@@ -205,6 +205,7 @@
 <script type="module">
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
   import { getFirestore, collection, addDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+  import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js';
 
   const firebaseConfig = {
     apiKey:            "AIzaSyAcxGPyL-Tg-yB8pAwqqp8tCLOspTJzKIc",
@@ -215,9 +216,10 @@
     appId:             "1:764690233349:web:fc22418ed9c2f101a6c46c"
   };
 
-  const app = initializeApp(firebaseConfig);
-  const db  = getFirestore(app);
-  window._firebase = { db, collection, addDoc, serverTimestamp };
+  const app     = initializeApp(firebaseConfig);
+  const db      = getFirestore(app);
+  const storage = getStorage(app);
+  window._firebase = { db, collection, addDoc, serverTimestamp, storage, ref, uploadBytesResumable, getDownloadURL };
 </script>
 
 <script>
@@ -269,12 +271,9 @@
       } else if (isVideo) {
         if (videoCount >= MAX_VIDEOS) { showErr('동영상은 최대 2개까지 첨부 가능합니다.'); return; }
         if (f.size > MAX_VIDEO_SIZE) { showErr(f.name + ' 동영상이 10MB를 초과합니다.'); return; }
-        const reader = new FileReader();
-        reader.onload = e => {
-          mediaFiles.push({ kind: 'video', name: f.name, data: e.target.result, mime: f.type });
-          renderPreview();
-        };
-        reader.readAsDataURL(f);
+        const previewUrl = URL.createObjectURL(f);
+        mediaFiles.push({ kind: 'video', name: f.name, file: f, previewUrl, mime: f.type });
+        renderPreview();
       }
     });
     document.getElementById('fileInput').value = '';
@@ -287,12 +286,17 @@
       if (m.kind === 'photo') {
         return `<div class="prev-item"><img src="${m.data}" alt="${m.name}"><button class="del" onclick="removeMedia(${i})">✕</button><span class="type-badge">사진</span></div>`;
       } else {
-        return `<div class="prev-item"><video src="${m.data}" muted playsinline></video><button class="del" onclick="removeMedia(${i})">✕</button><span class="type-badge">동영상</span></div>`;
+        return `<div class="prev-item"><video src="${m.previewUrl}" muted playsinline></video><button class="del" onclick="removeMedia(${i})">✕</button><span class="type-badge">동영상</span></div>`;
       }
     }).join('');
   }
 
-  function removeMedia(i) { mediaFiles.splice(i, 1); renderPreview(); }
+  function removeMedia(i) {
+    const m = mediaFiles[i];
+    if (m.previewUrl) URL.revokeObjectURL(m.previewUrl);
+    mediaFiles.splice(i, 1);
+    renderPreview();
+  }
   window.removeMedia = removeMedia;
 
   function showErr(msg) {
@@ -330,10 +334,37 @@
     btn.disabled = true;
     btn.innerHTML = '<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i>&nbsp; 제출 중...';
 
-    const { db, collection, addDoc, serverTimestamp } = window._firebase;
+    const { db, collection, addDoc, serverTimestamp, storage, ref, uploadBytesResumable, getDownloadURL } = window._firebase;
 
     try {
-      setProgress(50);
+      // 동영상은 Firebase Storage에 업로드, 사진은 base64 그대로 저장
+      const mediaToStore = [];
+      const videos = mediaFiles.filter(m => m.kind === 'video');
+      let totalBytes = videos.reduce((s, m) => s + m.file.size, 0);
+      let uploadedBytes = 0;
+
+      for (const m of mediaFiles) {
+        if (m.kind === 'photo') {
+          mediaToStore.push({ kind: 'photo', name: m.name, data: m.data });
+        } else {
+          const storageRef = ref(storage, `surveys/${Date.now()}_${m.name}`);
+          const snapshot = await new Promise((resolve, reject) => {
+            const task = uploadBytesResumable(storageRef, m.file);
+            task.on('state_changed',
+              snap => {
+                uploadedBytes += snap.bytesTransferred - (uploadedBytes > 0 ? uploadedBytes : 0);
+                setProgress(Math.round(uploadedBytes / totalBytes * 80));
+              },
+              reject,
+              () => resolve(task.snapshot)
+            );
+          });
+          const url = await getDownloadURL(snapshot.ref);
+          mediaToStore.push({ kind: 'video', name: m.name, url, mime: m.mime });
+        }
+      }
+
+      setProgress(90);
       await addDoc(collection(db, 'surveys'), {
         submittedAt:     serverTimestamp(),
         agency, name: uname, model,
@@ -344,7 +375,7 @@
         fanNoise:        ans.q2,
         combustionNoise: ans.q3,
         overallComment:  q4,
-        media: mediaFiles.map(m => ({ kind: m.kind, name: m.name, data: m.data, mime: m.mime || '' }))
+        media:           mediaToStore
       });
       setProgress(100);
       document.getElementById('formWrap').style.display = 'none';
@@ -361,3 +392,4 @@
 <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
 </body>
 </html>
+
