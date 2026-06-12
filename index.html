@@ -206,6 +206,7 @@
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
   import { getFirestore, collection, addDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
   import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js';
+  import { getAuth, signInAnonymously } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
   const firebaseConfig = {
     apiKey:            "AIzaSyAcxGPyL-Tg-yB8pAwqqp8tCLOspTJzKIc",
     authDomain:        "bluebox-9471f.firebaseapp.com",
@@ -218,7 +219,8 @@
   const app = initializeApp(firebaseConfig);
   const db  = getFirestore(app);
   const storage = getStorage(app);
-  window._firebase = { db, collection, addDoc, serverTimestamp, storage, ref, uploadBytesResumable, getDownloadURL };
+  const auth = getAuth(app);
+  window._firebase = { db, collection, addDoc, serverTimestamp, storage, ref, uploadBytesResumable, getDownloadURL, auth, signInAnonymously };
 </script>
 
 <script>
@@ -333,7 +335,7 @@
     btn.disabled = true;
     btn.innerHTML = '<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i>&nbsp; 제출 중...';
 
-    const { db, collection, addDoc, serverTimestamp, storage, ref, uploadBytesResumable, getDownloadURL } = window._firebase;
+    const { db, collection, addDoc, serverTimestamp, storage, ref, uploadBytesResumable, getDownloadURL, auth, signInAnonymously } = window._firebase;
 
     try {
       // 동영상은 Firebase Storage SDK로 업로드, 사진은 base64 그대로 저장
@@ -345,6 +347,7 @@
           mediaToStore.push({ kind: 'photo', name: m.name, data: m.data });
         } else {
           btn.innerHTML = '<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i>&nbsp; 동영상 업로드 중...';
+          if (!auth.currentUser) await signInAnonymously(auth);
           const fileName = `surveys/${Date.now()}_${m.name}`;
           const storageRef = ref(storage, fileName);
 
