@@ -346,16 +346,24 @@
         if (m.kind === 'photo') {
           mediaToStore.push({ kind: 'photo', name: m.name, data: m.data });
         } else {
-          const pct = Math.round((vi / mediaFiles.length) * 70);
-          setProgress(pct);
+          btn.innerHTML = '<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i>&nbsp; 동영상 업로드 중...';
           const storageRef = ref(storage, `surveys/${Date.now()}_${m.name}`);
-          const TIMEOUT = 90000;
-          const snapshot = await Promise.race([
-            uploadBytes(storageRef, m.file),
-            new Promise((_, rej) => setTimeout(() => rej(new Error(
-              '동영상 업로드 시간 초과(90초).\nFirebase Storage 규칙이 설정됐는지 확인해 주세요.'
-            )), TIMEOUT))
-          ]);
+          let snapshot;
+          try {
+            snapshot = await Promise.race([
+              uploadBytes(storageRef, m.file),
+              new Promise((_, rej) => setTimeout(() => rej(Object.assign(new Error('TIMEOUT'), {code:'timeout'})), 20000))
+            ]);
+          } catch (uploadErr) {
+            const code = uploadErr.code || '';
+            if (code === 'timeout' || uploadErr.message === 'TIMEOUT') {
+              throw new Error('동영상 업로드 실패: Firebase Storage가 활성화되지 않았습니다.\n\nFirebase 콘솔 → Storage → 시작하기를 클릭해 Storage를 활성화해 주세요.');
+            } else if (code.includes('unauthorized') || code.includes('permission')) {
+              throw new Error('동영상 업로드 실패: Storage 보안 규칙에서 업로드가 차단됐습니다.\n\nFirebase 콘솔 → Storage → 규칙에서 write 권한을 추가해 주세요.');
+            } else {
+              throw new Error('동영상 업로드 실패: ' + uploadErr.message);
+            }
+          }
           const url = await getDownloadURL(snapshot.ref);
           mediaToStore.push({ kind: 'video', name: m.name, url, mime: m.mime });
         }
