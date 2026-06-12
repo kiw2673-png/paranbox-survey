@@ -205,8 +205,6 @@
 <script type="module">
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
   import { getFirestore, collection, addDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
-  import { getStorage, ref, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js';
-
   const firebaseConfig = {
     apiKey:            "AIzaSyAcxGPyL-Tg-yB8pAwqqp8tCLOspTJzKIc",
     authDomain:        "bluebox-9471f.firebaseapp.com",
@@ -216,10 +214,9 @@
     appId:             "1:764690233349:web:fc22418ed9c2f101a6c46c"
   };
 
-  const app     = initializeApp(firebaseConfig);
-  const db      = getFirestore(app);
-  const storage = getStorage(app);
-  window._firebase = { db, collection, addDoc, serverTimestamp, storage, ref, uploadBytes, getDownloadURL };
+  const app = initializeApp(firebaseConfig);
+  const db  = getFirestore(app);
+  window._firebase = { db, collection, addDoc, serverTimestamp, storageBucket: firebaseConfig.storageBucket };
 </script>
 
 <script>
@@ -334,12 +331,11 @@
     btn.disabled = true;
     btn.innerHTML = '<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i>&nbsp; 제출 중...';
 
-    const { db, collection, addDoc, serverTimestamp, storage, ref, uploadBytes, getDownloadURL } = window._firebase;
+    const { db, collection, addDoc, serverTimestamp, storageBucket } = window._firebase;
 
     try {
-      // 동영상은 Firebase Storage에 업로드, 사진은 base64 그대로 저장
+      // 동영상은 Firebase Storage REST API로 업로드, 사진은 base64 그대로 저장
       const mediaToStore = [];
-      const videos = mediaFiles.filter(m => m.kind === 'video');
 
       for (let vi = 0; vi < mediaFiles.length; vi++) {
         const m = mediaFiles[vi];
@@ -347,24 +343,38 @@
           mediaToStore.push({ kind: 'photo', name: m.name, data: m.data });
         } else {
           btn.innerHTML = '<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i>&nbsp; 동영상 업로드 중...';
-          const storageRef = ref(storage, `surveys/${Date.now()}_${m.name}`);
-          let snapshot;
+          const fileName = `surveys/${Date.now()}_${m.name}`;
+          const encodedName = encodeURIComponent(fileName);
+          const uploadUrl = `https://firebasestorage.googleapis.com/v0/b/${storageBucket}/o?uploadType=media&name=${encodedName}`;
+
+          const ctrl = new AbortController();
+          const tid  = setTimeout(() => ctrl.abort(), 30000);
+          let res;
           try {
-            snapshot = await Promise.race([
-              uploadBytes(storageRef, m.file),
-              new Promise((_, rej) => setTimeout(() => rej(Object.assign(new Error('TIMEOUT'), {code:'timeout'})), 20000))
-            ]);
-          } catch (uploadErr) {
-            const code = uploadErr.code || '';
-            if (code === 'timeout' || uploadErr.message === 'TIMEOUT') {
-              throw new Error('동영상 업로드 실패: Firebase Storage가 활성화되지 않았습니다.\n\nFirebase 콘솔 → Storage → 시작하기를 클릭해 Storage를 활성화해 주세요.');
-            } else if (code.includes('unauthorized') || code.includes('permission')) {
-              throw new Error('동영상 업로드 실패: Storage 보안 규칙에서 업로드가 차단됐습니다.\n\nFirebase 콘솔 → Storage → 규칙에서 write 권한을 추가해 주세요.');
-            } else {
-              throw new Error('동영상 업로드 실패: ' + uploadErr.message);
-            }
+            res = await fetch(uploadUrl, {
+              method:  'POST',
+              headers: { 'Content-Type': m.mime || 'video/mp4' },
+              body:    m.file,
+              signal:  ctrl.signal
+            });
+          } catch (fetchErr) {
+            clearTimeout(tid);
+            if (fetchErr.name === 'AbortError') throw new Error('동영상 업로드 시간 초과(30초).\nFirebase Storage 규칙을 확인해 주세요.');
+            throw new Error('동영상 업로드 네트워크 오류: ' + fetchErr.message);
           }
-          const url = await getDownloadURL(snapshot.ref);
+          clearTimeout(tid);
+
+          if (!res.ok) {
+            const errBody = await res.json().catch(() => ({}));
+            const msg = errBody.error?.message || `HTTP ${res.status}`;
+            if (res.status === 403) throw new Error('동영상 업로드 실패(권한 없음): Firebase Storage 규칙에서 write 허용이 필요합니다.\n오류: ' + msg);
+            if (res.status === 404) throw new Error('동영상 업로드 실패(버킷 없음): Firebase Storage가 활성화되지 않았습니다.\n오류: ' + msg);
+            throw new Error('동영상 업로드 실패: ' + msg);
+          }
+
+          const data  = await res.json();
+          const token = data.downloadTokens;
+          const url   = `https://firebasestorage.googleapis.com/v0/b/${storageBucket}/o/${encodedName}?alt=media&token=${token}`;
           mediaToStore.push({ kind: 'video', name: m.name, url, mime: m.mime });
         }
       }
