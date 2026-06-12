@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>파란박스 설치후기 설문지</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --blue: #1a56b0; --blue-dark: #154698; --blue-light: #e6f1fb;
+    --green: #3B6D11; --green-bg: #eaf3de; --green-border: #639922;
+    --amber-bg: #faeeda; --amber-border: #BA7517; --amber-text: #854F0B;
+    --red-bg: #fcebeb; --red-border: #E24B4A; --red-text: #A32D2D;
+    --border: #e2e2e2; --text: #1a1a1a; --text-muted: #666; --text-hint: #999;
+    --bg: #f5f6f8; --card: #fff; --radius: 10px; --radius-sm: 6px;
+  }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+  .wrap { max-width: 660px; margin: 0 auto; padding: 1.5rem 1rem 4rem; }
+
+  .header { background: linear-gradient(135deg, #1a56b0 0%, #2d7dd2 100%); border-radius: var(--radius); padding: 1.5rem; margin-bottom: 1.25rem; color: #fff; }
+  .header-top { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .header-icon { width: 40px; height: 40px; background: rgba(255,255,255,0.2); border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+  .header h1 { font-size: 19px; font-weight: 600; }
+  .header p { font-size: 13px; opacity: 0.88; line-height: 1.5; }
+
+  .card { background: var(--card); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 1.25rem; margin-bottom: 1rem; }
+  .section-label { font-size: 11.5px; font-weight: 600; color: var(--blue); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 1rem; display: flex; align-items: center; gap: 6px; }
+
+  .field { margin-bottom: 14px; }
+  .field:last-child { margin-bottom: 0; }
+  .field label { display: block; font-size: 13.5px; font-weight: 500; margin-bottom: 5px; }
+  .req { color: var(--red-text); }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  input[type=text], input[type=date], textarea {
+    width: 100%; border: 1px solid var(--border); border-radius: var(--radius-sm);
+    padding: 9px 12px; font-size: 14px; color: var(--text); background: #fff;
+    outline: none; transition: border-color 0.15s; font-family: inherit;
+  }
+  input:focus, textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(26,86,176,0.1); }
+  textarea { resize: vertical; min-height: 88px; line-height: 1.6; }
+
+  .q-label { font-size: 14px; font-weight: 500; line-height: 1.55; margin-bottom: 10px; display: flex; align-items: flex-start; gap: 8px; }
+  .q-num { flex-shrink: 0; width: 22px; height: 22px; background: var(--blue-light); color: var(--blue); border-radius: 50%; font-size: 11.5px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; margin-top: 1px; }
+  .q-pre-box { background: #fffbea; border: 1px solid #f0d070; border-radius: var(--radius-sm); padding: 10px 14px; margin-bottom: 14px; }
+  .q-pre-box .q-label { margin-bottom: 8px; }
+
+  .btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
+  .sel-btn { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 18px; font-size: 13.5px; cursor: pointer; background: #fff; color: var(--text); transition: all 0.15s; user-select: none; font-family: inherit; }
+  .sel-btn:hover { border-color: var(--blue); background: var(--blue-light); color: var(--blue); }
+  .sel-btn.active { background: var(--blue-light); border-color: var(--blue); color: var(--blue); font-weight: 500; }
+  .sel-btn.active.high { background: var(--green-bg); border-color: var(--green-border); color: var(--green); }
+  .sel-btn.active.mid { background: var(--amber-bg); border-color: var(--amber-border); color: var(--amber-text); }
+  .sel-btn.active.low { background: var(--red-bg); border-color: var(--red-border); color: var(--red-text); }
+
+  .divider { height: 1px; background: var(--border); margin: 16px 0; }
+
+  .photo-drop { border: 2px dashed var(--border); border-radius: var(--radius-sm); padding: 1.5rem; text-align: center; cursor: pointer; transition: all 0.15s; background: #fafafa; }
+  .photo-drop:hover { border-color: var(--blue); background: var(--blue-light); }
+  .photo-drop i { font-size: 28px; color: var(--text-muted); margin-bottom: 8px; display: block; }
+  .photo-drop p { font-size: 13.5px; color: var(--text-muted); }
+  .photo-drop small { font-size: 11.5px; color: var(--text-hint); display: block; margin-top: 3px; }
+  #fileInput { display: none; }
+
+  .photo-limit-notice { font-size: 12px; color: var(--amber-text); background: var(--amber-bg); border: 1px solid var(--amber-border); border-radius: var(--radius-sm); padding: 8px 12px; margin-top: 8px; display: none; }
+
+  .preview-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 8px; margin-top: 10px; }
+  .prev-item { position: relative; aspect-ratio: 1; border-radius: var(--radius-sm); overflow: hidden; border: 1px solid var(--border); }
+  .prev-item img { width: 100%; height: 100%; object-fit: cover; }
+  .prev-item .del { position: absolute; top: 3px; right: 3px; background: rgba(0,0,0,0.55); color: #fff; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 11px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+
+  .progress-bar { height: 4px; background: var(--border); border-radius: 2px; margin-top: 10px; overflow: hidden; display: none; }
+  .progress-fill { height: 100%; background: var(--blue); border-radius: 2px; width: 0%; transition: width 0.3s; }
+
+  .submit-btn { width: 100%; padding: 14px; background: var(--blue); color: #fff; border: none; border-radius: var(--radius-sm); font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 1.25rem; transition: background 0.15s; font-family: inherit; display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .submit-btn:hover:not(:disabled) { background: var(--blue-dark); }
+  .submit-btn:disabled { background: #aaa; cursor: not-allowed; }
+
+  .success { display: none; background: var(--green-bg); border: 1px solid var(--green-border); border-radius: var(--radius); padding: 2.5rem; text-align: center; }
+  .success i { font-size: 44px; color: var(--green); margin-bottom: 12px; display: block; }
+  .success h2 { color: var(--green); font-size: 20px; margin-bottom: 8px; }
+  .success p { color: #27500A; font-size: 14px; line-height: 1.6; }
+
+  .err-toast { display: none; background: var(--red-bg); border: 1px solid var(--red-border); border-radius: var(--radius-sm); padding: 10px 14px; color: var(--red-text); font-size: 13.5px; margin-top: 10px; }
+
+  @media (max-width: 480px) { .grid2 { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="header">
+    <div class="header-top">
+      <div class="header-icon"><i class="ti ti-box" style="font-size:22px;color:#fff"></i></div>
+      <h1>파란박스 설치후기 설문지</h1>
+    </div>
+    <p>설치 후 경험을 공유해 주시면 제품 개선에 큰 도움이 됩니다. &nbsp;·&nbsp; 소요시간 약 3분</p>
+  </div>
+
+  <div id="formWrap">
+    <!-- 기본 정보 -->
+    <div class="card">
+      <div class="section-label"><i class="ti ti-user"></i> 기본 정보</div>
+      <div class="field"><label>대리점명 <span class="req">*</span></label><input type="text" id="agency" placeholder="대리점명을 입력하세요"></div>
+      <div class="field"><label>담당자 이름 <span class="req">*</span></label><input type="text" id="uname" placeholder="이름을 입력하세요"></div>
+      <div class="grid2">
+        <div class="field"><label>모델명 <span class="req">*</span></label><input type="text" id="model" placeholder="예) PB-2400"></div>
+        <div class="field"><label>설치일자 <span class="req">*</span></label><input type="date" id="idate"></div>
+      </div>
+      <div class="field"><label>설치장소 <span class="req">*</span></label><input type="text" id="location" placeholder="예) 서울시 강남구 OO아파트 101동"></div>
+    </div>
+
+    <!-- 설치 후기 -->
+    <div class="card">
+      <div class="section-label"><i class="ti ti-clipboard-check"></i> 설치 후기</div>
+
+      <div class="q-pre-box">
+        <div class="q-label"><span class="q-num" style="background:#fff3cd;color:#7a5c00">전</span><span>설치 후 물 보충하고 실제 운전까지 진행하셨나요?</span></div>
+        <div class="btn-group" id="q0">
+          <button class="sel-btn" data-v="예" onclick="pick('q0',this,'yn')">예</button>
+          <button class="sel-btn" data-v="아니오" onclick="pick('q0',this,'yn')">아니오</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="q-label"><span class="q-num">1</span><span>파란박스의 <strong>펌프 소음</strong>은 기존 모델보다 개선되었나요?</span></div>
+        <div class="btn-group" id="q1">
+          <button class="sel-btn" data-v="상" onclick="pick('q1',this,'high')">상 &nbsp;😊</button>
+          <button class="sel-btn" data-v="중" onclick="pick('q1',this,'mid')">중 &nbsp;😐</button>
+          <button class="sel-btn" data-v="하" onclick="pick('q1',this,'low')">하 &nbsp;😔</button>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="field">
+        <div class="q-label"><span class="q-num">2</span><span>파란박스의 <strong>팬 소음</strong>은 기존 모델보다 개선되었나요?</span></div>
+        <div class="btn-group" id="q2">
+          <button class="sel-btn" data-v="상" onclick="pick('q2',this,'high')">상 &nbsp;😊</button>
+          <button class="sel-btn" data-v="중" onclick="pick('q2',this,'mid')">중 &nbsp;😐</button>
+          <button class="sel-btn" data-v="하" onclick="pick('q2',this,'low')">하 &nbsp;😔</button>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="field">
+        <div class="q-label"><span class="q-num">3</span><span>파란박스의 <strong>점화 및 연소 소음</strong>은 기존 모델보다 개선되었나요?</span></div>
+        <div class="btn-group" id="q3">
+          <button class="sel-btn" data-v="상" onclick="pick('q3',this,'high')">상 &nbsp;😊</button>
+          <button class="sel-btn" data-v="중" onclick="pick('q3',this,'mid')">중 &nbsp;😐</button>
+          <button class="sel-btn" data-v="하" onclick="pick('q3',this,'low')">하 &nbsp;😔</button>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="field">
+        <div class="q-label"><span class="q-num">4</span><span>시운전 후 기존 제품과 비교했을 때 전반적인 소음 느낌을 자유롭게 작성해 주세요.</span></div>
+        <textarea id="q4" placeholder="예) 차이가 크게 없고 비슷하다 / 조금 더 조용한 것 같다 / 확실히 조용해진 것 같다"></textarea>
+      </div>
+    </div>
+
+    <!-- 사진 첨부 -->
+    <div class="card">
+      <div class="section-label"><i class="ti ti-camera"></i> 사진 첨부</div>
+      <div class="q-label"><span class="q-num">5</span><span>설치 현장 또는 시운전 관련 사진을 첨부해 주세요. <span style="font-weight:400;color:var(--text-muted)">(선택 · 최대 3장 · 장당 1MB)</span></span></div>
+      <div class="photo-drop" id="dropZone" onclick="document.getElementById('fileInput').click()">
+        <i class="ti ti-photo-plus"></i>
+        <p>클릭하여 사진 추가</p>
+        <small>JPG, PNG · 최대 3장 · 파일당 1MB 이하</small>
+      </div>
+      <input type="file" id="fileInput" accept="image/*" multiple onchange="addFiles(this.files)">
+      <div class="photo-limit-notice" id="photoNotice">
+        ⚠ 무료 플랜 사용 중입니다. 사진은 최대 3장, 파일당 1MB 이하로 제한됩니다.
+      </div>
+      <div class="progress-bar" id="progressBar"><div class="progress-fill" id="progressFill"></div></div>
+      <div class="preview-grid" id="preview"></div>
+    </div>
+
+    <div class="err-toast" id="errMsg"></div>
+    <button class="submit-btn" id="submitBtn" onclick="submitForm()">
+      <i class="ti ti-send"></i> 설문 제출하기
+    </button>
+  </div>
+
+  <div class="success" id="success">
+    <i class="ti ti-circle-check"></i>
+    <h2>제출 완료!</h2>
+    <p>소중한 설치후기를 공유해 주셔서 감사합니다.<br>더 좋은 제품으로 보답하겠습니다.</p>
+  </div>
+</div>
+
+<!-- Firebase SDK (Firestore만 사용 - 무료 플랜) -->
+<script type="module">
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+  import { getFirestore, collection, addDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+  // ★ Firebase 콘솔에서 복사한 설정값으로 교체하세요
+  const firebaseConfig = {
+    apiKey:            "AIzaSyAcxGPyL-Tg-yB8pAwqqp8tCLOspTJzKIc",
+    authDomain:        "bluebox-9471f.firebaseapp.com",
+    projectId:         "bluebox-9471f",
+    storageBucket:     "bluebox-9471f.firebasestorage.app",
+    messagingSenderId: "764690233349",
+    appId:             "1:764690233349:web:fc22418ed9c2f101a6c46c"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db  = getFirestore(app);
+
+  window._firebase = { db, collection, addDoc, serverTimestamp };
+</script>
+
+<script>
+  const ans = { q0: null, q1: null, q2: null, q3: null };
+  const photos = [];
+  const MAX_PHOTOS = 3;
+  const MAX_SIZE   = 1 * 1024 * 1024; // 1MB
+
+  // 사진 안내문구 표시
+  document.getElementById('photoNotice').style.display = 'block';
+
+  function pick(id, el, cls) {
+    document.getElementById(id).querySelectorAll('.sel-btn').forEach(b => b.classList.remove('active','high','mid','low'));
+    el.classList.add('active');
+    if (cls !== 'yn') el.classList.add(cls);
+    ans[id] = el.dataset.v;
+  }
+  window.pick = pick;
+
+  function resizeImage(dataUrl, maxWidth, quality) {
+    return new Promise(resolve => {
+      const img = new Image();
+      img.onload = () => {
+        const scale = Math.min(1, maxWidth / img.width);
+        const canvas = document.createElement('canvas');
+        canvas.width  = img.width  * scale;
+        canvas.height = img.height * scale;
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.src = dataUrl;
+    });
+  }
+
+  function addFiles(files) {
+    if (photos.length >= MAX_PHOTOS) { showErr(`사진은 최대 ${MAX_PHOTOS}장까지 첨부 가능합니다.`); return; }
+    const remaining = MAX_PHOTOS - photos.length;
+    Array.from(files).slice(0, remaining).forEach(f => {
+      if (f.size > MAX_SIZE) { showErr(`${f.name} 파일이 1MB를 초과합니다. 더 작은 사진을 사용해 주세요.`); return; }
+      const reader = new FileReader();
+      reader.onload = async e => {
+        // 긴 변 800px 이하, 품질 0.75로 압축
+        const compressed = await resizeImage(e.target.result, 800, 0.75);
+        photos.push({ name: f.name, data: compressed });
+        renderPreview();
+      };
+      reader.readAsDataURL(f);
+    });
+    if (files.length > remaining) showErr(`${remaining}장만 추가되었습니다. (최대 ${MAX_PHOTOS}장)`);
+  }
+  window.addFiles = addFiles;
+
+  function renderPreview() {
+    const g = document.getElementById('preview');
+    g.innerHTML = photos.map((p, i) =>
+      `<div class="prev-item"><img src="${p.data}" alt="${p.name}"><button class="del" onclick="removePhoto(${i})">✕</button></div>`
+    ).join('');
+  }
+
+  function removePhoto(i) { photos.splice(i, 1); renderPreview(); }
+  window.removePhoto = removePhoto;
+
+  function showErr(msg) {
+    const el = document.getElementById('errMsg');
+    el.textContent = '⚠ ' + msg; el.style.display = 'block';
+    setTimeout(() => el.style.display = 'none', 5000);
+  }
+
+  function setProgress(pct) {
+    const bar = document.getElementById('progressBar');
+    bar.style.display = 'block';
+    document.getElementById('progressFill').style.width = pct + '%';
+    if (pct >= 100) setTimeout(() => bar.style.display = 'none', 800);
+  }
+
+  async function submitForm() {
+    const agency   = document.getElementById('agency').value.trim();
+    const uname    = document.getElementById('uname').value.trim();
+    const model    = document.getElementById('model').value.trim();
+    const idate    = document.getElementById('idate').value;
+    const location = document.getElementById('location').value.trim();
+    const q4       = document.getElementById('q4').value.trim();
+
+    if (!agency || !uname || !model || !idate || !location) { showErr('기본 정보를 모두 입력해 주세요.'); return; }
+    if (!ans.q0) { showErr('사전 운전 여부를 선택해 주세요.'); return; }
+    if (!ans.q1 || !ans.q2 || !ans.q3) { showErr('소음 개선 평가(1~3번)를 모두 선택해 주세요.'); return; }
+
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i>&nbsp; 제출 중...';
+
+    const { db, collection, addDoc, serverTimestamp } = window._firebase;
+
+    try {
+      setProgress(50);
+
+      // 사진은 Base64 그대로 Firestore에 저장 (Storage 미사용)
+      await addDoc(collection(db, 'surveys'), {
+        submittedAt:     serverTimestamp(),
+        agency,
+        name:            uname,
+        model,
+        installDate:     idate,
+        location,
+        preRun:          ans.q0,
+        pumpNoise:       ans.q1,
+        fanNoise:        ans.q2,
+        combustionNoise: ans.q3,
+        overallComment:  q4,
+        photos:          photos.map(p => ({ name: p.name, data: p.data }))
+      });
+
+      setProgress(100);
+      document.getElementById('formWrap').style.display = 'none';
+      document.getElementById('success').style.display  = 'block';
+
+    } catch (e) {
+      console.error(e);
+      showErr('제출 중 오류가 발생했습니다: ' + e.message);
+      btn.disabled = false;
+      btn.innerHTML = '<i class="ti ti-send"></i>&nbsp; 설문 제출하기';
+    }
+  }
+  window.submitForm = submitForm;
+</script>
+<style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+</body>
+</html>
