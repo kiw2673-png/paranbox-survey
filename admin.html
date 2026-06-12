@@ -6,6 +6,7 @@
 <title>파란박스 설문 관리자</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
@@ -411,7 +412,14 @@
       await deleteDoc(doc(db, 'surveys', deletingId));
       closeModal('deleteModal');
       await loadData();
-    } catch (e) { alert('삭제 실패: ' + e.message); }
+    } catch (e) {
+      console.error('삭제 오류:', e.code, e.message);
+      if (e.code === 'permission-denied' || (e.message && e.message.includes('permission'))) {
+        alert('삭제 실패: Firebase 보안 규칙에서 삭제 권한이 없습니다.\n\nFirebase 콘솔 > Firestore Database > 규칙 탭에서\nallow delete 권한을 추가해 주세요.');
+      } else {
+        alert('삭제 실패: ' + e.message);
+      }
+    }
   }
   window.confirmDelete = confirmDelete;
 
@@ -440,31 +448,47 @@
   }
   window.closeViewer = closeViewer;
 
-  // 엑셀 다운로드 (사진·동영상 파일명 포함)
-  function downloadExcel() {
+  // 엑셀 + 사진 ZIP 다운로드
+  async function downloadExcel() {
     if (!allData.length) { alert('다운로드할 데이터가 없습니다.'); return; }
-    const rows = allData.map(r => {
-      const media = r.media || (r.photos ? r.photos.map(p => ({kind:'photo',name:p.name})) : []);
-      const photos = media.filter(m => m.kind === 'photo').map(m => m.name).join(', ');
-      const videos = media.filter(m => m.kind === 'video').map(m => m.name).join(', ');
+
+    const zip = new JSZip();
+    const photoFolder = zip.folder('사진');
+
+    const rows = allData.map((r, ri) => {
+      const media  = r.media || (r.photos ? r.photos.map(p => ({kind:'photo', name:p.name, data:p.data})) : []);
+      const photos = media.filter(m => m.kind === 'photo');
+      const videos = media.filter(m => m.kind === 'video');
+
+      // 사진을 ZIP 폴더에 추가
+      photos.forEach(m => {
+        if (m.data && m.data.includes(',')) {
+          const b64 = m.data.split(',')[1];
+          const safe = (r.agency || 'unknown').replace(/[\/\\:*?"<>|]/g, '_');
+          photoFolder.file(`${String(ri + 1).padStart(3,'0')}_${safe}_${m.name}`, b64, { base64: true });
+        }
+      });
+
       return {
-        '제출일시':     r.submittedAt ? (r.submittedAt.toDate ? r.submittedAt.toDate().toLocaleString('ko-KR') : r.submittedAt) : '',
-        '대리점명':     r.agency || '',
-        '담당자':       r.name || '',
-        '모델명':       r.model || '',
-        '설치일자':     r.installDate || '',
-        '설치장소':     r.location || '',
-        '사전운전여부': r.preRun || '',
-        '펌프소음개선': r.pumpNoise || '',
-        '팬소음개선':   r.fanNoise || '',
-        '연소소음개선': r.combustionNoise || '',
-        '전반적의견':   r.overallComment || '',
-        '사진수':       media.filter(m => m.kind === 'photo').length,
-        '첨부사진파일명': photos,
-        '동영상수':     media.filter(m => m.kind === 'video').length,
-        '첨부동영상파일명': videos
+        '제출일시':        r.submittedAt ? (r.submittedAt.toDate ? r.submittedAt.toDate().toLocaleString('ko-KR') : r.submittedAt) : '',
+        '대리점명':        r.agency || '',
+        '담당자':          r.name || '',
+        '모델명':          r.model || '',
+        '설치일자':        r.installDate || '',
+        '설치장소':        r.location || '',
+        '사전운전여부':    r.preRun || '',
+        '펌프소음개선':    r.pumpNoise || '',
+        '팬소음개선':      r.fanNoise || '',
+        '연소소음개선':    r.combustionNoise || '',
+        '전반적의견':      r.overallComment || '',
+        '사진수':          photos.length,
+        '첨부사진파일명':  photos.map(m => m.name).join(', '),
+        '동영상수':        videos.length,
+        '첨부동영상파일명': videos.map(m => m.name).join(', ')
       };
     });
+
+    // 엑셀 생성 후 ZIP에 포함
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.json_to_sheet(rows);
     ws['!cols'] = [
@@ -472,9 +496,21 @@
       {wch:12},{wch:12},{wch:10},{wch:12},{wch:40},{wch:6},{wch:30},{wch:8},{wch:30}
     ];
     XLSX.utils.book_append_sheet(wb, ws, '설치후기');
-    XLSX.writeFile(wb, `파란박스_설치후기_${new Date().toISOString().slice(0,10)}.xlsx`);
+    const dateStr = new Date().toISOString().slice(0, 10);
+    zip.file(`파란박스_설치후기_${dateStr}.xlsx`, XLSX.write(wb, { type: 'base64', bookType: 'xlsx' }), { base64: true });
+
+    const blob = await zip.generateAsync({ type: 'blob' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url;
+    a.download = `파란박스_설치후기_${dateStr}.zip`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   }
   window.downloadExcel = downloadExcel;
 </script>
 </body>
 </html>
+
