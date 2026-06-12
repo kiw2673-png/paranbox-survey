@@ -18,7 +18,6 @@
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
   .wrap { max-width: 660px; margin: 0 auto; padding: 1.5rem 1rem 4rem; }
 
-  /* 관리자 링크 */
   .admin-link { position: fixed; top: 14px; right: 16px; background: rgba(255,255,255,0.92); border: 1px solid var(--border); border-radius: 20px; padding: 6px 14px; font-size: 12.5px; color: var(--text-muted); text-decoration: none; display: flex; align-items: center; gap: 5px; backdrop-filter: blur(4px); z-index: 100; transition: all 0.15s; }
   .admin-link:hover { border-color: var(--blue); color: var(--blue); }
 
@@ -48,9 +47,6 @@
   .q-label { font-size: 14px; font-weight: 500; line-height: 1.55; margin-bottom: 10px; display: flex; align-items: flex-start; gap: 8px; }
   .q-num { flex-shrink: 0; width: 22px; height: 22px; background: var(--blue-light); color: var(--blue); border-radius: 50%; font-size: 11.5px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; margin-top: 1px; }
   .q-pre-box { background: #fffbea; border: 1px solid #f0d070; border-radius: var(--radius-sm); padding: 10px 14px; margin-bottom: 14px; }
-  .q-pre-box .q-label { margin-bottom: 8px; }
-
-  /* 미선택 강조 */
   .q-required-hint { font-size: 12px; color: var(--red-text); margin-top: 6px; display: none; }
   .q-required-hint.show { display: block; }
 
@@ -64,7 +60,6 @@
 
   .divider { height: 1px; background: var(--border); margin: 16px 0; }
 
-  /* 미디어 첨부 */
   .media-drop { border: 2px dashed var(--border); border-radius: var(--radius-sm); padding: 1.5rem; text-align: center; cursor: pointer; transition: all 0.15s; background: #fafafa; }
   .media-drop:hover { border-color: var(--blue); background: var(--blue-light); }
   .media-drop i { font-size: 28px; color: var(--text-muted); margin-bottom: 8px; display: block; }
@@ -72,17 +67,19 @@
   .media-drop small { font-size: 11.5px; color: var(--text-hint); display: block; margin-top: 3px; }
   #fileInput { display: none; }
 
-  .media-notice { font-size: 12px; color: var(--amber-text); background: var(--amber-bg); border: 1px solid var(--amber-border); border-radius: var(--radius-sm); padding: 8px 12px; margin-top: 8px; }
-
   .preview-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; margin-top: 10px; }
-  .prev-item { position: relative; aspect-ratio: 1; border-radius: var(--radius-sm); overflow: hidden; border: 1px solid var(--border); background: #000; }
+  .prev-item { position: relative; aspect-ratio: 1; border-radius: var(--radius-sm); overflow: hidden; border: 1px solid var(--border); background: #111; }
   .prev-item img { width: 100%; height: 100%; object-fit: cover; }
   .prev-item video { width: 100%; height: 100%; object-fit: cover; }
   .prev-item .del { position: absolute; top: 3px; right: 3px; background: rgba(0,0,0,0.6); color: #fff; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 11px; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 2; }
   .prev-item .type-badge { position: absolute; bottom: 3px; left: 3px; background: rgba(0,0,0,0.6); color: #fff; font-size: 10px; padding: 1px 5px; border-radius: 3px; }
+  .prev-item .upload-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.5); display: flex; flex-direction: column; align-items: center; justify-content: center; color: #fff; font-size: 11px; gap: 4px; }
+  .prev-item .upload-overlay i { font-size: 18px; }
 
-  .progress-bar { height: 4px; background: var(--border); border-radius: 2px; margin-top: 10px; overflow: hidden; display: none; }
-  .progress-fill { height: 100%; background: var(--blue); border-radius: 2px; width: 0%; transition: width 0.3s; }
+  .progress-wrap { margin-top: 12px; display: none; }
+  .progress-label { font-size: 12px; color: var(--text-muted); margin-bottom: 5px; display: flex; justify-content: space-between; }
+  .progress-bar { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+  .progress-fill { height: 100%; background: var(--blue); border-radius: 3px; width: 0%; transition: width 0.2s; }
 
   .submit-btn { width: 100%; padding: 14px; background: var(--blue); color: #fff; border: none; border-radius: var(--radius-sm); font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 1.25rem; transition: background 0.15s; font-family: inherit; display: flex; align-items: center; justify-content: center; gap: 8px; }
   .submit-btn:hover:not(:disabled) { background: var(--blue-dark); }
@@ -96,6 +93,7 @@
   .err-toast { display: none; background: var(--red-bg); border: 1px solid var(--red-border); border-radius: var(--radius-sm); padding: 10px 14px; color: var(--red-text); font-size: 13.5px; margin-top: 10px; }
 
   @media (max-width: 480px) { .grid2 { grid-template-columns: 1fr; } }
+  @keyframes spin { to { transform: rotate(360deg); } }
 </style>
 </head>
 <body>
@@ -112,7 +110,6 @@
   </div>
 
   <div id="formWrap">
-    <!-- 기본 정보 -->
     <div class="card">
       <div class="section-label"><i class="ti ti-user"></i> 기본 정보</div>
       <div class="field"><label>대리점명 <span class="req">*</span></label><input type="text" id="agency" placeholder="대리점명을 입력하세요"></div>
@@ -124,7 +121,6 @@
       <div class="field"><label>설치장소 <span class="req">*</span></label><input type="text" id="location" placeholder="예) 서울시 강남구 OO아파트 101동"></div>
     </div>
 
-    <!-- 설치 후기 -->
     <div class="card">
       <div class="section-label"><i class="ti ti-clipboard-check"></i> 설치 후기</div>
 
@@ -174,18 +170,19 @@
       </div>
     </div>
 
-    <!-- 미디어 첨부 -->
     <div class="card">
       <div class="section-label"><i class="ti ti-photo-video"></i> 사진 · 동영상 첨부</div>
       <div class="q-label"><span class="q-num">5</span><span>설치 현장 또는 시운전 관련 사진·동영상을 첨부해 주세요. <span style="font-weight:400;color:var(--text-muted)">(선택)</span></span></div>
       <div class="media-drop" onclick="document.getElementById('fileInput').click()">
         <i class="ti ti-cloud-upload"></i>
         <p>클릭하여 사진 또는 동영상 추가</p>
-        <small>사진: JPG·PNG (최대 3장·장당 1MB) &nbsp;|&nbsp; 동영상: MP4·MOV (최대 2개·개당 10MB)</small>
+        <small>사진: JPG·PNG (최대 10장·장당 20MB) &nbsp;|&nbsp; 동영상: MP4·MOV (최대 5개·개당 200MB)</small>
       </div>
       <input type="file" id="fileInput" accept="image/*,video/*" multiple onchange="addFiles(this.files)">
-      <div class="media-notice">⚠ 무료 플랜 기준: 사진 최대 3장(1MB), 동영상 최대 2개(10MB)</div>
-      <div class="progress-bar" id="progressBar"><div class="progress-fill" id="progressFill"></div></div>
+      <div class="progress-wrap" id="progressWrap">
+        <div class="progress-label"><span id="progressLabel">업로드 중...</span><span id="progressPct">0%</span></div>
+        <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+      </div>
       <div class="preview-grid" id="preview"></div>
     </div>
 
@@ -206,7 +203,7 @@
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
   import { getFirestore, collection, addDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
   import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js';
-  import { getAuth, signInAnonymously } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+
   const firebaseConfig = {
     apiKey:            "AIzaSyAcxGPyL-Tg-yB8pAwqqp8tCLOspTJzKIc",
     authDomain:        "bluebox-9471f.firebaseapp.com",
@@ -216,19 +213,15 @@
     appId:             "1:764690233349:web:fc22418ed9c2f101a6c46c"
   };
 
-  const app = initializeApp(firebaseConfig);
-  const db  = getFirestore(app);
+  const app     = initializeApp(firebaseConfig);
+  const db      = getFirestore(app);
   const storage = getStorage(app);
-  const auth = getAuth(app);
-  window._firebase = { db, collection, addDoc, serverTimestamp, storage, ref, uploadBytesResumable, getDownloadURL, auth, signInAnonymously };
+  window._firebase = { db, storage, collection, addDoc, serverTimestamp, ref, uploadBytesResumable, getDownloadURL };
 </script>
 
 <script>
   const ans = { q0: null, q1: null, q2: null, q3: null };
-  const mediaFiles = [];
-  const MAX_PHOTOS = 3, MAX_VIDEOS = 2;
-  const MAX_PHOTO_SIZE = 1 * 1024 * 1024;
-  const MAX_VIDEO_SIZE = 10 * 1024 * 1024;
+  const mediaFiles = []; // { file, kind, previewUrl, name }
 
   function pick(id, el, cls) {
     document.getElementById(id).querySelectorAll('.sel-btn').forEach(b => b.classList.remove('active','high','mid','low'));
@@ -239,20 +232,6 @@
   }
   window.pick = pick;
 
-  function resizeImage(dataUrl, maxWidth, quality) {
-    return new Promise(resolve => {
-      const img = new Image();
-      img.onload = () => {
-        const scale = Math.min(1, maxWidth / img.width);
-        const c = document.createElement('canvas');
-        c.width = img.width * scale; c.height = img.height * scale;
-        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-        resolve(c.toDataURL('image/jpeg', quality));
-      };
-      img.src = dataUrl;
-    });
-  }
-
   function addFiles(files) {
     const photoCount = mediaFiles.filter(f => f.kind === 'photo').length;
     const videoCount = mediaFiles.filter(f => f.kind === 'video').length;
@@ -260,23 +239,18 @@
       const isVideo = f.type.startsWith('video/');
       const isPhoto = f.type.startsWith('image/');
       if (isPhoto) {
-        if (photoCount >= MAX_PHOTOS) { showErr('사진은 최대 3장까지 첨부 가능합니다.'); return; }
-        if (f.size > MAX_PHOTO_SIZE) { showErr(f.name + ' 사진이 1MB를 초과합니다.'); return; }
-        const reader = new FileReader();
-        reader.onload = async e => {
-          const compressed = await resizeImage(e.target.result, 800, 0.75);
-          mediaFiles.push({ kind: 'photo', name: f.name, data: compressed });
-          renderPreview();
-        };
-        reader.readAsDataURL(f);
+        if (photoCount >= 10) { showErr('사진은 최대 10장까지 첨부 가능합니다.'); return; }
+        if (f.size > 20 * 1024 * 1024) { showErr(f.name + ' 사진이 20MB를 초과합니다.'); return; }
+        const url = URL.createObjectURL(f);
+        mediaFiles.push({ file: f, kind: 'photo', previewUrl: url, name: f.name });
       } else if (isVideo) {
-        if (videoCount >= MAX_VIDEOS) { showErr('동영상은 최대 2개까지 첨부 가능합니다.'); return; }
-        if (f.size > MAX_VIDEO_SIZE) { showErr(f.name + ' 동영상이 10MB를 초과합니다.'); return; }
-        const previewUrl = URL.createObjectURL(f);
-        mediaFiles.push({ kind: 'video', name: f.name, file: f, previewUrl, mime: f.type });
-        renderPreview();
+        if (videoCount >= 5) { showErr('동영상은 최대 5개까지 첨부 가능합니다.'); return; }
+        if (f.size > 200 * 1024 * 1024) { showErr(f.name + ' 동영상이 200MB를 초과합니다.'); return; }
+        const url = URL.createObjectURL(f);
+        mediaFiles.push({ file: f, kind: 'video', previewUrl: url, name: f.name });
       }
     });
+    renderPreview();
     document.getElementById('fileInput').value = '';
   }
   window.addFiles = addFiles;
@@ -285,19 +259,14 @@
     const g = document.getElementById('preview');
     g.innerHTML = mediaFiles.map((m, i) => {
       if (m.kind === 'photo') {
-        return `<div class="prev-item"><img src="${m.data}" alt="${m.name}"><button class="del" onclick="removeMedia(${i})">✕</button><span class="type-badge">사진</span></div>`;
+        return `<div class="prev-item"><img src="${m.previewUrl}" alt="${m.name}"><button class="del" onclick="removeMedia(${i})">✕</button><span class="type-badge">사진</span></div>`;
       } else {
         return `<div class="prev-item"><video src="${m.previewUrl}" muted playsinline></video><button class="del" onclick="removeMedia(${i})">✕</button><span class="type-badge">동영상</span></div>`;
       }
     }).join('');
   }
 
-  function removeMedia(i) {
-    const m = mediaFiles[i];
-    if (m.previewUrl) URL.revokeObjectURL(m.previewUrl);
-    mediaFiles.splice(i, 1);
-    renderPreview();
-  }
+  function removeMedia(i) { mediaFiles.splice(i, 1); renderPreview(); }
   window.removeMedia = removeMedia;
 
   function showErr(msg) {
@@ -306,11 +275,28 @@
     setTimeout(() => el.style.display = 'none', 5000);
   }
 
-  function setProgress(pct) {
-    const bar = document.getElementById('progressBar');
-    bar.style.display = 'block';
+  function setProgress(pct, label) {
+    const wrap = document.getElementById('progressWrap');
+    wrap.style.display = 'block';
     document.getElementById('progressFill').style.width = pct + '%';
-    if (pct >= 100) setTimeout(() => bar.style.display = 'none', 800);
+    document.getElementById('progressPct').textContent = Math.round(pct) + '%';
+    if (label) document.getElementById('progressLabel').textContent = label;
+    if (pct >= 100) setTimeout(() => wrap.style.display = 'none', 1000);
+  }
+
+  function uploadFile(storageRef, file) {
+    return new Promise((resolve, reject) => {
+      const { uploadBytesResumable, getDownloadURL } = window._firebase;
+      const task = uploadBytesResumable(storageRef, file);
+      task.on('state_changed',
+        snap => {
+          const pct = (snap.bytesTransferred / snap.totalBytes) * 100;
+          setProgress(pct, `업로드 중: ${file.name}`);
+        },
+        reject,
+        async () => { resolve(await getDownloadURL(task.snapshot.ref)); }
+      );
+    });
   }
 
   async function submitForm() {
@@ -323,51 +309,32 @@
 
     let valid = true;
     if (!agency || !uname || !model || !idate || !location) { showErr('기본 정보를 모두 입력해 주세요.'); valid = false; }
-
-    // 설치 후기 필수 검증
-    ['q0','q1','q2','q3'].forEach(k => {
-      if (!ans[k]) { document.getElementById('hint-' + k).classList.add('show'); valid = false; }
-    });
+    ['q0','q1','q2','q3'].forEach(k => { if (!ans[k]) { document.getElementById('hint-' + k).classList.add('show'); valid = false; } });
     if (!q4) { document.getElementById('hint-q4').classList.add('show'); valid = false; }
-    if (!valid) { showErr('설치 후기 항목을 모두 입력해 주세요.'); return; }
+    if (!valid) { if (ans.q0 && ans.q1 && ans.q2 && ans.q3) showErr('기본 정보를 모두 입력해 주세요.'); else showErr('설치 후기 항목을 모두 입력해 주세요.'); return; }
 
     const btn = document.getElementById('submitBtn');
     btn.disabled = true;
     btn.innerHTML = '<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i>&nbsp; 제출 중...';
 
-    const { db, collection, addDoc, serverTimestamp, storage, ref, uploadBytesResumable, getDownloadURL, auth, signInAnonymously } = window._firebase;
+    const { db, storage, collection, addDoc, serverTimestamp, ref } = window._firebase;
 
     try {
-      // 동영상은 Firebase Storage SDK로 업로드, 사진은 base64 그대로 저장
-      const mediaToStore = [];
-
-      for (let vi = 0; vi < mediaFiles.length; vi++) {
-        const m = mediaFiles[vi];
-        if (m.kind === 'photo') {
-          mediaToStore.push({ kind: 'photo', name: m.name, data: m.data });
-        } else {
-          btn.innerHTML = '<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i>&nbsp; 동영상 업로드 중...';
-          if (!auth.currentUser) await signInAnonymously(auth);
-          const fileName = `surveys/${Date.now()}_${m.name}`;
-          const storageRef = ref(storage, fileName);
-
-          const url = await new Promise((resolve, reject) => {
-            const task = uploadBytesResumable(storageRef, m.file);
-            const timer = setTimeout(() => {
-              task.cancel();
-              reject(new Error('동영상 업로드 시간 초과(60초). Firebase Storage 규칙을 확인해 주세요.'));
-            }, 60000);
-            task.on('state_changed', null,
-              (err) => { clearTimeout(timer); reject(new Error('동영상 업로드 실패: ' + (err.code || err.message))); },
-              async () => { clearTimeout(timer); resolve(await getDownloadURL(task.snapshot.ref)); }
-            );
-          });
-
-          mediaToStore.push({ kind: 'video', name: m.name, url, mime: m.mime });
-        }
+      // 1. Storage에 파일 업로드
+      const docId = Date.now().toString();
+      const uploaded = [];
+      for (let i = 0; i < mediaFiles.length; i++) {
+        const m = mediaFiles[i];
+        const ext = m.name.split('.').pop();
+        const path = `surveys/${docId}/${m.kind}_${i}.${ext}`;
+        const storageRef = ref(storage, path);
+        const url = await uploadFile(storageRef, m.file);
+        uploaded.push({ kind: m.kind, name: m.name, url });
       }
 
-      setProgress(90);
+      setProgress(100, '저장 중...');
+
+      // 2. Firestore에 메타데이터 저장
       await addDoc(collection(db, 'surveys'), {
         submittedAt:     serverTimestamp(),
         agency, name: uname, model,
@@ -378,11 +345,12 @@
         fanNoise:        ans.q2,
         combustionNoise: ans.q3,
         overallComment:  q4,
-        media:           mediaToStore
+        media:           uploaded
       });
-      setProgress(100);
+
       document.getElementById('formWrap').style.display = 'none';
       document.getElementById('success').style.display  = 'block';
+
     } catch (e) {
       console.error(e);
       showErr('제출 중 오류가 발생했습니다: ' + e.message);
@@ -392,7 +360,5 @@
   }
   window.submitForm = submitForm;
 </script>
-<style>@keyframes spin{to{transform:rotate(360deg)}}</style>
 </body>
 </html>
-
