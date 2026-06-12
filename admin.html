@@ -349,7 +349,7 @@
     document.getElementById('detailTitle').textContent = r.agency + ' · ' + r.name;
     const media = r.media || (r.photos ? r.photos.map(p => ({kind:'photo',name:p.name,data:p.data})) : []);
     const mediaHtml = media.map((m, mi) => {
-      if (m.kind === 'video') return `<div class="media-grid-item" onclick="openViewer(${idx},${mi})"><video src="${m.data}"></video><div class="play-icon"><i class="ti ti-player-play"></i></div></div>`;
+      if (m.kind === 'video') return `<div class="media-grid-item" onclick="openViewer(${idx},${mi})"><video src="${m.url || m.data}"></video><div class="play-icon"><i class="ti ti-player-play"></i></div></div>`;
       return `<div class="media-grid-item" onclick="openViewer(${idx},${mi})"><img src="${m.data}" alt="${m.name}"></div>`;
     }).join('');
 
@@ -434,7 +434,8 @@
     if (!m) return;
     const vc = document.getElementById('viewerContent');
     if (m.kind === 'video') {
-      vc.innerHTML = `<video src="${m.data}" controls autoplay style="max-width:92vw;max-height:88vh;border-radius:6px;outline:none"></video>`;
+      const src = m.url || m.data;
+      vc.innerHTML = `<video src="${src}" controls autoplay style="max-width:92vw;max-height:88vh;border-radius:6px;outline:none"></video>`;
     } else {
       vc.innerHTML = `<img src="${m.data}" style="max-width:92vw;max-height:88vh;border-radius:6px;object-fit:contain">`;
     }
