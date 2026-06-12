@@ -36,12 +36,12 @@
   .req { color: var(--red-text); }
   .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
-  input[type=text], input[type=date], textarea {
+  input[type=text], input[type=date], textarea, select {
     width: 100%; border: 1px solid var(--border); border-radius: var(--radius-sm);
     padding: 9px 12px; font-size: 14px; color: var(--text); background: #fff;
     outline: none; transition: border-color 0.15s; font-family: inherit;
   }
-  input:focus, textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(26,86,176,0.1); }
+  input:focus, textarea:focus, select:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(26,86,176,0.1); }
   textarea { resize: vertical; min-height: 88px; line-height: 1.6; }
 
   .q-label { font-size: 14px; font-weight: 500; line-height: 1.55; margin-bottom: 10px; display: flex; align-items: flex-start; gap: 8px; }
@@ -114,10 +114,38 @@
   <div id="formWrap">
     <div class="card">
       <div class="section-label"><i class="ti ti-user"></i> 기본 정보</div>
-      <div class="field"><label>대리점명 <span class="req">*</span></label><input type="text" id="agency" placeholder="대리점명을 입력하세요"></div>
+      <div class="field"><label>대리점명 <span class="req">*</span></label>
+      <select id="agency">
+        <option value="">-- 대리점을 선택하세요 --</option>
+        <option>서울도봉</option>
+        <option>남양주제일</option>
+        <option>부천북부</option>
+        <option>시흥북부</option>
+        <option>원주중부</option>
+        <option>천안동부</option>
+        <option>동대구</option>
+        <option>포항북구</option>
+        <option>사하남부</option>
+        <option>여수남부</option>
+        <option>전주동부</option>
+        <option>북전주</option>
+        <option>춘천</option>
+        <option>대전서구</option>
+        <option>안산</option>
+      </select></div>
       <div class="field"><label>담당자 이름 <span class="req">*</span></label><input type="text" id="uname" placeholder="이름을 입력하세요"></div>
       <div class="grid2">
-        <div class="field"><label>모델명 <span class="req">*</span></label><input type="text" id="model" placeholder="예) PB-2400"></div>
+        <div class="field"><label>모델명 <span class="req">*</span></label>
+        <select id="model">
+          <option value="">-- 모델명 선택 --</option>
+          <option>DiB-13K</option>
+          <option>DiB-16K</option>
+          <option>DOC-22K</option>
+          <option>DOC-27K</option>
+          <option>DQC-18K</option>
+          <option>DQC-22K</option>
+          <option>DQC-27K</option>
+        </select></div>
         <div class="field"><label>설치일자 <span class="req">*</span></label><input type="date" id="idate"></div>
       </div>
       <div class="field"><label>설치장소 <span class="req">*</span></label><input type="text" id="location" placeholder="예) 서울시 강남구 OO아파트 101동"></div>
@@ -138,9 +166,9 @@
       <div class="field">
         <div class="q-label"><span class="q-num">1</span><span>파란박스의 <strong>펌프 소음</strong>은 기존 모델보다 개선되었나요? <span class="req">*</span></span></div>
         <div class="btn-group" id="q1">
-          <button class="sel-btn" data-v="상" onclick="pick('q1',this,'high')">상 &nbsp;😊</button>
-          <button class="sel-btn" data-v="중" onclick="pick('q1',this,'mid')">중 &nbsp;😐</button>
-          <button class="sel-btn" data-v="하" onclick="pick('q1',this,'low')">하 &nbsp;😔</button>
+          <button class="sel-btn" data-v="좋음" onclick="pick('q1',this,'high')">좋음 &nbsp;😊</button>
+          <button class="sel-btn" data-v="보통" onclick="pick('q1',this,'mid')">보통 &nbsp;😐</button>
+          <button class="sel-btn" data-v="나쁨" onclick="pick('q1',this,'low')">나쁨 &nbsp;😔</button>
         </div>
         <div class="q-required-hint" id="hint-q1">⚠ 선택해 주세요.</div>
       </div>
@@ -148,9 +176,9 @@
       <div class="field">
         <div class="q-label"><span class="q-num">2</span><span>파란박스의 <strong>팬 소음</strong>은 기존 모델보다 개선되었나요? <span class="req">*</span></span></div>
         <div class="btn-group" id="q2">
-          <button class="sel-btn" data-v="상" onclick="pick('q2',this,'high')">상 &nbsp;😊</button>
-          <button class="sel-btn" data-v="중" onclick="pick('q2',this,'mid')">중 &nbsp;😐</button>
-          <button class="sel-btn" data-v="하" onclick="pick('q2',this,'low')">하 &nbsp;😔</button>
+          <button class="sel-btn" data-v="좋음" onclick="pick('q2',this,'high')">좋음 &nbsp;😊</button>
+          <button class="sel-btn" data-v="보통" onclick="pick('q2',this,'mid')">보통 &nbsp;😐</button>
+          <button class="sel-btn" data-v="나쁨" onclick="pick('q2',this,'low')">나쁨 &nbsp;😔</button>
         </div>
         <div class="q-required-hint" id="hint-q2">⚠ 선택해 주세요.</div>
       </div>
@@ -158,9 +186,9 @@
       <div class="field">
         <div class="q-label"><span class="q-num">3</span><span>파란박스의 <strong>점화 및 연소 소음</strong>은 기존 모델보다 개선되었나요? <span class="req">*</span></span></div>
         <div class="btn-group" id="q3">
-          <button class="sel-btn" data-v="상" onclick="pick('q3',this,'high')">상 &nbsp;😊</button>
-          <button class="sel-btn" data-v="중" onclick="pick('q3',this,'mid')">중 &nbsp;😐</button>
-          <button class="sel-btn" data-v="하" onclick="pick('q3',this,'low')">하 &nbsp;😔</button>
+          <button class="sel-btn" data-v="좋음" onclick="pick('q3',this,'high')">좋음 &nbsp;😊</button>
+          <button class="sel-btn" data-v="보통" onclick="pick('q3',this,'mid')">보통 &nbsp;😐</button>
+          <button class="sel-btn" data-v="나쁨" onclick="pick('q3',this,'low')">나쁨 &nbsp;😔</button>
         </div>
         <div class="q-required-hint" id="hint-q3">⚠ 선택해 주세요.</div>
       </div>
