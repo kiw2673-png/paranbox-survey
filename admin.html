@@ -282,7 +282,7 @@
 
   function badge(val) {
     if (!val) return '-';
-    const map = { '상': 'badge-high 상 😊', '중': 'badge-mid 중 😐', '하': 'badge-low 하 😔', '예': 'badge-yes 예', '아니오': 'badge-no 아니오' };
+    const map = { '좋음': 'badge-high 좋음 😊', '보통': 'badge-mid 보통 😐', '나쁨': 'badge-low 나쁨 😔', '예': 'badge-yes 예', '아니오': 'badge-no 아니오' };
     const m = map[val]; if (!m) return val;
     const [cls, ...txt] = m.split(' ');
     return `<span class="badge ${cls}">${txt.join(' ')}</span>`;
@@ -344,9 +344,9 @@
       <div class="modal-row"><span class="lbl">설치장소</span><input id="e-location" value="${r.location||''}"></div>
       <div class="modal-divider"></div>
       <div class="modal-row"><span class="lbl">사전 운전</span><select id="e-prerun">${sel('',r.preRun,['예','아니오'])}</select></div>
-      <div class="modal-row"><span class="lbl">펌프 소음</span><select id="e-pump">${sel('',r.pumpNoise,['상','중','하'])}</select></div>
-      <div class="modal-row"><span class="lbl">팬 소음</span><select id="e-fan">${sel('',r.fanNoise,['상','중','하'])}</select></div>
-      <div class="modal-row"><span class="lbl">연소 소음</span><select id="e-comb">${sel('',r.combustionNoise,['상','중','하'])}</select></div>
+      <div class="modal-row"><span class="lbl">펌프 소음</span><select id="e-pump">${sel('',r.pumpNoise,['좋음','보통','나쁨'])}</select></div>
+      <div class="modal-row"><span class="lbl">팬 소음</span><select id="e-fan">${sel('',r.fanNoise,['좋음','보통','나쁨'])}</select></div>
+      <div class="modal-row"><span class="lbl">연소 소음</span><select id="e-comb">${sel('',r.combustionNoise,['좋음','보통','나쁨'])}</select></div>
       <div class="modal-row" style="align-items:flex-start"><span class="lbl" style="margin-top:8px">전반적 의견</span><textarea id="e-comment">${r.overallComment||''}</textarea></div>
       ${mediaHtml ? `<div class="modal-divider"></div><div style="font-size:13px;font-weight:500;margin-bottom:8px">첨부 미디어 (${media.length}개) — 클릭하여 확대</div><div class="media-grid">${mediaHtml}</div>` : ''}
     `;
