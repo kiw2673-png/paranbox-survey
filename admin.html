@@ -202,6 +202,7 @@
     <div class="toolbar">
       <input type="text" id="searchInput" placeholder="대리점명, 이름, 모델명으로 검색..." oninput="renderTable()">
       <button class="icon-btn" onclick="loadData()"><i class="ti ti-refresh" id="refreshIcon"></i> 새로고침</button>
+      <button class="icon-btn" onclick="resetColWidths()" title="열 너비 초기화"><i class="ti ti-layout-columns"></i> 열 초기화</button>
       <button class="icon-btn green" onclick="downloadExcel()"><i class="ti ti-file-spreadsheet"></i> 엑셀 다운로드</button>
     </div>
 
@@ -319,6 +320,15 @@
     icon.classList.remove('spinning');
   }
   window.loadData = loadData;
+
+  function resetColWidths() {
+    localStorage.removeItem('paranbox_col_widths');
+    document.querySelectorAll('table thead th').forEach(th => {
+      th.style.width = '';
+      th.style.minWidth = '';
+    });
+  }
+  window.resetColWidths = resetColWidths;
 
   function saveColWidths() {
     const widths = {};
