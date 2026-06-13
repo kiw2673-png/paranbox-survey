@@ -493,27 +493,76 @@
 
   function downloadExcel() {
     if (!allData.length) { alert('다운로드할 데이터가 없습니다.'); return; }
-    const rows = allData.map((r, i) => {
+
+    let maxPhotos = 0, maxVideos = 0;
+    allData.forEach(r => {
+      const media = r.media || [];
+      const p = media.filter(m => m.kind === 'photo').length;
+      const v = media.filter(m => m.kind === 'video').length;
+      if (p > maxPhotos) maxPhotos = p;
+      if (v > maxVideos) maxVideos = v;
+    });
+
+    const BASE_COLS = 14;
+    const photoColStart = BASE_COLS;
+    const videoColStart = BASE_COLS + maxPhotos;
+
+    const headers = [
+      'NO', '제출일시', '대리점명', '담당자', '모델명',
+      '설치일자', '설치장소', '사전운전여부', '펌프소음개선',
+      '팬소음개선', '연소소음개선', '전반적의견', '사진수', '동영상수'
+    ];
+    for (let i = 1; i <= maxPhotos; i++) headers.push(`사진${i}`);
+    for (let i = 1; i <= maxVideos; i++) headers.push(`동영상${i}`);
+
+    const aoa = [headers];
+    allData.forEach((r, i) => {
       const media = r.media || [];
       const photos = media.filter(m => m.kind === 'photo');
       const videos = media.filter(m => m.kind === 'video');
-      const row = {
-        'NO': i + 1,
-        '제출일시': r.submittedAt ? (r.submittedAt.toDate ? r.submittedAt.toDate().toLocaleString('ko-KR') : r.submittedAt) : '',
-        '대리점명': r.agency||'', '담당자': r.name||'', '모델명': r.model||'',
-        '설치일자': r.installDate||'', '설치장소': r.location||'',
-        '사전운전여부': r.preRun||'', '펌프소음개선': r.pumpNoise||'',
-        '팬소음개선': r.fanNoise||'', '연소소음개선': r.combustionNoise||'',
-        '전반적의견': r.overallComment||'',
-        '사진수': photos.length, '동영상수': videos.length,
-      };
-      photos.forEach((p, pi) => { row[`사진${pi+1}_파일명`] = p.name; row[`사진${pi+1}_URL`] = p.url; });
-      videos.forEach((v, vi) => { row[`동영상${vi+1}_파일명`] = v.name; row[`동영상${vi+1}_URL`] = v.url; });
-      return row;
+      const row = [
+        i + 1,
+        r.submittedAt ? (r.submittedAt.toDate ? r.submittedAt.toDate().toLocaleString('ko-KR') : r.submittedAt) : '',
+        r.agency||'', r.name||'', r.model||'',
+        r.installDate||'', r.location||'',
+        r.preRun||'', r.pumpNoise||'', r.fanNoise||'', r.combustionNoise||'',
+        r.overallComment||'', photos.length, videos.length,
+      ];
+      for (let j = 0; j < maxPhotos; j++) row.push(photos[j] ? (photos[j].name || `사진${j+1}`) : '');
+      for (let j = 0; j < maxVideos; j++) row.push(videos[j] ? (videos[j].name || `동영상${j+1}`) : '');
+      aoa.push(row);
     });
+
     const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.json_to_sheet(rows);
-    ws['!cols'] = [{wch:6},{wch:20},{wch:16},{wch:10},{wch:12},{wch:12},{wch:24},{wch:12},{wch:12},{wch:10},{wch:12},{wch:40},{wch:6},{wch:8}];
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+
+    // 사진·동영상 셀에 하이퍼링크 추가 (파일명 표시 + 클릭 시 URL 열기)
+    allData.forEach((r, ri) => {
+      const media = r.media || [];
+      const photos = media.filter(m => m.kind === 'photo');
+      const videos = media.filter(m => m.kind === 'video');
+      photos.forEach((p, pi) => {
+        if (!p.url) return;
+        const addr = XLSX.utils.encode_cell({ r: ri + 1, c: photoColStart + pi });
+        if (!ws[addr]) ws[addr] = { t: 's', v: p.name || `사진${pi+1}` };
+        ws[addr].l = { Target: p.url };
+      });
+      videos.forEach((v, vi) => {
+        if (!v.url) return;
+        const addr = XLSX.utils.encode_cell({ r: ri + 1, c: videoColStart + vi });
+        if (!ws[addr]) ws[addr] = { t: 's', v: v.name || `동영상${vi+1}` };
+        ws[addr].l = { Target: v.url };
+      });
+    });
+
+    const cols = [
+      {wch:6},{wch:20},{wch:16},{wch:10},{wch:12},
+      {wch:12},{wch:24},{wch:12},{wch:12},{wch:10},
+      {wch:12},{wch:40},{wch:6},{wch:8},
+    ];
+    for (let i = 0; i < maxPhotos + maxVideos; i++) cols.push({wch:32});
+    ws['!cols'] = cols;
+
     XLSX.utils.book_append_sheet(wb, ws, '설치후기');
     XLSX.writeFile(wb, `파란박스_설치후기_${new Date().toISOString().slice(0,10)}.xlsx`);
   }
