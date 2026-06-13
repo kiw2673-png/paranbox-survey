@@ -344,6 +344,22 @@
     return d.toLocaleDateString('ko-KR') + ' ' + d.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
   }
 
+  function fmtDateShort(ts) {
+    if (!ts) return '-';
+    const d = ts.toDate ? ts.toDate() : new Date(ts);
+    const yy = String(d.getFullYear()).slice(2);
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${yy}.${mm}.${dd}`;
+  }
+
+  function fmtInstallDate(s) {
+    if (!s) return '-';
+    const p = s.split('-');
+    if (p.length !== 3) return s;
+    return `${p[0].slice(2)}.${p[1]}.${p[2]}`;
+  }
+
   function escHtml(s) {
     return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
@@ -386,12 +402,12 @@
 
       return `<tr class="data-row" onclick="toggleDetail('${r.id}')">
         <td class="no-col">${rowNo}</td>
-        <td style="white-space:nowrap;font-size:12px">${fmtDate(r.submittedAt)}</td>
+        <td style="white-space:nowrap;font-size:12px">${fmtDateShort(r.submittedAt)}</td>
         <td><strong>${escHtml(r.agency)||'-'}</strong></td>
         <td>${escHtml(r.name)||'-'}</td>
         <td>${escHtml(r.model)||'-'}</td>
-        <td style="white-space:nowrap">${r.installDate||'-'}</td>
-        <td style="max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(r.location)||''}">${escHtml(r.location)||'-'}</td>
+        <td style="white-space:nowrap">${fmtInstallDate(r.installDate)}</td>
+        <td style="max-width:130px;white-space:normal;word-break:keep-all;line-height:1.5">${escHtml(r.location)||'-'}</td>
         <td>${badge(r.preRun)}</td>
         <td>${badge(r.pumpNoise)}</td>
         <td>${badge(r.fanNoise)}</td>
