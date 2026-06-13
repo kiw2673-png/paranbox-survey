@@ -11,7 +11,7 @@
   :root {
     --blue: #1a56b0; --blue-light: #e6f1fb;
     --green: #3B6D11; --green-bg: #eaf3de; --green-border: #639922;
-    --amber-bg: #faeeda; --amber-text: #854F0B;
+    --amber-bg: #faeeda; --amber-text: #854F0B; --amber-border: #d4a55a;
     --red-bg: #fcebeb; --red-text: #A32D2D; --red-border: #E24B4A;
     --border: #e2e2e2; --text: #1a1a1a; --text-muted: #666;
     --bg: #f5f6f8; --card: #fff; --radius: 10px; --radius-sm: 6px;
@@ -37,10 +37,17 @@
 
   .content { max-width: 1200px; margin: 0 auto; padding: 1.5rem 1rem 3rem; }
 
-  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 1.25rem; }
+  /* 통계 카드 */
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 1.25rem; }
   .stat-card { background: var(--card); border: 0.5px solid var(--border); border-radius: var(--radius-sm); padding: 14px 16px; }
-  .stat-card .label { font-size: 12px; color: var(--text-muted); margin-bottom: 4px; }
+  .stat-card .label { font-size: 12px; color: var(--text-muted); margin-bottom: 4px; font-weight: 500; }
   .stat-card .value { font-size: 26px; font-weight: 600; color: var(--blue); }
+  .noise-counts { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .noise-count { font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 20px; display: inline-flex; align-items: center; gap: 4px; }
+  .noise-count .n { font-size: 15px; font-weight: 700; }
+  .noise-count.good { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); }
+  .noise-count.mid  { background: var(--amber-bg); color: var(--amber-text); border: 1px solid var(--amber-border); }
+  .noise-count.bad  { background: var(--red-bg); color: var(--red-text); border: 1px solid var(--red-border); }
 
   .toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 1rem; flex-wrap: wrap; }
   .toolbar input { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 12px; font-size: 13.5px; outline: none; font-family: inherit; flex: 1; min-width: 180px; }
@@ -51,11 +58,23 @@
   .icon-btn.green:hover { background: #27500A; }
 
   .table-wrap { background: var(--card); border: 0.5px solid var(--border); border-radius: var(--radius); overflow: auto; }
-  table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 900px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 950px; }
   th { background: #f8f9fa; padding: 10px 12px; text-align: left; font-size: 11.5px; font-weight: 600; color: var(--text-muted); border-bottom: 1px solid var(--border); white-space: nowrap; }
+  th.no-th { text-align: center; width: 44px; }
   td { padding: 9px 12px; border-bottom: 0.5px solid var(--border); vertical-align: middle; }
   tr:last-child td { border-bottom: none; }
-  tr:hover td { background: #fafafa; }
+  tr.data-row { cursor: pointer; }
+  tr.data-row:hover td { background: #fafafa; }
+  .no-col { text-align: center; color: var(--text-muted); font-size: 12px; }
+
+  /* 세부사항 확장 행 */
+  tr.detail-row { display: none; }
+  tr.detail-row.open { display: table-row; }
+  tr.detail-row td { padding: 0; border-bottom: 1px solid #c5d8f4; }
+  .detail-content { padding: 10px 20px 12px; background: var(--blue-light); border-left: 4px solid var(--blue); }
+  .detail-label { font-size: 11.5px; font-weight: 600; color: var(--blue); margin-bottom: 4px; display: flex; align-items: center; gap: 4px; }
+  .detail-text { font-size: 13px; color: var(--text); white-space: pre-wrap; line-height: 1.6; }
+  .detail-empty { font-size: 13px; color: var(--text-muted); font-style: italic; }
 
   .badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 20px; font-size: 11.5px; font-weight: 500; }
   .badge-high { background: var(--green-bg); color: var(--green); }
@@ -147,10 +166,34 @@
 
   <div class="content">
     <div class="stats">
-      <div class="stat-card"><div class="label">전체 응답</div><div class="value" id="statTotal">-</div></div>
-      <div class="stat-card"><div class="label">펌프소음 상</div><div class="value" id="statPump">-</div></div>
-      <div class="stat-card"><div class="label">팬소음 상</div><div class="value" id="statFan">-</div></div>
-      <div class="stat-card"><div class="label">연소소음 상</div><div class="value" id="statComb">-</div></div>
+      <div class="stat-card">
+        <div class="label">전체 응답</div>
+        <div class="value" id="statTotal">-</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">펌프 소음</div>
+        <div class="noise-counts">
+          <span class="noise-count good">좋음 <span class="n" id="statPumpGood">-</span></span>
+          <span class="noise-count mid">보통 <span class="n" id="statPumpMid">-</span></span>
+          <span class="noise-count bad">나쁨 <span class="n" id="statPumpBad">-</span></span>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="label">팬 소음</div>
+        <div class="noise-counts">
+          <span class="noise-count good">좋음 <span class="n" id="statFanGood">-</span></span>
+          <span class="noise-count mid">보통 <span class="n" id="statFanMid">-</span></span>
+          <span class="noise-count bad">나쁨 <span class="n" id="statFanBad">-</span></span>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="label">연소 소음</div>
+        <div class="noise-counts">
+          <span class="noise-count good">좋음 <span class="n" id="statCombGood">-</span></span>
+          <span class="noise-count mid">보통 <span class="n" id="statCombMid">-</span></span>
+          <span class="noise-count bad">나쁨 <span class="n" id="statCombBad">-</span></span>
+        </div>
+      </div>
     </div>
 
     <div class="toolbar">
@@ -163,6 +206,7 @@
       <table>
         <thead>
           <tr>
+            <th class="no-th">NO</th>
             <th>제출일시</th><th>대리점명</th><th>이름</th><th>모델명</th>
             <th>설치일자</th><th>설치장소</th><th>사전운전</th>
             <th>펌프</th><th>팬</th><th>연소</th><th>미디어</th><th>관리</th>
@@ -275,9 +319,15 @@
 
   function updateStats() {
     document.getElementById('statTotal').textContent = allData.length;
-    document.getElementById('statPump').textContent  = allData.filter(r => r.pumpNoise === '상').length;
-    document.getElementById('statFan').textContent   = allData.filter(r => r.fanNoise === '상').length;
-    document.getElementById('statComb').textContent  = allData.filter(r => r.combustionNoise === '상').length;
+    document.getElementById('statPumpGood').textContent = allData.filter(r => r.pumpNoise === '좋음').length;
+    document.getElementById('statPumpMid').textContent  = allData.filter(r => r.pumpNoise === '보통').length;
+    document.getElementById('statPumpBad').textContent  = allData.filter(r => r.pumpNoise === '나쁨').length;
+    document.getElementById('statFanGood').textContent  = allData.filter(r => r.fanNoise === '좋음').length;
+    document.getElementById('statFanMid').textContent   = allData.filter(r => r.fanNoise === '보통').length;
+    document.getElementById('statFanBad').textContent   = allData.filter(r => r.fanNoise === '나쁨').length;
+    document.getElementById('statCombGood').textContent = allData.filter(r => r.combustionNoise === '좋음').length;
+    document.getElementById('statCombMid').textContent  = allData.filter(r => r.combustionNoise === '보통').length;
+    document.getElementById('statCombBad').textContent  = allData.filter(r => r.combustionNoise === '나쁨').length;
   }
 
   function badge(val) {
@@ -294,31 +344,70 @@
     return d.toLocaleDateString('ko-KR') + ' ' + d.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
   }
 
+  function escHtml(s) {
+    return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function toggleDetail(id) {
+    const row = document.getElementById('detail-' + id);
+    if (!row) return;
+    if (row.classList.contains('open')) {
+      row.classList.remove('open');
+      row.style.display = 'none';
+    } else {
+      row.classList.add('open');
+      row.style.display = 'table-row';
+    }
+  }
+  window.toggleDetail = toggleDetail;
+
   function renderTable() {
     const q = document.getElementById('searchInput').value.toLowerCase();
     const filtered = allData.filter(r => !q || [r.agency,r.name,r.model,r.location].some(v => v && v.toLowerCase().includes(q)));
     const body = document.getElementById('tableBody'), empty = document.getElementById('emptyMsg');
-    if (!filtered.length) { body.innerHTML = ''; empty.style.display = 'block'; empty.textContent = allData.length ? '검색 결과가 없습니다.' : '아직 응답이 없습니다.'; return; }
+    if (!filtered.length) {
+      body.innerHTML = '';
+      empty.style.display = 'block';
+      empty.textContent = allData.length ? '검색 결과가 없습니다.' : '아직 응답이 없습니다.';
+      return;
+    }
     empty.style.display = 'none';
 
-    body.innerHTML = filtered.map(r => {
+    body.innerHTML = filtered.map((r, fi) => {
       const media = r.media || [];
       const idx = allData.indexOf(r);
+      const rowNo = fi + 1;
       const thumbs = media.slice(0, 4).map((m, mi) => {
-        if (m.kind === 'video') return `<div class="video-thumb" onclick="openViewer(${idx},${mi})" title="${m.name}"><i class="ti ti-player-play"></i></div>`;
-        return `<img class="thumb" src="${m.url}" onclick="openViewer(${idx},${mi})" title="${m.name}">`;
+        if (m.kind === 'video') return `<div class="video-thumb" onclick="event.stopPropagation();openViewer(${idx},${mi})" title="${escHtml(m.name)}"><i class="ti ti-player-play"></i></div>`;
+        return `<img class="thumb" src="${m.url}" onclick="event.stopPropagation();openViewer(${idx},${mi})" title="${escHtml(m.name)}">`;
       }).join('') + (media.length > 4 ? `<span style="font-size:11px;color:var(--text-muted)">+${media.length-4}</span>` : '');
 
-      return `<tr>
+      const comment = escHtml(r.overallComment || '');
+
+      return `<tr class="data-row" onclick="toggleDetail('${r.id}')">
+        <td class="no-col">${rowNo}</td>
         <td style="white-space:nowrap;font-size:12px">${fmtDate(r.submittedAt)}</td>
-        <td><strong>${r.agency||'-'}</strong></td><td>${r.name||'-'}</td><td>${r.model||'-'}</td>
+        <td><strong>${escHtml(r.agency)||'-'}</strong></td>
+        <td>${escHtml(r.name)||'-'}</td>
+        <td>${escHtml(r.model)||'-'}</td>
         <td style="white-space:nowrap">${r.installDate||'-'}</td>
-        <td style="max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.location||''}">${r.location||'-'}</td>
-        <td>${badge(r.preRun)}</td><td>${badge(r.pumpNoise)}</td><td>${badge(r.fanNoise)}</td><td>${badge(r.combustionNoise)}</td>
+        <td style="max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(r.location)||''}">${escHtml(r.location)||'-'}</td>
+        <td>${badge(r.preRun)}</td>
+        <td>${badge(r.pumpNoise)}</td>
+        <td>${badge(r.fanNoise)}</td>
+        <td>${badge(r.combustionNoise)}</td>
         <td><div class="media-cell">${thumbs||'-'}</div></td>
-        <td style="white-space:nowrap">
+        <td style="white-space:nowrap" onclick="event.stopPropagation()">
           <button class="action-btn" onclick="openDetail(${idx})"><i class="ti ti-edit"></i> 수정</button>
           <button class="action-btn del" onclick="openDelete(${idx})"><i class="ti ti-trash"></i></button>
+        </td>
+      </tr>
+      <tr class="detail-row" id="detail-${r.id}">
+        <td colspan="13">
+          <div class="detail-content">
+            <div class="detail-label"><i class="ti ti-message-dots"></i> 전반적 의견</div>
+            ${comment ? `<div class="detail-text">${comment}</div>` : '<div class="detail-empty">의견이 없습니다.</div>'}
+          </div>
         </td>
       </tr>`;
     }).join('');
@@ -327,27 +416,27 @@
 
   function openDetail(idx) {
     const r = allData[idx]; editingId = r.id;
-    document.getElementById('detailTitle').textContent = r.agency + ' · ' + r.name;
+    document.getElementById('detailTitle').textContent = (r.agency || '') + ' · ' + (r.name || '');
     const media = r.media || [];
     const mediaHtml = media.map((m, mi) => {
       if (m.kind === 'video') return `<div class="media-grid-item" onclick="openViewer(${idx},${mi})"><video src="${m.url}"></video><div class="play-icon"><i class="ti ti-player-play"></i></div></div>`;
-      return `<div class="media-grid-item" onclick="openViewer(${idx},${mi})"><img src="${m.url}" alt="${m.name}"></div>`;
+      return `<div class="media-grid-item" onclick="openViewer(${idx},${mi})"><img src="${m.url}" alt="${escHtml(m.name)}"></div>`;
     }).join('');
     const sel = (v, cur, opts) => opts.map(o => `<option value="${o}" ${o===cur?'selected':''}>${o}</option>`).join('');
 
     document.getElementById('detailBody').innerHTML = `
       <div class="modal-row"><span class="lbl">제출일시</span><span class="val">${fmtDate(r.submittedAt)}</span></div>
-      <div class="modal-row"><span class="lbl">대리점명</span><input id="e-agency" value="${r.agency||''}"></div>
-      <div class="modal-row"><span class="lbl">담당자</span><input id="e-name" value="${r.name||''}"></div>
-      <div class="modal-row"><span class="lbl">모델명</span><input id="e-model" value="${r.model||''}"></div>
+      <div class="modal-row"><span class="lbl">대리점명</span><input id="e-agency" value="${escHtml(r.agency||'')}"></div>
+      <div class="modal-row"><span class="lbl">담당자</span><input id="e-name" value="${escHtml(r.name||'')}"></div>
+      <div class="modal-row"><span class="lbl">모델명</span><input id="e-model" value="${escHtml(r.model||'')}"></div>
       <div class="modal-row"><span class="lbl">설치일자</span><input type="date" id="e-date" value="${r.installDate||''}"></div>
-      <div class="modal-row"><span class="lbl">설치장소</span><input id="e-location" value="${r.location||''}"></div>
+      <div class="modal-row"><span class="lbl">설치장소</span><input id="e-location" value="${escHtml(r.location||'')}"></div>
       <div class="modal-divider"></div>
       <div class="modal-row"><span class="lbl">사전 운전</span><select id="e-prerun">${sel('',r.preRun,['예','아니오'])}</select></div>
       <div class="modal-row"><span class="lbl">펌프 소음</span><select id="e-pump">${sel('',r.pumpNoise,['좋음','보통','나쁨'])}</select></div>
       <div class="modal-row"><span class="lbl">팬 소음</span><select id="e-fan">${sel('',r.fanNoise,['좋음','보통','나쁨'])}</select></div>
       <div class="modal-row"><span class="lbl">연소 소음</span><select id="e-comb">${sel('',r.combustionNoise,['좋음','보통','나쁨'])}</select></div>
-      <div class="modal-row" style="align-items:flex-start"><span class="lbl" style="margin-top:8px">전반적 의견</span><textarea id="e-comment">${r.overallComment||''}</textarea></div>
+      <div class="modal-row" style="align-items:flex-start"><span class="lbl" style="margin-top:8px">전반적 의견</span><textarea id="e-comment">${escHtml(r.overallComment||'')}</textarea></div>
       ${mediaHtml ? `<div class="modal-divider"></div><div style="font-size:13px;font-weight:500;margin-bottom:8px">첨부 미디어 (${media.length}개) — 클릭하여 확대</div><div class="media-grid">${mediaHtml}</div>` : ''}
     `;
     document.getElementById('detailModal').classList.add('open');
@@ -404,11 +493,12 @@
 
   function downloadExcel() {
     if (!allData.length) { alert('다운로드할 데이터가 없습니다.'); return; }
-    const rows = allData.map(r => {
+    const rows = allData.map((r, i) => {
       const media = r.media || [];
       const photos = media.filter(m => m.kind === 'photo');
       const videos = media.filter(m => m.kind === 'video');
       const row = {
+        'NO': i + 1,
         '제출일시': r.submittedAt ? (r.submittedAt.toDate ? r.submittedAt.toDate().toLocaleString('ko-KR') : r.submittedAt) : '',
         '대리점명': r.agency||'', '담당자': r.name||'', '모델명': r.model||'',
         '설치일자': r.installDate||'', '설치장소': r.location||'',
@@ -417,13 +507,13 @@
         '전반적의견': r.overallComment||'',
         '사진수': photos.length, '동영상수': videos.length,
       };
-      photos.forEach((p, i) => { row[`사진${i+1}_파일명`] = p.name; row[`사진${i+1}_URL`] = p.url; });
-      videos.forEach((v, i) => { row[`동영상${i+1}_파일명`] = v.name; row[`동영상${i+1}_URL`] = v.url; });
+      photos.forEach((p, pi) => { row[`사진${pi+1}_파일명`] = p.name; row[`사진${pi+1}_URL`] = p.url; });
+      videos.forEach((v, vi) => { row[`동영상${vi+1}_파일명`] = v.name; row[`동영상${vi+1}_URL`] = v.url; });
       return row;
     });
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.json_to_sheet(rows);
-    ws['!cols'] = [{wch:20},{wch:16},{wch:10},{wch:12},{wch:12},{wch:24},{wch:12},{wch:12},{wch:10},{wch:12},{wch:40},{wch:6},{wch:8}];
+    ws['!cols'] = [{wch:6},{wch:20},{wch:16},{wch:10},{wch:12},{wch:12},{wch:24},{wch:12},{wch:12},{wch:10},{wch:12},{wch:40},{wch:6},{wch:8}];
     XLSX.utils.book_append_sheet(wb, ws, '설치후기');
     XLSX.writeFile(wb, `파란박스_설치후기_${new Date().toISOString().slice(0,10)}.xlsx`);
   }
