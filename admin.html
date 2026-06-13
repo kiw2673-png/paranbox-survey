@@ -320,7 +320,25 @@
   }
   window.loadData = loadData;
 
+  function saveColWidths() {
+    const widths = {};
+    document.querySelectorAll('table thead th').forEach((th, i) => {
+      if (th.style.width) widths[i] = th.style.width;
+    });
+    localStorage.setItem('paranbox_col_widths', JSON.stringify(widths));
+  }
+
+  function restoreColWidths() {
+    try {
+      const saved = JSON.parse(localStorage.getItem('paranbox_col_widths') || '{}');
+      document.querySelectorAll('table thead th').forEach((th, i) => {
+        if (saved[i]) { th.style.width = saved[i]; th.style.minWidth = saved[i]; }
+      });
+    } catch {}
+  }
+
   function initResizableCols() {
+    restoreColWidths();
     const ths = document.querySelectorAll('table thead th');
     ths.forEach(th => {
       const old = th.querySelector('.col-resize-handle');
@@ -343,6 +361,7 @@
           handle.classList.remove('dragging');
           document.removeEventListener('mousemove', onMove);
           document.removeEventListener('mouseup', onUp);
+          saveColWidths();
         };
         document.addEventListener('mousemove', onMove);
         document.addEventListener('mouseup', onUp);
