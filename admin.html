@@ -6,18 +6,20 @@
 <title>파란박스 설문 관리자</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
     --blue: #1a56b0; --blue-light: #e6f1fb;
     --green: #3B6D11; --green-bg: #eaf3de; --green-border: #639922;
-    --amber-bg: #faeeda; --amber-text: #854F0B; --amber-border: #d4a55a;
+    --amber-bg: #faeeda; --amber-text: #854F0B;
     --red-bg: #fcebeb; --red-text: #A32D2D; --red-border: #E24B4A;
     --border: #e2e2e2; --text: #1a1a1a; --text-muted: #666;
     --bg: #f5f6f8; --card: #fff; --radius: 10px; --radius-sm: 6px;
   }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); }
 
+  /* Login */
   .login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1rem; }
   .login-card { background: var(--card); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 2rem; width: 100%; max-width: 360px; text-align: center; }
   .login-card h1 { font-size: 18px; margin-bottom: 4px; }
@@ -28,6 +30,7 @@
   .login-btn:hover { background: #154698; }
   .login-err { color: var(--red-text); font-size: 13px; margin-top: 8px; display: none; }
 
+  /* Admin */
   .admin { display: none; min-height: 100vh; }
   .topbar { background: var(--blue); color: #fff; padding: 0 1.5rem; height: 54px; display: flex; align-items: center; justify-content: space-between; }
   .topbar h1 { font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
@@ -37,18 +40,13 @@
 
   .content { max-width: 1200px; margin: 0 auto; padding: 1.5rem 1rem 3rem; }
 
-  /* 통계 카드 */
-  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 1.25rem; }
+  /* Stats */
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 1.25rem; }
   .stat-card { background: var(--card); border: 0.5px solid var(--border); border-radius: var(--radius-sm); padding: 14px 16px; }
-  .stat-card .label { font-size: 12px; color: var(--text-muted); margin-bottom: 4px; font-weight: 500; }
+  .stat-card .label { font-size: 12px; color: var(--text-muted); margin-bottom: 4px; }
   .stat-card .value { font-size: 26px; font-weight: 600; color: var(--blue); }
-  .noise-counts { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
-  .noise-count { font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 20px; display: inline-flex; align-items: center; gap: 4px; }
-  .noise-count .n { font-size: 15px; font-weight: 700; }
-  .noise-count.good { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); }
-  .noise-count.mid  { background: var(--amber-bg); color: var(--amber-text); border: 1px solid var(--amber-border); }
-  .noise-count.bad  { background: var(--red-bg); color: var(--red-text); border: 1px solid var(--red-border); }
 
+  /* Toolbar */
   .toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 1rem; flex-wrap: wrap; }
   .toolbar input { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 12px; font-size: 13.5px; outline: none; font-family: inherit; flex: 1; min-width: 180px; }
   .toolbar input:focus { border-color: var(--blue); }
@@ -57,27 +55,13 @@
   .icon-btn.green { background: var(--green); color: #fff; border-color: var(--green); }
   .icon-btn.green:hover { background: #27500A; }
 
+  /* Table */
   .table-wrap { background: var(--card); border: 0.5px solid var(--border); border-radius: var(--radius); overflow: auto; }
-  table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 950px; table-layout: fixed; }
-  th { background: #f8f9fa; padding: 10px 12px; text-align: left; font-size: 11.5px; font-weight: 600; color: var(--text-muted); border-bottom: 1px solid var(--border); white-space: nowrap; position: relative; overflow: hidden; }
-  th.no-th { text-align: center; width: 44px; }
-  td { padding: 9px 12px; border-bottom: 0.5px solid var(--border); vertical-align: middle; overflow: hidden; text-overflow: ellipsis; }
-  .col-resize-handle { position: absolute; right: 0; top: 0; bottom: 0; width: 6px; cursor: col-resize; z-index: 1; }
-  .col-resize-handle:hover, .col-resize-handle.dragging { background: var(--blue); opacity: 0.45; }
-  .loc-cell { white-space: normal; word-break: keep-all; line-height: 1.5; overflow: visible; text-overflow: unset; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 900px; }
+  th { background: #f8f9fa; padding: 10px 12px; text-align: left; font-size: 11.5px; font-weight: 600; color: var(--text-muted); border-bottom: 1px solid var(--border); white-space: nowrap; }
+  td { padding: 9px 12px; border-bottom: 0.5px solid var(--border); vertical-align: middle; }
   tr:last-child td { border-bottom: none; }
-  tr.data-row { cursor: pointer; }
-  tr.data-row:hover td { background: #fafafa; }
-  .no-col { text-align: center; color: var(--text-muted); font-size: 12px; }
-
-  /* 세부사항 확장 행 */
-  tr.detail-row { display: none; }
-  tr.detail-row.open { display: table-row; }
-  tr.detail-row td { padding: 0; border-bottom: 1px solid #c5d8f4; }
-  .detail-content { padding: 10px 20px 12px; background: var(--blue-light); border-left: 4px solid var(--blue); }
-  .detail-label { font-size: 11.5px; font-weight: 600; color: var(--blue); margin-bottom: 4px; display: flex; align-items: center; gap: 4px; }
-  .detail-text { font-size: 13px; color: var(--text); white-space: pre-wrap; line-height: 1.6; }
-  .detail-empty { font-size: 13px; color: var(--text-muted); font-style: italic; }
+  tr:hover td { background: #fafafa; }
 
   .badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 20px; font-size: 11.5px; font-weight: 500; }
   .badge-high { background: var(--green-bg); color: var(--green); }
@@ -86,11 +70,9 @@
   .badge-yes  { background: var(--blue-light); color: var(--blue); }
   .badge-no   { background: #f1f1f1; color: #555; }
 
-  .media-cell { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
-  .thumb { width: 36px; height: 36px; border-radius: 4px; object-fit: cover; border: 1px solid var(--border); cursor: pointer; transition: opacity 0.15s; }
-  .thumb:hover { opacity: 0.8; }
-  .video-thumb { width: 36px; height: 36px; border-radius: 4px; border: 1px solid var(--border); background: #222; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background 0.15s; }
-  .video-thumb:hover { background: #333; }
+  .media-cell { display: flex; gap: 4px; flex-wrap: wrap; }
+  .thumb { width: 36px; height: 36px; border-radius: 4px; object-fit: cover; border: 1px solid var(--border); cursor: pointer; }
+  .video-thumb { width: 36px; height: 36px; border-radius: 4px; border: 1px solid var(--border); background: #111; display: flex; align-items: center; justify-content: center; cursor: pointer; }
   .video-thumb i { color: #fff; font-size: 14px; }
 
   .action-btn { background: none; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 4px 9px; font-size: 12px; cursor: pointer; font-family: inherit; color: var(--text-muted); margin-right: 4px; }
@@ -99,44 +81,43 @@
 
   .empty { text-align: center; padding: 3rem; color: var(--text-muted); font-size: 14px; }
 
-  /* Modals */
-  .modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 1000; align-items: center; justify-content: center; padding: 1rem; }
+  /* Modal base */
+  .modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 1000; align-items: center; justify-content: center; padding: 1rem; overflow-y: auto; }
   .modal-bg.open { display: flex; }
   .modal { background: var(--card); border-radius: var(--radius); width: 100%; max-height: 90vh; overflow-y: auto; padding: 1.5rem; }
-  .modal.sm { max-width: 460px; }
+  .modal.sm { max-width: 480px; }
   .modal.lg { max-width: 680px; }
   .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
   .modal-header h2 { font-size: 16px; }
   .modal-close { background: none; border: none; font-size: 22px; cursor: pointer; color: var(--text-muted); line-height: 1; padding: 2px 6px; }
-  .modal-row { display: flex; gap: 8px; margin-bottom: 10px; font-size: 13.5px; align-items: center; }
+  .modal-row { display: flex; gap: 8px; margin-bottom: 10px; font-size: 13.5px; }
   .modal-row .lbl { width: 110px; flex-shrink: 0; color: var(--text-muted); font-weight: 500; }
   .modal-row .val { flex: 1; line-height: 1.6; }
   .modal-row input, .modal-row select, .modal-row textarea { flex: 1; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 6px 10px; font-size: 13.5px; font-family: inherit; outline: none; }
   .modal-row input:focus, .modal-row select:focus, .modal-row textarea:focus { border-color: var(--blue); }
-  .modal-row textarea { min-height: 70px; resize: vertical; align-self: flex-start; }
+  .modal-row textarea { min-height: 70px; resize: vertical; }
   .modal-divider { height: 1px; background: var(--border); margin: 12px 0; }
   .modal-footer { display: flex; gap: 8px; justify-content: flex-end; margin-top: 1rem; }
-  .modal-footer button { padding: 9px 18px; border-radius: var(--radius-sm); font-size: 13.5px; font-weight: 500; cursor: pointer; font-family: inherit; border: 1px solid var(--border); display: flex; align-items: center; gap: 5px; }
+  .modal-footer button { padding: 9px 18px; border-radius: var(--radius-sm); font-size: 13.5px; font-weight: 500; cursor: pointer; font-family: inherit; border: 1px solid var(--border); }
   .modal-footer .btn-primary { background: var(--blue); color: #fff; border-color: var(--blue); }
   .modal-footer .btn-primary:hover { background: #154698; }
   .modal-footer .btn-danger { background: var(--red-bg); color: var(--red-text); border-color: var(--red-border); }
   .modal-footer .btn-cancel { background: #fff; color: var(--text-muted); }
 
-  /* 미디어 그리드 */
-  .media-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 8px; margin-top: 8px; }
-  .media-grid-item { border-radius: var(--radius-sm); overflow: hidden; border: 1px solid var(--border); aspect-ratio: 1; cursor: pointer; background: #000; display: flex; align-items: center; justify-content: center; position: relative; transition: opacity 0.15s; }
-  .media-grid-item:hover { opacity: 0.85; }
-  .media-grid-item img { width: 100%; height: 100%; object-fit: cover; }
-  .media-grid-item .play-icon { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.35); }
-  .media-grid-item .play-icon i { color: #fff; font-size: 30px; }
-
   /* 미디어 뷰어 */
-  .media-viewer { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.93); z-index: 2000; align-items: center; justify-content: center; flex-direction: column; }
+  .media-viewer { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 2000; align-items: center; justify-content: center; }
   .media-viewer.open { display: flex; }
-  .viewer-close { position: absolute; top: 16px; right: 20px; background: rgba(255,255,255,0.15); border: none; color: #fff; font-size: 20px; cursor: pointer; border-radius: 50%; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; z-index: 10; }
-  .viewer-close:hover { background: rgba(255,255,255,0.25); }
-  #viewerContent img { max-width: 92vw; max-height: 88vh; object-fit: contain; border-radius: 6px; display: block; }
-  #viewerContent video { max-width: 92vw; max-height: 88vh; border-radius: 6px; outline: none; display: block; }
+  .media-viewer img { max-width: 92vw; max-height: 88vh; border-radius: 6px; object-fit: contain; }
+  .media-viewer video { max-width: 92vw; max-height: 88vh; border-radius: 6px; outline: none; }
+  .viewer-close { position: absolute; top: 16px; right: 20px; background: rgba(255,255,255,0.15); border: none; color: #fff; font-size: 22px; cursor: pointer; border-radius: 50%; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; }
+
+  /* 미디어 그리드 (상세 모달) */
+  .media-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 8px; margin-top: 8px; }
+  .media-grid-item { border-radius: var(--radius-sm); overflow: hidden; border: 1px solid var(--border); aspect-ratio: 1; cursor: pointer; background: #000; display: flex; align-items: center; justify-content: center; position: relative; }
+  .media-grid-item img { width: 100%; height: 100%; object-fit: cover; }
+  .media-grid-item video { width: 100%; height: 100%; object-fit: cover; }
+  .media-grid-item .play-icon { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.3); }
+  .media-grid-item .play-icon i { color: #fff; font-size: 28px; }
 
   @keyframes spin { to { transform: rotate(360deg); } }
   .spinning { animation: spin 1s linear infinite; display: inline-block; }
@@ -144,6 +125,7 @@
 </head>
 <body>
 
+<!-- Login -->
 <div class="login-wrap" id="loginWrap">
   <div class="login-card">
     <div style="font-size:32px;margin-bottom:10px">🔒</div>
@@ -156,11 +138,11 @@
   </div>
 </div>
 
+<!-- Admin -->
 <div class="admin" id="adminWrap">
   <div class="topbar">
-    <h1><i class="ti ti-box"></i> 파란박스 설문 관리자 <span style="background:rgba(255,255,255,0.2);font-size:11px;padding:2px 8px;border-radius:20px;font-weight:500;letter-spacing:0.03em">v2.0</span></h1>
+    <h1><i class="ti ti-box"></i> 파란박스 설문 관리자</h1>
     <div class="topbar-right">
-      <span style="font-size:11px;opacity:0.55">v2.0.0</span>
       <span id="userEmail" style="font-size:13px;opacity:0.85"></span>
       <a class="topbar-btn" href="index.html"><i class="ti ti-forms"></i> 설문지</a>
       <button class="topbar-btn" onclick="doLogout()"><i class="ti ti-logout"></i> 로그아웃</button>
@@ -168,49 +150,25 @@
   </div>
 
   <div class="content">
-    <div class="stats">
-      <div class="stat-card">
-        <div class="label">전체 응답</div>
-        <div class="value" id="statTotal">-</div>
-      </div>
-      <div class="stat-card">
-        <div class="label">펌프 소음</div>
-        <div class="noise-counts">
-          <span class="noise-count good">좋음 <span class="n" id="statPumpGood">-</span></span>
-          <span class="noise-count mid">보통 <span class="n" id="statPumpMid">-</span></span>
-          <span class="noise-count bad">나쁨 <span class="n" id="statPumpBad">-</span></span>
-        </div>
-      </div>
-      <div class="stat-card">
-        <div class="label">팬 소음</div>
-        <div class="noise-counts">
-          <span class="noise-count good">좋음 <span class="n" id="statFanGood">-</span></span>
-          <span class="noise-count mid">보통 <span class="n" id="statFanMid">-</span></span>
-          <span class="noise-count bad">나쁨 <span class="n" id="statFanBad">-</span></span>
-        </div>
-      </div>
-      <div class="stat-card">
-        <div class="label">연소 소음</div>
-        <div class="noise-counts">
-          <span class="noise-count good">좋음 <span class="n" id="statCombGood">-</span></span>
-          <span class="noise-count mid">보통 <span class="n" id="statCombMid">-</span></span>
-          <span class="noise-count bad">나쁨 <span class="n" id="statCombBad">-</span></span>
-        </div>
-      </div>
+    <div class="stats" id="statsArea">
+      <div class="stat-card"><div class="label">전체 응답</div><div class="value" id="statTotal">-</div></div>
+      <div class="stat-card"><div class="label">펌프소음 상</div><div class="value" id="statPump">-</div></div>
+      <div class="stat-card"><div class="label">팬소음 상</div><div class="value" id="statFan">-</div></div>
+      <div class="stat-card"><div class="label">연소소음 상</div><div class="value" id="statComb">-</div></div>
     </div>
 
     <div class="toolbar">
       <input type="text" id="searchInput" placeholder="대리점명, 이름, 모델명으로 검색..." oninput="renderTable()">
       <button class="icon-btn" onclick="loadData()"><i class="ti ti-refresh" id="refreshIcon"></i> 새로고침</button>
-      <button class="icon-btn" onclick="resetColWidths()" title="열 너비 초기화"><i class="ti ti-layout-columns"></i> 열 초기화</button>
       <button class="icon-btn green" onclick="downloadExcel()"><i class="ti ti-file-spreadsheet"></i> 엑셀 다운로드</button>
+      <button class="icon-btn" onclick="document.getElementById('xlsxUploadInput').click()"><i class="ti ti-upload"></i> 엑셀 업로드</button>
+      <input type="file" id="xlsxUploadInput" accept=".xlsx,.xls" style="display:none" onchange="parseExcelUpload(this)">
     </div>
 
     <div class="table-wrap">
       <table>
         <thead>
           <tr>
-            <th class="no-th">NO</th>
             <th>제출일시</th><th>대리점명</th><th>이름</th><th>모델명</th>
             <th>설치일자</th><th>설치장소</th><th>사전운전</th>
             <th>펌프</th><th>팬</th><th>연소</th><th>미디어</th><th>관리</th>
@@ -223,16 +181,16 @@
   </div>
 </div>
 
-<!-- 수정 모달 -->
+<!-- 상세/수정 모달 -->
 <div class="modal-bg" id="detailModal" onclick="if(event.target===this)closeModal('detailModal')">
   <div class="modal lg">
     <div class="modal-header">
-      <h2 id="detailTitle">응답 수정</h2>
+      <h2 id="detailTitle">응답 상세</h2>
       <button class="modal-close" onclick="closeModal('detailModal')">✕</button>
     </div>
     <div id="detailBody"></div>
     <div class="modal-footer">
-      <button class="modal-footer btn-cancel" onclick="closeModal('detailModal')">취소</button>
+      <button class="modal-footer btn-cancel" onclick="closeModal('detailModal')">닫기</button>
       <button class="modal-footer btn-primary" onclick="saveEdit()"><i class="ti ti-device-floppy"></i> 저장</button>
     </div>
   </div>
@@ -245,10 +203,25 @@
       <h2>응답 삭제</h2>
       <button class="modal-close" onclick="closeModal('deleteModal')">✕</button>
     </div>
-    <p style="font-size:14px;color:var(--text-muted);line-height:1.7">이 응답을 삭제하면 복구할 수 없습니다.<br>정말 삭제하시겠습니까?</p>
+    <p style="font-size:14px;color:var(--text-muted);line-height:1.6">이 응답을 삭제하면 복구할 수 없습니다.<br>정말 삭제하시겠습니까?</p>
     <div class="modal-footer">
       <button class="modal-footer btn-cancel" onclick="closeModal('deleteModal')">취소</button>
       <button class="modal-footer btn-danger" onclick="confirmDelete()"><i class="ti ti-trash"></i> 삭제</button>
+    </div>
+  </div>
+</div>
+
+<!-- 엑셀 업로드 모달 -->
+<div class="modal-bg" id="uploadModal" onclick="if(event.target===this)closeModal('uploadModal')">
+  <div class="modal lg">
+    <div class="modal-header">
+      <h2><i class="ti ti-upload" style="font-size:16px"></i> 엑셀 업로드</h2>
+      <button class="modal-close" onclick="closeModal('uploadModal')">✕</button>
+    </div>
+    <div id="uploadPreview"></div>
+    <div class="modal-footer">
+      <button class="modal-footer btn-cancel" onclick="closeModal('uploadModal')">취소</button>
+      <button class="modal-footer btn-primary" id="uploadConfirmBtn" onclick="confirmUpload()"><i class="ti ti-upload"></i> 등록</button>
     </div>
   </div>
 </div>
@@ -261,7 +234,7 @@
 
 <script type="module">
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-  import { getFirestore, collection, getDocs, doc, updateDoc, deleteDoc, orderBy, query } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+  import { getFirestore, collection, getDocs, doc, updateDoc, deleteDoc, orderBy, query, addDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
   import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 
   const firebaseConfig = {
@@ -276,29 +249,32 @@
   const app  = initializeApp(firebaseConfig);
   const db   = getFirestore(app);
   const auth = getAuth(app);
-  window._fb = { db, auth, collection, getDocs, doc, updateDoc, deleteDoc, orderBy, query, signInWithEmailAndPassword, signOut, onAuthStateChanged };
+
+  window._fb = { db, auth, collection, getDocs, doc, updateDoc, deleteDoc, orderBy, query, addDoc, serverTimestamp, signInWithEmailAndPassword, signOut, onAuthStateChanged };
 
   onAuthStateChanged(auth, user => {
     if (user) {
-      document.getElementById('loginWrap').style.display = 'none';
-      document.getElementById('adminWrap').style.display = 'block';
-      document.getElementById('userEmail').textContent   = user.email;
+      document.getElementById('loginWrap').style.display  = 'none';
+      document.getElementById('adminWrap').style.display  = 'block';
+      document.getElementById('userEmail').textContent    = user.email;
       loadData();
     } else {
-      document.getElementById('loginWrap').style.display = 'flex';
-      document.getElementById('adminWrap').style.display = 'none';
+      document.getElementById('loginWrap').style.display  = 'flex';
+      document.getElementById('adminWrap').style.display  = 'none';
     }
   });
 </script>
 
 <script>
-  let allData = [], editingId = null, deletingId = null;
+  let allData = [];
+  let editingId = null;
+  let deletingId = null;
 
   async function doLogin() {
     const email = document.getElementById('loginEmail').value.trim();
     const pw    = document.getElementById('loginPw').value;
     try { await window._fb.signInWithEmailAndPassword(window._fb.auth, email, pw); }
-    catch { document.getElementById('loginErr').style.display = 'block'; }
+    catch (e) { document.getElementById('loginErr').style.display = 'block'; }
   }
   window.doLogin = doLogin;
 
@@ -311,94 +287,31 @@
     document.getElementById('emptyMsg').style.display = 'block';
     document.getElementById('emptyMsg').textContent = '데이터를 불러오는 중...';
     document.getElementById('tableBody').innerHTML = '';
+    const { db, collection, getDocs, orderBy, query } = window._fb;
     try {
-      const { db, collection, getDocs, orderBy, query } = window._fb;
-      const snap = await getDocs(query(collection(db, 'surveys'), orderBy('submittedAt', 'desc')));
+      const q    = query(collection(db, 'surveys'), orderBy('submittedAt', 'desc'));
+      const snap = await getDocs(q);
       allData = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      updateStats(); renderTable(); initResizableCols();
+      updateStats(); renderTable();
     } catch (e) { document.getElementById('emptyMsg').textContent = '불러오기 실패: ' + e.message; }
     icon.classList.remove('spinning');
   }
   window.loadData = loadData;
 
-  function resetColWidths() {
-    localStorage.removeItem('paranbox_col_widths');
-    document.querySelectorAll('table thead th').forEach(th => {
-      th.style.width = '';
-      th.style.minWidth = '';
-    });
-  }
-  window.resetColWidths = resetColWidths;
-
-  function saveColWidths() {
-    const widths = {};
-    document.querySelectorAll('table thead th').forEach((th, i) => {
-      if (th.style.width) widths[i] = th.style.width;
-    });
-    localStorage.setItem('paranbox_col_widths', JSON.stringify(widths));
-  }
-
-  function restoreColWidths() {
-    try {
-      const saved = JSON.parse(localStorage.getItem('paranbox_col_widths') || '{}');
-      document.querySelectorAll('table thead th').forEach((th, i) => {
-        if (saved[i]) { th.style.width = saved[i]; th.style.minWidth = saved[i]; }
-      });
-    } catch {}
-  }
-
-  function initResizableCols() {
-    restoreColWidths();
-    const ths = document.querySelectorAll('table thead th');
-    ths.forEach(th => {
-      const old = th.querySelector('.col-resize-handle');
-      if (old) old.remove();
-      const handle = document.createElement('div');
-      handle.className = 'col-resize-handle';
-      th.appendChild(handle);
-      handle.addEventListener('mousedown', e => {
-        e.preventDefault();
-        e.stopPropagation();
-        const startX = e.pageX;
-        const startW = th.offsetWidth;
-        handle.classList.add('dragging');
-        const onMove = e => {
-          const w = Math.max(40, startW + e.pageX - startX);
-          th.style.width = w + 'px';
-          th.style.minWidth = w + 'px';
-        };
-        const onUp = () => {
-          handle.classList.remove('dragging');
-          document.removeEventListener('mousemove', onMove);
-          document.removeEventListener('mouseup', onUp);
-          saveColWidths();
-        };
-        document.addEventListener('mousemove', onMove);
-        document.addEventListener('mouseup', onUp);
-      });
-    });
-  }
-  window.initResizableCols = initResizableCols;
-
   function updateStats() {
     document.getElementById('statTotal').textContent = allData.length;
-    document.getElementById('statPumpGood').textContent = allData.filter(r => r.pumpNoise === '좋음').length;
-    document.getElementById('statPumpMid').textContent  = allData.filter(r => r.pumpNoise === '보통').length;
-    document.getElementById('statPumpBad').textContent  = allData.filter(r => r.pumpNoise === '나쁨').length;
-    document.getElementById('statFanGood').textContent  = allData.filter(r => r.fanNoise === '좋음').length;
-    document.getElementById('statFanMid').textContent   = allData.filter(r => r.fanNoise === '보통').length;
-    document.getElementById('statFanBad').textContent   = allData.filter(r => r.fanNoise === '나쁨').length;
-    document.getElementById('statCombGood').textContent = allData.filter(r => r.combustionNoise === '좋음').length;
-    document.getElementById('statCombMid').textContent  = allData.filter(r => r.combustionNoise === '보통').length;
-    document.getElementById('statCombBad').textContent  = allData.filter(r => r.combustionNoise === '나쁨').length;
+    document.getElementById('statPump').textContent  = allData.filter(r => r.pumpNoise === '상').length;
+    document.getElementById('statFan').textContent   = allData.filter(r => r.fanNoise === '상').length;
+    document.getElementById('statComb').textContent  = allData.filter(r => r.combustionNoise === '상').length;
   }
 
   function badge(val) {
     if (!val) return '-';
-    const map = { '좋음': 'badge-high 좋음 😊', '보통': 'badge-mid 보통 😐', '나쁨': 'badge-low 나쁨 😔', '예': 'badge-yes 예', '아니오': 'badge-no 아니오' };
-    const m = map[val]; if (!m) return val;
-    const [cls, ...txt] = m.split(' ');
-    return `<span class="badge ${cls}">${txt.join(' ')}</span>`;
+    if (val === '상') return `<span class="badge badge-high">상 😊</span>`;
+    if (val === '중') return `<span class="badge badge-mid">중 😐</span>`;
+    if (val === '하') return `<span class="badge badge-low">하 😔</span>`;
+    if (val === '예') return `<span class="badge badge-yes">예</span>`;
+    return `<span class="badge badge-no">${val}</span>`;
   }
 
   function fmtDate(ts) {
@@ -407,116 +320,73 @@
     return d.toLocaleDateString('ko-KR') + ' ' + d.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
   }
 
-  function fmtDateShort(ts) {
-    if (!ts) return '-';
-    const d = ts.toDate ? ts.toDate() : new Date(ts);
-    const yy = String(d.getFullYear()).slice(2);
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const dd = String(d.getDate()).padStart(2, '0');
-    return `${yy}.${mm}.${dd}`;
-  }
-
-  function fmtInstallDate(s) {
-    if (!s) return '-';
-    const p = s.split('-');
-    if (p.length !== 3) return s;
-    return `${p[0].slice(2)}.${p[1]}.${p[2]}`;
-  }
-
-  function escHtml(s) {
-    return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  }
-
-  function toggleDetail(id) {
-    const row = document.getElementById('detail-' + id);
-    if (!row) return;
-    if (row.classList.contains('open')) {
-      row.classList.remove('open');
-      row.style.display = 'none';
-    } else {
-      row.classList.add('open');
-      row.style.display = 'table-row';
-    }
-  }
-  window.toggleDetail = toggleDetail;
-
   function renderTable() {
     const q = document.getElementById('searchInput').value.toLowerCase();
-    const filtered = allData.filter(r => !q || [r.agency,r.name,r.model,r.location].some(v => v && v.toLowerCase().includes(q)));
-    const body = document.getElementById('tableBody'), empty = document.getElementById('emptyMsg');
-    if (!filtered.length) {
-      body.innerHTML = '';
-      empty.style.display = 'block';
-      empty.textContent = allData.length ? '검색 결과가 없습니다.' : '아직 응답이 없습니다.';
-      return;
-    }
+    const filtered = allData.filter(r =>
+      !q || [r.agency, r.name, r.model, r.location].some(v => v && v.toLowerCase().includes(q))
+    );
+    const body = document.getElementById('tableBody');
+    const empty = document.getElementById('emptyMsg');
+    if (!filtered.length) { body.innerHTML = ''; empty.style.display = 'block'; empty.textContent = allData.length ? '검색 결과가 없습니다.' : '아직 응답이 없습니다.'; return; }
     empty.style.display = 'none';
 
-    body.innerHTML = filtered.map((r, fi) => {
-      const media = r.media || [];
-      const idx = allData.indexOf(r);
-      const rowNo = fi + 1;
+    body.innerHTML = filtered.map(r => {
+      const media = r.media || (r.photos ? r.photos.map(p => ({kind:'photo',name:p.name,data:p.data})) : []);
       const thumbs = media.slice(0, 4).map((m, mi) => {
-        if (m.kind === 'video') return `<div class="video-thumb" onclick="event.stopPropagation();openViewer(${idx},${mi})" title="${escHtml(m.name)}"><i class="ti ti-player-play"></i></div>`;
-        return `<img class="thumb" src="${m.url}" onclick="event.stopPropagation();openViewer(${idx},${mi})" title="${escHtml(m.name)}">`;
-      }).join('') + (media.length > 4 ? `<span style="font-size:11px;color:var(--text-muted)">+${media.length-4}</span>` : '');
-
-      const comment = escHtml(r.overallComment || '');
-
-      return `<tr class="data-row" onclick="toggleDetail('${r.id}')">
-        <td class="no-col">${rowNo}</td>
-        <td style="white-space:nowrap;font-size:12px">${fmtDateShort(r.submittedAt)}</td>
-        <td><strong>${escHtml(r.agency)||'-'}</strong></td>
-        <td>${escHtml(r.name)||'-'}</td>
-        <td>${escHtml(r.model)||'-'}</td>
-        <td style="white-space:nowrap">${fmtInstallDate(r.installDate)}</td>
-        <td class="loc-cell">${escHtml(r.location)||'-'}</td>
+        const idx = allData.indexOf(r);
+        if (m.kind === 'video') return `<div class="video-thumb" onclick="openViewer(${idx},${allData.indexOf(r) !== -1 ? media.indexOf(m) : mi})" title="${m.name}"><i class="ti ti-player-play"></i></div>`;
+        return `<img class="thumb" src="${m.data}" onclick="openViewer(${idx},${media.indexOf(m)})" title="${m.name}">`;
+      }).join('');
+      const idx = allData.indexOf(r);
+      return `<tr>
+        <td style="white-space:nowrap;font-size:12px">${fmtDate(r.submittedAt)}</td>
+        <td><strong>${r.agency||'-'}</strong></td>
+        <td>${r.name||'-'}</td>
+        <td>${r.model||'-'}</td>
+        <td style="white-space:nowrap">${r.installDate||'-'}</td>
+        <td style="max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.location||''}">${r.location||'-'}</td>
         <td>${badge(r.preRun)}</td>
         <td>${badge(r.pumpNoise)}</td>
         <td>${badge(r.fanNoise)}</td>
         <td>${badge(r.combustionNoise)}</td>
         <td><div class="media-cell">${thumbs||'-'}</div></td>
-        <td style="white-space:nowrap" onclick="event.stopPropagation()">
+        <td style="white-space:nowrap">
           <button class="action-btn" onclick="openDetail(${idx})"><i class="ti ti-edit"></i> 수정</button>
           <button class="action-btn del" onclick="openDelete(${idx})"><i class="ti ti-trash"></i></button>
-        </td>
-      </tr>
-      <tr class="detail-row" id="detail-${r.id}">
-        <td colspan="13">
-          <div class="detail-content">
-            <div class="detail-label"><i class="ti ti-message-dots"></i> 전반적 의견</div>
-            ${comment ? `<div class="detail-text">${comment}</div>` : '<div class="detail-empty">의견이 없습니다.</div>'}
-          </div>
         </td>
       </tr>`;
     }).join('');
   }
   window.renderTable = renderTable;
 
+  // 상세/수정 모달
   function openDetail(idx) {
-    const r = allData[idx]; editingId = r.id;
-    document.getElementById('detailTitle').textContent = (r.agency || '') + ' · ' + (r.name || '');
-    const media = r.media || [];
+    const r = allData[idx];
+    editingId = r.id;
+    document.getElementById('detailTitle').textContent = r.agency + ' · ' + r.name;
+    const media = r.media || (r.photos ? r.photos.map(p => ({kind:'photo',name:p.name,data:p.data})) : []);
     const mediaHtml = media.map((m, mi) => {
-      if (m.kind === 'video') return `<div class="media-grid-item" onclick="openViewer(${idx},${mi})"><video src="${m.url}"></video><div class="play-icon"><i class="ti ti-player-play"></i></div></div>`;
-      return `<div class="media-grid-item" onclick="openViewer(${idx},${mi})"><img src="${m.url}" alt="${escHtml(m.name)}"></div>`;
+      if (m.kind === 'video') return `<div class="media-grid-item" onclick="openViewer(${idx},${mi})"><video src="${m.url || m.data}"></video><div class="play-icon"><i class="ti ti-player-play"></i></div></div>`;
+      return `<div class="media-grid-item" onclick="openViewer(${idx},${mi})"><img src="${m.data}" alt="${m.name}"></div>`;
     }).join('');
-    const sel = (v, cur, opts) => opts.map(o => `<option value="${o}" ${o===cur?'selected':''}>${o}</option>`).join('');
+
+    const selOpt = (v, cur) => ['상','중','하'].map(o => `<option value="${o}" ${o===cur?'selected':''}>${o}</option>`).join('');
+    const ynOpt  = (v, cur) => ['예','아니오'].map(o => `<option value="${o}" ${o===cur?'selected':''}>${o}</option>`).join('');
 
     document.getElementById('detailBody').innerHTML = `
       <div class="modal-row"><span class="lbl">제출일시</span><span class="val">${fmtDate(r.submittedAt)}</span></div>
-      <div class="modal-row"><span class="lbl">대리점명</span><input id="e-agency" value="${escHtml(r.agency||'')}"></div>
-      <div class="modal-row"><span class="lbl">담당자</span><input id="e-name" value="${escHtml(r.name||'')}"></div>
-      <div class="modal-row"><span class="lbl">모델명</span><input id="e-model" value="${escHtml(r.model||'')}"></div>
+      <div class="modal-row"><span class="lbl">대리점명</span><input id="e-agency" value="${r.agency||''}"></div>
+      <div class="modal-row"><span class="lbl">담당자</span><input id="e-name" value="${r.name||''}"></div>
+      <div class="modal-row"><span class="lbl">모델명</span><input id="e-model" value="${r.model||''}"></div>
       <div class="modal-row"><span class="lbl">설치일자</span><input type="date" id="e-date" value="${r.installDate||''}"></div>
-      <div class="modal-row"><span class="lbl">설치장소</span><input id="e-location" value="${escHtml(r.location||'')}"></div>
+      <div class="modal-row"><span class="lbl">설치장소</span><input id="e-location" value="${r.location||''}"></div>
       <div class="modal-divider"></div>
-      <div class="modal-row"><span class="lbl">사전 운전</span><select id="e-prerun">${sel('',r.preRun,['예','아니오'])}</select></div>
-      <div class="modal-row"><span class="lbl">펌프 소음</span><select id="e-pump">${sel('',r.pumpNoise,['좋음','보통','나쁨'])}</select></div>
-      <div class="modal-row"><span class="lbl">팬 소음</span><select id="e-fan">${sel('',r.fanNoise,['좋음','보통','나쁨'])}</select></div>
-      <div class="modal-row"><span class="lbl">연소 소음</span><select id="e-comb">${sel('',r.combustionNoise,['좋음','보통','나쁨'])}</select></div>
-      <div class="modal-row" style="align-items:flex-start"><span class="lbl" style="margin-top:8px">전반적 의견</span><textarea id="e-comment">${escHtml(r.overallComment||'')}</textarea></div>
-      ${mediaHtml ? `<div class="modal-divider"></div><div style="font-size:13px;font-weight:500;margin-bottom:8px">첨부 미디어 (${media.length}개) — 클릭하여 확대</div><div class="media-grid">${mediaHtml}</div>` : ''}
+      <div class="modal-row"><span class="lbl">사전 운전</span><select id="e-prerun">${ynOpt('',r.preRun)}</select></div>
+      <div class="modal-row"><span class="lbl">펌프 소음</span><select id="e-pump">${selOpt('',r.pumpNoise)}</select></div>
+      <div class="modal-row"><span class="lbl">팬 소음</span><select id="e-fan">${selOpt('',r.fanNoise)}</select></div>
+      <div class="modal-row"><span class="lbl">연소 소음</span><select id="e-comb">${selOpt('',r.combustionNoise)}</select></div>
+      <div class="modal-row"><span class="lbl">전반적 의견</span><textarea id="e-comment">${r.overallComment||''}</textarea></div>
+      ${mediaHtml ? `<div class="modal-divider"></div><div style="font-size:13px;font-weight:500;margin-bottom:8px">첨부 미디어 (${media.length}개)</div><div class="media-grid">${mediaHtml}</div>` : ''}
     `;
     document.getElementById('detailModal').classList.add('open');
   }
@@ -525,127 +395,229 @@
   async function saveEdit() {
     if (!editingId) return;
     const { db, doc, updateDoc } = window._fb;
+    const updates = {
+      agency:          document.getElementById('e-agency').value.trim(),
+      name:            document.getElementById('e-name').value.trim(),
+      model:           document.getElementById('e-model').value.trim(),
+      installDate:     document.getElementById('e-date').value,
+      location:        document.getElementById('e-location').value.trim(),
+      preRun:          document.getElementById('e-prerun').value,
+      pumpNoise:       document.getElementById('e-pump').value,
+      fanNoise:        document.getElementById('e-fan').value,
+      combustionNoise: document.getElementById('e-comb').value,
+      overallComment:  document.getElementById('e-comment').value.trim(),
+    };
     try {
-      await updateDoc(doc(db, 'surveys', editingId), {
-        agency: document.getElementById('e-agency').value.trim(),
-        name: document.getElementById('e-name').value.trim(),
-        model: document.getElementById('e-model').value.trim(),
-        installDate: document.getElementById('e-date').value,
-        location: document.getElementById('e-location').value.trim(),
-        preRun: document.getElementById('e-prerun').value,
-        pumpNoise: document.getElementById('e-pump').value,
-        fanNoise: document.getElementById('e-fan').value,
-        combustionNoise: document.getElementById('e-comb').value,
-        overallComment: document.getElementById('e-comment').value.trim(),
-      });
-      closeModal('detailModal'); await loadData();
+      await updateDoc(doc(db, 'surveys', editingId), updates);
+      closeModal('detailModal');
+      await loadData();
     } catch (e) { alert('저장 실패: ' + e.message); }
   }
   window.saveEdit = saveEdit;
 
-  function openDelete(idx) { deletingId = allData[idx].id; document.getElementById('deleteModal').classList.add('open'); }
+  // 삭제
+  function openDelete(idx) {
+    deletingId = allData[idx].id;
+    document.getElementById('deleteModal').classList.add('open');
+  }
   window.openDelete = openDelete;
 
   async function confirmDelete() {
     if (!deletingId) return;
     const { db, doc, deleteDoc } = window._fb;
-    try { await deleteDoc(doc(db, 'surveys', deletingId)); closeModal('deleteModal'); await loadData(); }
-    catch (e) { alert('삭제 실패: ' + e.message); }
+    try {
+      await deleteDoc(doc(db, 'surveys', deletingId));
+      closeModal('deleteModal');
+      await loadData();
+    } catch (e) {
+      console.error('삭제 오류:', e.code, e.message);
+      if (e.code === 'permission-denied' || (e.message && e.message.includes('permission'))) {
+        alert('삭제 실패: Firebase 보안 규칙에서 삭제 권한이 없습니다.\n\nFirebase 콘솔 > Firestore Database > 규칙 탭에서\nallow delete 권한을 추가해 주세요.');
+      } else {
+        alert('삭제 실패: ' + e.message);
+      }
+    }
   }
   window.confirmDelete = confirmDelete;
 
   function closeModal(id) { document.getElementById(id).classList.remove('open'); }
   window.closeModal = closeModal;
 
+  // 미디어 뷰어
   function openViewer(rowIdx, mediaIdx) {
-    const m = (allData[rowIdx].media || [])[mediaIdx];
+    const r = allData[rowIdx];
+    const media = r.media || (r.photos ? r.photos.map(p => ({kind:'photo',name:p.name,data:p.data})) : []);
+    const m = media[mediaIdx];
     if (!m) return;
-    document.getElementById('viewerContent').innerHTML = m.kind === 'video'
-      ? `<video src="${m.url}" controls autoplay style="max-width:92vw;max-height:88vh;border-radius:6px;outline:none"></video>`
-      : `<img src="${m.url}" style="max-width:92vw;max-height:88vh;border-radius:6px;object-fit:contain">`;
+    const vc = document.getElementById('viewerContent');
+    if (m.kind === 'video') {
+      const src = m.url || m.data;
+      vc.innerHTML = `<video src="${src}" controls autoplay style="max-width:92vw;max-height:88vh;border-radius:6px;outline:none"></video>`;
+    } else {
+      vc.innerHTML = `<img src="${m.data}" style="max-width:92vw;max-height:88vh;border-radius:6px;object-fit:contain">`;
+    }
     document.getElementById('mediaViewer').classList.add('open');
   }
   window.openViewer = openViewer;
 
-  function closeViewer() { document.getElementById('mediaViewer').classList.remove('open'); document.getElementById('viewerContent').innerHTML = ''; }
+  function closeViewer() {
+    document.getElementById('mediaViewer').classList.remove('open');
+    document.getElementById('viewerContent').innerHTML = '';
+  }
   window.closeViewer = closeViewer;
 
-  function downloadExcel() {
+  // 엑셀 업로드
+  let uploadRows = [];
+
+  function parseExcelUpload(input) {
+    const file = input.files[0];
+    if (!file) return;
+    input.value = '';
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws);
+      if (!rows.length) { alert('데이터가 없습니다. 올바른 엑셀 파일을 선택해 주세요.'); return; }
+
+      uploadRows = rows.map(r => ({
+        agency:          String(r['대리점명'] || ''),
+        name:            String(r['담당자'] || ''),
+        model:           String(r['모델명'] || ''),
+        installDate:     r['설치일자'] != null ? String(r['설치일자']) : '',
+        location:        String(r['설치장소'] || ''),
+        preRun:          String(r['사전운전여부'] || ''),
+        pumpNoise:       String(r['펌프소음개선'] || ''),
+        fanNoise:        String(r['팬소음개선'] || ''),
+        combustionNoise: String(r['연소소음개선'] || ''),
+        overallComment:  String(r['전반적의견'] || ''),
+        media:           []
+      }));
+
+      document.getElementById('uploadPreview').innerHTML = `
+        <p style="font-size:13.5px;margin-bottom:12px;color:var(--text-muted)">
+          <strong style="color:var(--text)">${uploadRows.length}개</strong> 행을 Firestore에 등록합니다.
+        </p>
+        <div style="overflow:auto;max-height:360px">
+          <table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:580px">
+            <thead>
+              <tr style="background:#f8f9fa;position:sticky;top:0">
+                <th style="padding:7px 10px;text-align:left;border-bottom:1px solid var(--border)">#</th>
+                <th style="padding:7px 10px;text-align:left;border-bottom:1px solid var(--border)">대리점명</th>
+                <th style="padding:7px 10px;text-align:left;border-bottom:1px solid var(--border)">담당자</th>
+                <th style="padding:7px 10px;text-align:left;border-bottom:1px solid var(--border)">모델명</th>
+                <th style="padding:7px 10px;text-align:left;border-bottom:1px solid var(--border)">설치일자</th>
+                <th style="padding:7px 10px;text-align:left;border-bottom:1px solid var(--border)">펌프</th>
+                <th style="padding:7px 10px;text-align:left;border-bottom:1px solid var(--border)">팬</th>
+                <th style="padding:7px 10px;text-align:left;border-bottom:1px solid var(--border)">연소</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${uploadRows.map((r, i) => `<tr>
+                <td style="padding:6px 10px;border-bottom:0.5px solid var(--border);color:var(--text-muted)">${i+1}</td>
+                <td style="padding:6px 10px;border-bottom:0.5px solid var(--border)"><strong>${r.agency||'-'}</strong></td>
+                <td style="padding:6px 10px;border-bottom:0.5px solid var(--border)">${r.name||'-'}</td>
+                <td style="padding:6px 10px;border-bottom:0.5px solid var(--border)">${r.model||'-'}</td>
+                <td style="padding:6px 10px;border-bottom:0.5px solid var(--border);white-space:nowrap">${r.installDate||'-'}</td>
+                <td style="padding:6px 10px;border-bottom:0.5px solid var(--border)">${r.pumpNoise||'-'}</td>
+                <td style="padding:6px 10px;border-bottom:0.5px solid var(--border)">${r.fanNoise||'-'}</td>
+                <td style="padding:6px 10px;border-bottom:0.5px solid var(--border)">${r.combustionNoise||'-'}</td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>`;
+      document.getElementById('uploadModal').classList.add('open');
+    };
+    reader.readAsArrayBuffer(file);
+  }
+  window.parseExcelUpload = parseExcelUpload;
+
+  async function confirmUpload() {
+    if (!uploadRows.length) return;
+    const total = uploadRows.length;
+    const btn = document.getElementById('uploadConfirmBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="ti ti-loader-2 spinning"></i> 등록 중...';
+    const { db, collection, addDoc, serverTimestamp } = window._fb;
+    try {
+      for (const row of uploadRows) {
+        await addDoc(collection(db, 'surveys'), { ...row, submittedAt: serverTimestamp() });
+      }
+      closeModal('uploadModal');
+      uploadRows = [];
+      await loadData();
+      alert(`${total}개 데이터가 등록되었습니다.`);
+    } catch (e) {
+      alert('등록 실패: ' + e.message);
+      btn.disabled = false;
+      btn.innerHTML = '<i class="ti ti-upload"></i> 등록';
+    }
+  }
+  window.confirmUpload = confirmUpload;
+
+  // 엑셀 + 사진 ZIP 다운로드
+  async function downloadExcel() {
     if (!allData.length) { alert('다운로드할 데이터가 없습니다.'); return; }
 
-    let maxPhotos = 0, maxVideos = 0;
-    allData.forEach(r => {
-      const media = r.media || [];
-      const p = media.filter(m => m.kind === 'photo').length;
-      const v = media.filter(m => m.kind === 'video').length;
-      if (p > maxPhotos) maxPhotos = p;
-      if (v > maxVideos) maxVideos = v;
-    });
+    const zip = new JSZip();
+    const photoFolder = zip.folder('사진');
 
-    const BASE_COLS = 14;
-    const photoColStart = BASE_COLS;
-    const videoColStart = BASE_COLS + maxPhotos;
-
-    const headers = [
-      'NO', '제출일시', '대리점명', '담당자', '모델명',
-      '설치일자', '설치장소', '사전운전여부', '펌프소음개선',
-      '팬소음개선', '연소소음개선', '전반적의견', '사진수', '동영상수'
-    ];
-    for (let i = 1; i <= maxPhotos; i++) headers.push(`사진${i}`);
-    for (let i = 1; i <= maxVideos; i++) headers.push(`동영상${i}`);
-
-    const aoa = [headers];
-    allData.forEach((r, i) => {
-      const media = r.media || [];
+    const rows = allData.map((r, ri) => {
+      const media  = r.media || (r.photos ? r.photos.map(p => ({kind:'photo', name:p.name, data:p.data})) : []);
       const photos = media.filter(m => m.kind === 'photo');
       const videos = media.filter(m => m.kind === 'video');
-      const row = [
-        i + 1,
-        r.submittedAt ? (r.submittedAt.toDate ? r.submittedAt.toDate().toLocaleString('ko-KR') : r.submittedAt) : '',
-        r.agency||'', r.name||'', r.model||'',
-        r.installDate||'', r.location||'',
-        r.preRun||'', r.pumpNoise||'', r.fanNoise||'', r.combustionNoise||'',
-        r.overallComment||'', photos.length, videos.length,
-      ];
-      for (let j = 0; j < maxPhotos; j++) row.push(photos[j] ? (photos[j].name || `사진${j+1}`) : '');
-      for (let j = 0; j < maxVideos; j++) row.push(videos[j] ? (videos[j].name || `동영상${j+1}`) : '');
-      aoa.push(row);
+
+      // 사진을 ZIP 폴더에 추가
+      photos.forEach(m => {
+        if (m.data && m.data.includes(',')) {
+          const b64 = m.data.split(',')[1];
+          const safe = (r.agency || 'unknown').replace(/[\/\\:*?"<>|]/g, '_');
+          photoFolder.file(`${String(ri + 1).padStart(3,'0')}_${safe}_${m.name}`, b64, { base64: true });
+        }
+      });
+
+      return {
+        '제출일시':        r.submittedAt ? (r.submittedAt.toDate ? r.submittedAt.toDate().toLocaleString('ko-KR') : r.submittedAt) : '',
+        '대리점명':        r.agency || '',
+        '담당자':          r.name || '',
+        '모델명':          r.model || '',
+        '설치일자':        r.installDate || '',
+        '설치장소':        r.location || '',
+        '사전운전여부':    r.preRun || '',
+        '펌프소음개선':    r.pumpNoise || '',
+        '팬소음개선':      r.fanNoise || '',
+        '연소소음개선':    r.combustionNoise || '',
+        '전반적의견':      r.overallComment || '',
+        '사진수':          photos.length,
+        '첨부사진파일명':  photos.map(m => m.name).join(', '),
+        '동영상수':        videos.length,
+        '첨부동영상파일명': videos.map(m => m.name).join(', ')
+      };
     });
 
+    // 엑셀 생성 후 ZIP에 포함
     const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.aoa_to_sheet(aoa);
-
-    // 사진·동영상 셀에 하이퍼링크 추가 (파일명 표시 + 클릭 시 URL 열기)
-    allData.forEach((r, ri) => {
-      const media = r.media || [];
-      const photos = media.filter(m => m.kind === 'photo');
-      const videos = media.filter(m => m.kind === 'video');
-      photos.forEach((p, pi) => {
-        if (!p.url) return;
-        const addr = XLSX.utils.encode_cell({ r: ri + 1, c: photoColStart + pi });
-        if (!ws[addr]) ws[addr] = { t: 's', v: p.name || `사진${pi+1}` };
-        ws[addr].l = { Target: p.url };
-      });
-      videos.forEach((v, vi) => {
-        if (!v.url) return;
-        const addr = XLSX.utils.encode_cell({ r: ri + 1, c: videoColStart + vi });
-        if (!ws[addr]) ws[addr] = { t: 's', v: v.name || `동영상${vi+1}` };
-        ws[addr].l = { Target: v.url };
-      });
-    });
-
-    const cols = [
-      {wch:6},{wch:20},{wch:16},{wch:10},{wch:12},
-      {wch:12},{wch:24},{wch:12},{wch:12},{wch:10},
-      {wch:12},{wch:40},{wch:6},{wch:8},
+    const ws = XLSX.utils.json_to_sheet(rows);
+    ws['!cols'] = [
+      {wch:20},{wch:16},{wch:10},{wch:12},{wch:12},{wch:24},
+      {wch:12},{wch:12},{wch:10},{wch:12},{wch:40},{wch:6},{wch:30},{wch:8},{wch:30}
     ];
-    for (let i = 0; i < maxPhotos + maxVideos; i++) cols.push({wch:32});
-    ws['!cols'] = cols;
-
     XLSX.utils.book_append_sheet(wb, ws, '설치후기');
-    XLSX.writeFile(wb, `파란박스_설치후기_${new Date().toISOString().slice(0,10)}.xlsx`);
+    const dateStr = new Date().toISOString().slice(0, 10);
+    zip.file(`파란박스_설치후기_${dateStr}.xlsx`, XLSX.write(wb, { type: 'base64', bookType: 'xlsx' }), { base64: true });
+
+    const blob = await zip.generateAsync({ type: 'blob' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url;
+    a.download = `파란박스_설치후기_${dateStr}.zip`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   }
   window.downloadExcel = downloadExcel;
 </script>
 </body>
 </html>
+
