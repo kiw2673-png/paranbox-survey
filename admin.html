@@ -456,47 +456,31 @@
     if (m.kind === 'video') {
       const src = m.url || m.data;
       if (!src) {
-        vc.innerHTML = '<p style="color:#fff;padding:20px;text-align:center">동영상 URL이 없습니다.</p>';
+        vc.innerHTML = '<div style="color:#fff;padding:30px;text-align:center;font-size:15px">동영상 URL이 없습니다.</div>';
       } else {
-        const wrap = document.createElement('div');
-        wrap.style.cssText = 'text-align:center';
-        const video = document.createElement('video');
-        video.controls = true;
-        video.autoplay = true;
-        video.playsInline = true;
-        video.style.cssText = 'max-width:92vw;max-height:80vh;border-radius:6px;outline:none;display:block;margin:0 auto';
-        const source = document.createElement('source');
-        source.src = src;
-        if (m.mime) source.type = m.mime;
-        video.appendChild(source);
-        video.onerror = () => {
-          wrap.innerHTML = `<p style="color:#fff;padding:20px;text-align:center">동영상을 재생할 수 없습니다.<br><a href="${src}" target="_blank" rel="noopener" style="color:#7dd3fc;margin-top:10px;display:inline-block">새 탭에서 열기 ↗</a></p>`;
-        };
-        wrap.appendChild(video);
-        const link = document.createElement('a');
-        link.href = src;
-        link.target = '_blank';
-        link.rel = 'noopener';
-        link.style.cssText = 'color:#93c5fd;font-size:13px;margin-top:10px;display:inline-block;text-decoration:none';
-        link.textContent = '새 탭에서 열기 ↗';
-        wrap.appendChild(link);
-        vc.appendChild(wrap);
+        vc.innerHTML = `
+          <div style="text-align:center">
+            <video controls playsinline style="max-width:92vw;max-height:75vh;width:min(640px,92vw);border-radius:6px;outline:none;display:block;margin:0 auto;background:#000">
+              <source src="${src}"${m.mime ? ` type="${m.mime}"` : ''}>
+              동영상을 재생할 수 없습니다.
+            </video>
+            <a href="${src}" target="_blank" rel="noopener" style="color:#93c5fd;font-size:13px;margin-top:12px;display:inline-block;text-decoration:none">새 탭에서 열기 ↗</a>
+            <div style="color:#aaa;font-size:12px;margin-top:6px">${m.name || ''}</div>
+          </div>`;
+        const video = vc.querySelector('video');
+        if (video) video.play().catch(() => {});
       }
     } else {
       const data = m.data;
       if (!data) {
-        vc.innerHTML = '<p style="color:#fff;padding:20px;text-align:center">이미지 데이터가 없습니다.</p>';
+        vc.innerHTML = '<div style="color:#fff;padding:30px;text-align:center;font-size:15px">이미지 데이터가 없습니다.<br><small style="color:#aaa;font-size:12px">kind: ' + (m.kind||'?') + ' / name: ' + (m.name||'?') + '</small></div>';
       } else {
-        const img = document.createElement('img');
-        img.style.cssText = 'max-width:92vw;max-height:88vh;border-radius:6px;object-fit:contain;display:block;margin:0 auto';
-        img.onerror = () => {
-          img.replaceWith(Object.assign(document.createElement('p'), {
-            style: 'color:#fff;padding:20px;text-align:center',
-            textContent: '이미지를 불러올 수 없습니다.'
-          }));
-        };
-        img.src = data;
-        vc.appendChild(img);
+        vc.innerHTML = `
+          <div style="text-align:center">
+            <img src="${data}" style="max-width:92vw;max-height:82vh;border-radius:6px;object-fit:contain;display:block;margin:0 auto"
+              onerror="this.outerHTML='<div style=\\'color:#fff;padding:30px;text-align:center;font-size:15px\\'>이미지를 불러올 수 없습니다.<br><small style=\\'color:#aaa;font-size:12px\\'>${(m.name||'').replace(/'/g,"\\'")}</small></div>'">
+            <div style="color:#aaa;font-size:12px;margin-top:8px">${m.name || ''}</div>
+          </div>`;
       }
     }
     document.getElementById('mediaViewer').classList.add('open');
@@ -506,7 +490,7 @@
   function closeViewer() {
     const vc = document.getElementById('viewerContent');
     const video = vc.querySelector('video');
-    if (video) { video.pause(); video.src = ''; }
+    if (video) { try { video.pause(); } catch(e){} video.src = ''; }
     document.getElementById('mediaViewer').classList.remove('open');
     vc.innerHTML = '';
   }
