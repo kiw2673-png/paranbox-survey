@@ -446,23 +446,69 @@
   // 미디어 뷰어
   function openViewer(rowIdx, mediaIdx) {
     const r = allData[rowIdx];
+    if (!r) return;
     const media = r.media || (r.photos ? r.photos.map(p => ({kind:'photo',name:p.name,data:p.data})) : []);
     const m = media[mediaIdx];
     if (!m) return;
     const vc = document.getElementById('viewerContent');
+    vc.innerHTML = '';
+
     if (m.kind === 'video') {
       const src = m.url || m.data;
-      vc.innerHTML = `<video src="${src}" controls autoplay style="max-width:92vw;max-height:88vh;border-radius:6px;outline:none"></video>`;
+      if (!src) {
+        vc.innerHTML = '<p style="color:#fff;padding:20px;text-align:center">동영상 URL이 없습니다.</p>';
+      } else {
+        const wrap = document.createElement('div');
+        wrap.style.cssText = 'text-align:center';
+        const video = document.createElement('video');
+        video.controls = true;
+        video.autoplay = true;
+        video.playsInline = true;
+        video.style.cssText = 'max-width:92vw;max-height:80vh;border-radius:6px;outline:none;display:block;margin:0 auto';
+        const source = document.createElement('source');
+        source.src = src;
+        if (m.mime) source.type = m.mime;
+        video.appendChild(source);
+        video.onerror = () => {
+          wrap.innerHTML = `<p style="color:#fff;padding:20px;text-align:center">동영상을 재생할 수 없습니다.<br><a href="${src}" target="_blank" rel="noopener" style="color:#7dd3fc;margin-top:10px;display:inline-block">새 탭에서 열기 ↗</a></p>`;
+        };
+        wrap.appendChild(video);
+        const link = document.createElement('a');
+        link.href = src;
+        link.target = '_blank';
+        link.rel = 'noopener';
+        link.style.cssText = 'color:#93c5fd;font-size:13px;margin-top:10px;display:inline-block;text-decoration:none';
+        link.textContent = '새 탭에서 열기 ↗';
+        wrap.appendChild(link);
+        vc.appendChild(wrap);
+      }
     } else {
-      vc.innerHTML = `<img src="${m.data}" style="max-width:92vw;max-height:88vh;border-radius:6px;object-fit:contain">`;
+      const data = m.data;
+      if (!data) {
+        vc.innerHTML = '<p style="color:#fff;padding:20px;text-align:center">이미지 데이터가 없습니다.</p>';
+      } else {
+        const img = document.createElement('img');
+        img.style.cssText = 'max-width:92vw;max-height:88vh;border-radius:6px;object-fit:contain;display:block;margin:0 auto';
+        img.onerror = () => {
+          img.replaceWith(Object.assign(document.createElement('p'), {
+            style: 'color:#fff;padding:20px;text-align:center',
+            textContent: '이미지를 불러올 수 없습니다.'
+          }));
+        };
+        img.src = data;
+        vc.appendChild(img);
+      }
     }
     document.getElementById('mediaViewer').classList.add('open');
   }
   window.openViewer = openViewer;
 
   function closeViewer() {
+    const vc = document.getElementById('viewerContent');
+    const video = vc.querySelector('video');
+    if (video) { video.pause(); video.src = ''; }
     document.getElementById('mediaViewer').classList.remove('open');
-    document.getElementById('viewerContent').innerHTML = '';
+    vc.innerHTML = '';
   }
   window.closeViewer = closeViewer;
 
