@@ -335,7 +335,7 @@
       const thumbs = media.slice(0, 4).map((m, mi) => {
         const idx = allData.indexOf(r);
         if (m.kind === 'video') return `<div class="video-thumb" onclick="openViewer(${idx},${allData.indexOf(r) !== -1 ? media.indexOf(m) : mi})" title="${m.name}"><i class="ti ti-player-play"></i></div>`;
-        return `<img class="thumb" src="${m.data}" onclick="openViewer(${idx},${media.indexOf(m)})" title="${m.name}">`;
+        return `<img class="thumb" src="${m.url || m.data}" onclick="openViewer(${idx},${media.indexOf(m)})" title="${m.name}">`;
       }).join('');
       const idx = allData.indexOf(r);
       return `<tr>
@@ -367,7 +367,7 @@
     const media = r.media || (r.photos ? r.photos.map(p => ({kind:'photo',name:p.name,data:p.data})) : []);
     const mediaHtml = media.map((m, mi) => {
       if (m.kind === 'video') return `<div class="media-grid-item" onclick="openViewer(${idx},${mi})"><video src="${m.url || m.data}"></video><div class="play-icon"><i class="ti ti-player-play"></i></div></div>`;
-      return `<div class="media-grid-item" onclick="openViewer(${idx},${mi})"><img src="${m.data}" alt="${m.name}"></div>`;
+      return `<div class="media-grid-item" onclick="openViewer(${idx},${mi})"><img src="${m.url || m.data}" alt="${m.name}"></div>`;
     }).join('');
 
     const selOpt = (v, cur) => ['상','중','하'].map(o => `<option value="${o}" ${o===cur?'selected':''}>${o}</option>`).join('');
@@ -471,7 +471,7 @@
         if (video) video.play().catch(() => {});
       }
     } else {
-      const data = m.data;
+      const data = m.url || m.data;
       if (!data) {
         vc.innerHTML = '<div style="color:#fff;padding:30px;text-align:center;font-size:15px">이미지 데이터가 없습니다.<br><small style="color:#aaa;font-size:12px">kind: ' + (m.kind||'?') + ' / name: ' + (m.name||'?') + '</small></div>';
       } else {
