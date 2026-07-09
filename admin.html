@@ -31,7 +31,11 @@
   .login-err { color: var(--red-text); font-size: 13px; margin-top: 8px; display: none; }
 
   /* Admin */
-  .admin { display: none; min-height: 100vh; }
+  .admin { display: block; min-height: 100vh; }
+  body:not(.logged-in) .auth-only { display: none !important; }
+  body:not(.logged-in) #detailBody input,
+  body:not(.logged-in) #detailBody select,
+  body:not(.logged-in) #detailBody textarea { background:#f5f6f8; pointer-events:none; border-color:transparent; color:var(--text); }
   .topbar { background: var(--blue); color: #fff; padding: 0 1.5rem; height: 54px; display: flex; align-items: center; justify-content: space-between; }
   .topbar h1 { font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
   .topbar-right { display: flex; align-items: center; gap: 10px; }
@@ -135,16 +139,19 @@
 </head>
 <body>
 
-<!-- Login -->
-<div class="login-wrap" id="loginWrap">
-  <div class="login-card">
-    <div style="font-size:32px;margin-bottom:10px">🔒</div>
-    <h1>파란박스 관리자</h1>
-    <p>설문 응답 조회 및 관리</p>
-    <input type="email" id="loginEmail" placeholder="이메일" onkeydown="if(event.key==='Enter')doLogin()">
-    <input type="password" id="loginPw" placeholder="비밀번호" onkeydown="if(event.key==='Enter')doLogin()">
-    <button class="login-btn" onclick="doLogin()">로그인</button>
-    <div class="login-err" id="loginErr">이메일 또는 비밀번호가 올바르지 않습니다.</div>
+<!-- 로그인 모달 -->
+<div class="modal-bg" id="loginModal" onclick="if(event.target===this)closeModal('loginModal')">
+  <div class="modal sm">
+    <div class="modal-header">
+      <h2>관리자 로그인</h2>
+      <button class="modal-close" onclick="closeModal('loginModal')">✕</button>
+    </div>
+    <div style="padding:4px 0 8px">
+      <input type="email" id="loginEmail" placeholder="이메일" style="width:100%;border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;font-size:14px;margin-bottom:10px;outline:none;font-family:inherit;display:block" onkeydown="if(event.key==='Enter')doLogin()">
+      <input type="password" id="loginPw" placeholder="비밀번호" style="width:100%;border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;font-size:14px;margin-bottom:10px;outline:none;font-family:inherit;display:block" onkeydown="if(event.key==='Enter')doLogin()">
+      <button onclick="doLogin()" style="width:100%;padding:11px;background:var(--blue);color:#fff;border:none;border-radius:var(--radius-sm);font-size:14px;font-weight:600;cursor:pointer;font-family:inherit">로그인</button>
+      <div id="loginErr" style="color:var(--red-text);font-size:13px;margin-top:8px;display:none">이메일 또는 비밀번호가 올바르지 않습니다.</div>
+    </div>
   </div>
 </div>
 
@@ -153,9 +160,14 @@
   <div class="topbar">
     <h1><i class="ti ti-box"></i> 파란박스 설문 관리자</h1>
     <div class="topbar-right">
-      <span id="userEmail" style="font-size:13px;opacity:0.85"></span>
       <a class="topbar-btn" href="index.html"><i class="ti ti-forms"></i> 설문지</a>
-      <button class="topbar-btn" onclick="doLogout()"><i class="ti ti-logout"></i> 로그아웃</button>
+      <div id="guestArea">
+        <button class="topbar-btn" onclick="openLoginModal()"><i class="ti ti-lock"></i> 관리자 로그인</button>
+      </div>
+      <div id="loggedArea" style="display:none;align-items:center;gap:10px">
+        <span id="userEmail" style="font-size:13px;opacity:0.85"></span>
+        <button class="topbar-btn" onclick="doLogout()"><i class="ti ti-logout"></i> 로그아웃</button>
+      </div>
     </div>
   </div>
 
@@ -192,7 +204,7 @@
       <input type="text" id="searchInput" placeholder="대리점명, 이름, 모델명으로 검색..." oninput="renderTable()">
       <button class="icon-btn" onclick="loadData()"><i class="ti ti-refresh" id="refreshIcon"></i> 새로고침</button>
       <button class="icon-btn green" onclick="downloadExcel()"><i class="ti ti-file-spreadsheet"></i> 엑셀 다운로드</button>
-      <button class="icon-btn" onclick="document.getElementById('xlsxUploadInput').click()"><i class="ti ti-upload"></i> 엑셀 업로드</button>
+      <button class="icon-btn auth-only" onclick="document.getElementById('xlsxUploadInput').click()"><i class="ti ti-upload"></i> 엑셀 업로드</button>
       <input type="file" id="xlsxUploadInput" accept=".xlsx,.xls" style="display:none" onchange="parseExcelUpload(this)">
     </div>
 
@@ -222,7 +234,7 @@
     <div id="detailBody"></div>
     <div class="modal-footer">
       <button class="modal-footer btn-cancel" onclick="closeModal('detailModal')">닫기</button>
-      <button class="modal-footer btn-primary" onclick="saveEdit()"><i class="ti ti-device-floppy"></i> 저장</button>
+      <button class="modal-footer btn-primary auth-only" onclick="saveEdit()"><i class="ti ti-device-floppy"></i> 저장</button>
     </div>
   </div>
 </div>
@@ -283,16 +295,19 @@
 
   window._fb = { db, auth, collection, getDocs, doc, updateDoc, deleteDoc, orderBy, query, addDoc, serverTimestamp, signInWithEmailAndPassword, signOut, onAuthStateChanged };
 
+  let _dataLoaded = false;
   onAuthStateChanged(auth, user => {
+    document.body.classList.toggle('logged-in', !!user);
     if (user) {
-      document.getElementById('loginWrap').style.display  = 'none';
-      document.getElementById('adminWrap').style.display  = 'block';
+      document.getElementById('guestArea').style.display  = 'none';
+      document.getElementById('loggedArea').style.display = 'flex';
       document.getElementById('userEmail').textContent    = user.email;
-      loadData();
+      closeModal('loginModal');
     } else {
-      document.getElementById('loginWrap').style.display  = 'flex';
-      document.getElementById('adminWrap').style.display  = 'none';
+      document.getElementById('guestArea').style.display  = '';
+      document.getElementById('loggedArea').style.display = 'none';
     }
+    if (!_dataLoaded) { _dataLoaded = true; loadData(); }
   });
 </script>
 
@@ -301,9 +316,18 @@
   let editingId = null;
   let deletingId = null;
 
+  function openLoginModal() {
+    document.getElementById('loginErr').style.display = 'none';
+    document.getElementById('loginEmail').value = '';
+    document.getElementById('loginPw').value = '';
+    document.getElementById('loginModal').classList.add('open');
+  }
+  window.openLoginModal = openLoginModal;
+
   async function doLogin() {
     const email = document.getElementById('loginEmail').value.trim();
     const pw    = document.getElementById('loginPw').value;
+    document.getElementById('loginErr').style.display = 'none';
     try { await window._fb.signInWithEmailAndPassword(window._fb.auth, email, pw); }
     catch (e) { document.getElementById('loginErr').style.display = 'block'; }
   }
@@ -384,8 +408,8 @@
         <td>${badge(r.combustionNoise)}</td>
         <td><div class="media-cell">${thumbs||'-'}</div></td>
         <td style="white-space:nowrap" onclick="event.stopPropagation()">
-          <button class="action-btn" onclick="openDetail(${idx})"><i class="ti ti-edit"></i> 수정</button>
-          <button class="action-btn del" onclick="openDelete(${idx})"><i class="ti ti-trash"></i></button>
+          <button class="action-btn auth-only" onclick="openDetail(${idx})"><i class="ti ti-edit"></i> 수정</button>
+          <button class="action-btn del auth-only" onclick="openDelete(${idx})"><i class="ti ti-trash"></i></button>
         </td>
       </tr>`;
     }).join('');
