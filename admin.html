@@ -367,11 +367,11 @@
       const media = r.media || (r.photos ? r.photos.map(p => ({kind:'photo',name:p.name,data:p.data})) : []);
       const thumbs = media.slice(0, 4).map((m, mi) => {
         const idx = allData.indexOf(r);
-        if (m.kind === 'video') return `<div class="video-thumb" onclick="openViewer(${idx},${allData.indexOf(r) !== -1 ? media.indexOf(m) : mi})" title="${m.name}"><i class="ti ti-player-play"></i></div>`;
-        return `<img class="thumb" src="${m.url || m.data}" onclick="openViewer(${idx},${media.indexOf(m)})" title="${m.name}">`;
+        if (m.kind === 'video') return `<div class="video-thumb" onclick="event.stopPropagation();openViewer(${idx},${allData.indexOf(r) !== -1 ? media.indexOf(m) : mi})" title="${m.name}"><i class="ti ti-player-play"></i></div>`;
+        return `<img class="thumb" src="${m.url || m.data}" onclick="event.stopPropagation();openViewer(${idx},${media.indexOf(m)})" title="${m.name}">`;
       }).join('');
       const idx = allData.indexOf(r);
-      return `<tr>
+      return `<tr onclick="openDetail(${idx})" style="cursor:pointer">
         <td style="white-space:nowrap;font-size:12px">${fmtDate(r.submittedAt)}</td>
         <td><strong>${r.agency||'-'}</strong></td>
         <td>${r.name||'-'}</td>
@@ -383,7 +383,7 @@
         <td>${badge(r.fanNoise)}</td>
         <td>${badge(r.combustionNoise)}</td>
         <td><div class="media-cell">${thumbs||'-'}</div></td>
-        <td style="white-space:nowrap">
+        <td style="white-space:nowrap" onclick="event.stopPropagation()">
           <button class="action-btn" onclick="openDetail(${idx})"><i class="ti ti-edit"></i> 수정</button>
           <button class="action-btn del" onclick="openDelete(${idx})"><i class="ti ti-trash"></i></button>
         </td>
