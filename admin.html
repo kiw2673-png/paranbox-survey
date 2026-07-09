@@ -544,16 +544,16 @@
       if (!rows.length) { alert('데이터가 없습니다. 올바른 엑셀 파일을 선택해 주세요.'); return; }
 
       uploadRows = rows.map(r => ({
-        agency:          String(r['대리점명'] || ''),
-        name:            String(r['담당자'] || ''),
+        agency:          String(r['대리점'] || r['대리점명'] || ''),
+        name:            String(r['설치자'] || r['담당자'] || ''),
         model:           String(r['모델명'] || ''),
         installDate:     r['설치일자'] != null ? String(r['설치일자']) : '',
         location:        String(r['설치장소'] || ''),
         preRun:          String(r['사전운전여부'] || ''),
-        pumpNoise:       String(r['펌프소음개선'] || ''),
-        fanNoise:        String(r['팬소음개선'] || ''),
-        combustionNoise: String(r['연소소음개선'] || ''),
-        overallComment:  String(r['전반적의견'] || ''),
+        pumpNoise:       String(r['펌프소음'] || r['펌프소음개선'] || ''),
+        fanNoise:        String(r['팬소음'] || r['팬소음개선'] || ''),
+        combustionNoise: String(r['연소소음'] || r['연소소음개선'] || ''),
+        overallComment:  String(r['의견'] || r['전반적의견'] || ''),
         media:           []
       }));
 
@@ -640,17 +640,17 @@
       });
 
       return {
-        '제출일시':        r.submittedAt ? (r.submittedAt.toDate ? r.submittedAt.toDate().toLocaleString('ko-KR') : r.submittedAt) : '',
-        '대리점명':        r.agency || '',
-        '담당자':          r.name || '',
+        '제출일자':        r.submittedAt ? (r.submittedAt.toDate ? r.submittedAt.toDate().toLocaleString('ko-KR') : r.submittedAt) : '',
+        '대리점':          r.agency || '',
+        '설치자':          r.name || '',
         '모델명':          r.model || '',
         '설치일자':        r.installDate || '',
         '설치장소':        r.location || '',
         '사전운전여부':    r.preRun || '',
-        '펌프소음개선':    r.pumpNoise || '',
-        '팬소음개선':      r.fanNoise || '',
-        '연소소음개선':    r.combustionNoise || '',
-        '전반적의견':      r.overallComment || '',
+        '펌프소음':        r.pumpNoise || '',
+        '팬소음':          r.fanNoise || '',
+        '연소소음':        r.combustionNoise || '',
+        '의견':            r.overallComment || '',
         '사진수':          photos.length,
         '첨부사진파일명':  photos.map(m => m.name).join(', '),
         '동영상수':        videos.length,
