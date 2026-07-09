@@ -152,9 +152,9 @@
   <div class="content">
     <div class="stats" id="statsArea">
       <div class="stat-card"><div class="label">전체 응답</div><div class="value" id="statTotal">-</div></div>
-      <div class="stat-card"><div class="label">펌프소음 상</div><div class="value" id="statPump">-</div></div>
-      <div class="stat-card"><div class="label">팬소음 상</div><div class="value" id="statFan">-</div></div>
-      <div class="stat-card"><div class="label">연소소음 상</div><div class="value" id="statComb">-</div></div>
+      <div class="stat-card"><div class="label">펌프소음 좋음</div><div class="value" id="statPump">-</div></div>
+      <div class="stat-card"><div class="label">팬소음 좋음</div><div class="value" id="statFan">-</div></div>
+      <div class="stat-card"><div class="label">연소소음 좋음</div><div class="value" id="statComb">-</div></div>
     </div>
 
     <div class="toolbar">
@@ -300,16 +300,16 @@
 
   function updateStats() {
     document.getElementById('statTotal').textContent = allData.length;
-    document.getElementById('statPump').textContent  = allData.filter(r => r.pumpNoise === '상').length;
-    document.getElementById('statFan').textContent   = allData.filter(r => r.fanNoise === '상').length;
-    document.getElementById('statComb').textContent  = allData.filter(r => r.combustionNoise === '상').length;
+    document.getElementById('statPump').textContent  = allData.filter(r => r.pumpNoise === '좋음').length;
+    document.getElementById('statFan').textContent   = allData.filter(r => r.fanNoise === '좋음').length;
+    document.getElementById('statComb').textContent  = allData.filter(r => r.combustionNoise === '좋음').length;
   }
 
   function badge(val) {
     if (!val) return '-';
-    if (val === '상') return `<span class="badge badge-high">상 😊</span>`;
-    if (val === '중') return `<span class="badge badge-mid">중 😐</span>`;
-    if (val === '하') return `<span class="badge badge-low">하 😔</span>`;
+    if (val === '좋음') return `<span class="badge badge-high">좋음 😊</span>`;
+    if (val === '보통') return `<span class="badge badge-mid">보통 😐</span>`;
+    if (val === '나쁨') return `<span class="badge badge-low">나쁨 😔</span>`;
     if (val === '예') return `<span class="badge badge-yes">예</span>`;
     return `<span class="badge badge-no">${val}</span>`;
   }
@@ -370,7 +370,7 @@
       return `<div class="media-grid-item" onclick="openViewer(${idx},${mi})"><img src="${m.url || m.data}" alt="${m.name}"></div>`;
     }).join('');
 
-    const selOpt = (v, cur) => ['상','중','하'].map(o => `<option value="${o}" ${o===cur?'selected':''}>${o}</option>`).join('');
+    const selOpt = (v, cur) => ['좋음','보통','나쁨'].map(o => `<option value="${o}" ${o===cur?'selected':''}>${o}</option>`).join('');
     const ynOpt  = (v, cur) => ['예','아니오'].map(o => `<option value="${o}" ${o===cur?'selected':''}>${o}</option>`).join('');
 
     document.getElementById('detailBody').innerHTML = `
