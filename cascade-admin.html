@@ -267,7 +267,7 @@ function updateStats(){
     const d=r.submittedAt.toDate?r.submittedAt.toDate():new Date(r.submittedAt);
     return d.getMonth()===thisMonth && d.getFullYear()===thisYear;
   }).length;
-  document.getElementById('statMedia').textContent=allData.filter(r=>r.media&&r.media.length>0).length;
+  document.getElementById('statMedia').textContent=allData.filter(r=>r.media&&Object.values(r.media).some(a=>a&&a.length>0)).length;
 }
 
 function fmtDate(ts){
@@ -284,13 +284,14 @@ function renderTable(){
   empty.style.display='none';
 
   body.innerHTML=filtered.map(r=>{
-    const media=r.media||[];
+    const media=r.media||{};
     const idx=allData.indexOf(r);
-    const thumbs=media.slice(0,4).map((m,mi)=>
-      m.kind==='video'
-        ?`<div class="video-thumb" onclick="openViewer(${idx},${mi})" title="${m.name}"><i class="ti ti-player-play"></i></div>`
-        :`<img class="thumb" src="${m.url}" onclick="openViewer(${idx},${mi})" title="${m.name}">`
-    ).join('')+(media.length>4?`<span style="font-size:11px;color:var(--text-muted)">+${media.length-4}</span>`:'');
+    const allItems=Object.values(media).flat();
+    const thumbs=allItems.slice(0,4).map((m,mi)=>
+      (m.url&&m.url.match(/\.(mp4|mov|avi|webm)/i))
+        ?`<div class="video-thumb" onclick="openViewerByUrl('${m.url}','video')" title="${m.name}"><i class="ti ti-player-play"></i></div>`
+        :`<img class="thumb" src="${m.url}" onclick="openViewerByUrl('${m.url}','photo')" title="${m.name}">`
+    ).join('')+(allItems.length>4?`<span style="font-size:11px;color:var(--text-muted)">+${allItems.length-4}</span>`:'');
 
     return `<tr>
       <td style="white-space:nowrap;font-size:12px">${fmtDate(r.submittedAt)}</td>
@@ -300,7 +301,7 @@ function renderTable(){
       <td style="white-space:nowrap">${r.visitDate||'-'}</td>
       <td>${r.modelQty||'-'}</td>
       <td>${r.inspectorName||'-'}</td>
-      <td style="text-align:center">${(r.audio&&r.audio.length)?`<span style="background:#e6f1fb;color:#1a56b0;border-radius:20px;padding:2px 8px;font-size:11.5px;font-weight:500">${r.audio.length}개</span>`:'-'}</td>
+      <td style="text-align:center">${(r.audio&&r.audio.length)?`<span style="background:#e6f1fb;color:#1a56b0;border-radius:20px;padding:2px 8px;font-size:11.5px;font-weight:500">🎙 ${r.audio.length}개</span>`:'-'}</td>
       <td><div class="media-cell">${thumbs||'-'}</div></td>
       <td style="white-space:nowrap">
         <button class="action-btn" onclick="openDetail(${idx})"><i class="ti ti-eye"></i> 상세</button>
@@ -328,16 +329,28 @@ function openDetail(idx){
     <div style="display:flex;align-items:center;gap:10px;background:#f7fbff;border:1px solid #c7d7fa;border-radius:6px;padding:8px 12px">
       <i class="ti ti-file-music" style="color:#1a56b0;font-size:18px;flex-shrink:0"></i>
       <div style="flex:1;min-width:0">
-        <div style="font-size:13px;font-weight:500;margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${a.name}</div>
+        <div style="font-size:12.5px;font-weight:500;margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${a.name}</div>
         <audio controls src="${a.url}" style="width:100%;height:28px"></audio>
       </div>
-      <a href="${a.url}" download="${a.name}" style="color:#1a56b0;font-size:12px;text-decoration:none;white-space:nowrap"><i class="ti ti-download"></i></a>
+      <a href="${a.url}" download="${a.name}" style="color:#1a56b0;font-size:12px;text-decoration:none"><i class="ti ti-download"></i></a>
     </div>`).join('');
-  const mediaHtml=media.map((m,mi)=>
-    m.kind==='video'
-      ?`<div class="media-grid-item" onclick="openViewer(${idx},${mi})"><video src="${m.url}"></video><div class="play-icon"><i class="ti ti-player-play"></i></div></div>`
-      :`<div class="media-grid-item" onclick="openViewer(${idx},${mi})"><img src="${m.url}" alt="${m.name}"></div>`
-  ).join('');
+
+  // 섹션별 미디어 구성
+  const mediaSections=r.media||{};
+  const sectionLabels={전경:'5-1 설치 전경',명판:'5-2 제품 명판',내부:'5-3 제품 내부',이상부위:'5-4 이상 부위',설치환경:'5-5 설치 환경',동영상:'5-6 가동 중 동영상'};
+  let allMedia=[];
+  Object.keys(sectionLabels).forEach(key=>{ (mediaSections[key]||[]).forEach(m=>allMedia.push({...m,section:key})); });
+  const mediaHtml=Object.keys(sectionLabels).map(key=>{
+    const items=mediaSections[key]||[];
+    if(!items.length) return '';
+    const grid=items.map((m,mi)=>{
+      const globalIdx=allMedia.findIndex(a=>a.url===m.url);
+      return m.kind==='video'
+        ?`<div class="media-grid-item" onclick="openViewerByUrl('${m.url}','video')"><video src="${m.url}"></video><div class="play-icon"><i class="ti ti-player-play"></i></div></div>`
+        :`<div class="media-grid-item" onclick="openViewerByUrl('${m.url}','photo')"><img src="${m.url}" alt="${m.name}"></div>`;
+    }).join('');
+    return `<div style="margin-bottom:12px"><div style="font-size:12px;font-weight:600;color:var(--blue);margin-bottom:6px">${sectionLabels[key]} (${items.length})</div><div class="media-grid">${grid}</div></div>`;
+  }).join('');
 
   const checks2=(r.check2||[]).map(c=>`<tr><td style="color:var(--text-muted);width:36px;text-align:center">${c.no}</td><td>${c.item}</td><td>${ckBadge(c.result)}</td><td style="color:var(--text-muted);font-size:12px">${c.note||''}</td></tr>`).join('');
   const checks3=(r.check3||[]).map(c=>`<tr><td style="color:var(--text-muted);width:36px;text-align:center">${c.no}</td><td>${c.item}</td><td>${ckBadge(c.result)}</td><td style="color:var(--text-muted);font-size:12px">${c.note||''}</td></tr>`).join('');
@@ -377,7 +390,7 @@ function openDetail(idx){
       <div style="font-size:13.5px;color:var(--text-muted);line-height:1.7">${r.overallOpinion||'미입력'}</div>
       <div style="margin-top:10px;font-size:13px"><strong>조사자:</strong> ${r.inspectorName||'-'} &nbsp;|&nbsp; <strong>확인일자:</strong> ${r.confirmDate||'-'}</div>
     </div>
-    ${mediaHtml?`<div class="modal-divider"></div><div class="modal-section"><div class="modal-section-title">첨부 미디어 (${media.length}개)</div><div class="media-grid">${mediaHtml}</div></div>`:''}
+    ${mediaHtml?`<div class="modal-divider"></div><div class="modal-section"><div class="modal-section-title">첨부 사진 · 동영상</div>${mediaHtml}</div>`:''}
     ${audioHtml?`<div class="modal-divider"></div><div class="modal-section"><div class="modal-section-title">음성 녹취 (${(r.audio||[]).length}개)</div><div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">${audioHtml}</div></div>`:''}
   `;
   document.getElementById('detailModal').classList.add('open');
@@ -398,15 +411,21 @@ window.confirmDelete=confirmDelete;
 function closeModal(id){document.getElementById(id).classList.remove('open');}
 window.closeModal=closeModal;
 
-function openViewer(rowIdx,mediaIdx){
-  const m=(allData[rowIdx].media||[])[mediaIdx];
-  if(!m) return;
-  document.getElementById('viewerContent').innerHTML=m.kind==='video'
-    ?`<video src="${m.url}" controls autoplay style="max-width:92vw;max-height:88vh;border-radius:6px;outline:none"></video>`
-    :`<img src="${m.url}" style="max-width:92vw;max-height:88vh;border-radius:6px;object-fit:contain">`;
+function openViewerByUrl(url, kind) {
+  document.getElementById('viewerContent').innerHTML = kind === 'video'
+    ? `<video src="${url}" controls autoplay style="max-width:92vw;max-height:88vh;border-radius:6px;outline:none"></video>`
+    : `<img src="${url}" style="max-width:92vw;max-height:88vh;border-radius:6px;object-fit:contain">`;
   document.getElementById('mediaViewer').classList.add('open');
 }
-window.openViewer=openViewer;
+window.openViewerByUrl = openViewerByUrl;
+
+function openViewerByUrl(url,kind){
+  document.getElementById('viewerContent').innerHTML=kind==='video'
+    ?`<video src="${url}" controls autoplay style="max-width:92vw;max-height:88vh;border-radius:6px;outline:none"></video>`
+    :`<img src="${url}" style="max-width:92vw;max-height:88vh;border-radius:6px;object-fit:contain">`;
+  document.getElementById('mediaViewer').classList.add('open');
+}
+window.openViewerByUrl=openViewerByUrl;
 
 function closeViewer(){document.getElementById('mediaViewer').classList.remove('open');document.getElementById('viewerContent').innerHTML='';}
 window.closeViewer=closeViewer;
@@ -414,9 +433,8 @@ window.closeViewer=closeViewer;
 function downloadExcel(){
   if(!allData.length){alert('다운로드할 데이터가 없습니다.');return;}
   const rows=allData.map(r=>{
-    const media=r.media||[];
-    const photos=media.filter(m=>m.kind==='photo');
-    const videos=media.filter(m=>m.kind==='video');
+    const media=r.media||{};
+    const groupLabelsXls={frontView:'설치전경',nameplate:'제품명판',interior:'제품내부',defect:'이상부위',environment:'설치공간',operationVideo:'가동동영상'};
     const row={
       '제출일시':r.submittedAt?(r.submittedAt.toDate?r.submittedAt.toDate().toLocaleString('ko-KR'):r.submittedAt):'',
       '현장명':r.fieldName||'','방문일자':r.visitDate||'','현장주소':r.address||'',
@@ -432,9 +450,12 @@ function downloadExcel(){
     (r.interviews||[]).forEach((iv,i)=>{row[`인터뷰${i+1}`]=iv.answer||'';});
     row['종합소견']=r.overallOpinion||'';
     const audioList=r.audio||[];
-    row['사진수']=photos.length; row['동영상수']=videos.length; row['녹취수']=audioList.length;
-    photos.forEach((p,i)=>{row[`사진${i+1}_URL`]=p.url;});
-    videos.forEach((v,i)=>{row[`동영상${i+1}_URL`]=v.url;});
+    Object.entries(groupLabelsXls).forEach(([gk,label])=>{
+      const items=media[gk]||[];
+      row[`${label}_수`]=items.length;
+      items.forEach((m,i)=>{row[`${label}_${i+1}_URL`]=m.url;});
+    });
+    row['녹취수']=audioList.length;
     audioList.forEach((a,i)=>{row[`녹취${i+1}_파일명`]=a.name; row[`녹취${i+1}_URL`]=a.url;});
     return row;
   });
