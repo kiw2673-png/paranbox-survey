@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>캐스케이드 현장조사 관리자</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --blue: #1a56b0; --blue-light: #e6f1fb;
+    --green: #3B6D11; --green-bg: #eaf3de; --green-border: #639922;
+    --amber-bg: #faeeda; --amber-text: #854F0B;
+    --red-bg: #fcebeb; --red-text: #A32D2D; --red-border: #E24B4A;
+    --border: #e2e2e2; --text: #1a1a1a; --text-muted: #666;
+    --bg: #f5f6f8; --card: #fff; --radius: 10px; --radius-sm: 6px;
+  }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); }
+
+  .login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1rem; }
+  .login-card { background: var(--card); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 2rem; width: 100%; max-width: 360px; text-align: center; }
+  .login-card h1 { font-size: 18px; margin-bottom: 4px; }
+  .login-card p { font-size: 13px; color: var(--text-muted); margin-bottom: 1.5rem; }
+  .login-card input { width: 100%; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px; font-size: 14px; margin-bottom: 10px; outline: none; font-family: inherit; }
+  .login-card input:focus { border-color: var(--blue); }
+  .login-btn { width: 100%; padding: 11px; background: var(--blue); color: #fff; border: none; border-radius: var(--radius-sm); font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit; }
+  .login-btn:hover { background: #154698; }
+  .login-err { color: var(--red-text); font-size: 13px; margin-top: 8px; display: none; }
+
+  .admin { display: none; min-height: 100vh; }
+  .topbar { background: #0f4c8a; color: #fff; padding: 0 1.5rem; height: 54px; display: flex; align-items: center; justify-content: space-between; }
+  .topbar h1 { font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .topbar-right { display: flex; align-items: center; gap: 10px; }
+  .topbar-btn { background: rgba(255,255,255,0.15); border: none; color: #fff; padding: 6px 12px; border-radius: var(--radius-sm); font-size: 13px; cursor: pointer; font-family: inherit; display: flex; align-items: center; gap: 5px; text-decoration: none; }
+  .topbar-btn:hover { background: rgba(255,255,255,0.25); }
+
+  .content { max-width: 1200px; margin: 0 auto; padding: 1.5rem 1rem 3rem; }
+
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 1.25rem; }
+  .stat-card { background: var(--card); border: 0.5px solid var(--border); border-radius: var(--radius-sm); padding: 14px 16px; }
+  .stat-card .label { font-size: 12px; color: var(--text-muted); margin-bottom: 4px; }
+  .stat-card .value { font-size: 26px; font-weight: 600; color: var(--blue); }
+
+  .toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 1rem; flex-wrap: wrap; }
+  .toolbar input { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 12px; font-size: 13.5px; outline: none; font-family: inherit; flex: 1; min-width: 180px; }
+  .toolbar input:focus { border-color: var(--blue); }
+  .icon-btn { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 14px; font-size: 13.5px; cursor: pointer; font-family: inherit; display: flex; align-items: center; gap: 5px; white-space: nowrap; }
+  .icon-btn:hover { border-color: var(--blue); color: var(--blue); }
+  .icon-btn.green { background: var(--green); color: #fff; border-color: var(--green); }
+  .icon-btn.green:hover { background: #27500A; }
+
+  .table-wrap { background: var(--card); border: 0.5px solid var(--border); border-radius: var(--radius); overflow: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 800px; }
+  th { background: #f8f9fa; padding: 10px 12px; text-align: left; font-size: 11.5px; font-weight: 600; color: var(--text-muted); border-bottom: 1px solid var(--border); white-space: nowrap; }
+  td { padding: 9px 12px; border-bottom: 0.5px solid var(--border); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #fafafa; }
+
+  .media-cell { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
+  .thumb { width: 36px; height: 36px; border-radius: 4px; object-fit: cover; border: 1px solid var(--border); cursor: pointer; transition: opacity 0.15s; }
+  .thumb:hover { opacity: 0.8; }
+  .video-thumb { width: 36px; height: 36px; border-radius: 4px; border: 1px solid var(--border); background: #222; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+  .video-thumb:hover { background: #333; }
+  .video-thumb i { color: #fff; font-size: 14px; }
+
+  .action-btn { background: none; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 4px 9px; font-size: 12px; cursor: pointer; font-family: inherit; color: var(--text-muted); margin-right: 4px; }
+  .action-btn:hover { border-color: var(--blue); color: var(--blue); }
+  .action-btn.del:hover { border-color: var(--red-border); color: var(--red-text); }
+
+  .empty { text-align: center; padding: 3rem; color: var(--text-muted); font-size: 14px; }
+
+  /* 상세 모달 */
+  .modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 1000; align-items: flex-start; justify-content: center; padding: 1rem; overflow-y: auto; }
+  .modal-bg.open { display: flex; }
+  .modal { background: var(--card); border-radius: var(--radius); width: 100%; max-width: 780px; padding: 1.5rem; margin: auto; }
+  .modal.sm { max-width: 460px; }
+  .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+  .modal-header h2 { font-size: 16px; }
+  .modal-close { background: none; border: none; font-size: 22px; cursor: pointer; color: var(--text-muted); }
+  .modal-section { margin-bottom: 1.25rem; }
+  .modal-section-title { font-size: 12px; font-weight: 600; color: var(--blue); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
+  .modal-row { display: flex; gap: 8px; margin-bottom: 8px; font-size: 13.5px; }
+  .modal-row .lbl { width: 110px; flex-shrink: 0; color: var(--text-muted); font-weight: 500; }
+  .modal-divider { height: 1px; background: var(--border); margin: 12px 0; }
+  .modal-footer { display: flex; gap: 8px; justify-content: flex-end; margin-top: 1rem; }
+  .modal-footer button { padding: 9px 18px; border-radius: var(--radius-sm); font-size: 13.5px; font-weight: 500; cursor: pointer; font-family: inherit; border: 1px solid var(--border); display: flex; align-items: center; gap: 5px; }
+  .modal-footer .btn-cancel { background: #fff; color: var(--text-muted); }
+  .modal-footer .btn-danger { background: var(--red-bg); color: var(--red-text); border-color: var(--red-border); }
+
+  /* 체크 결과 뱃지 */
+  .ck { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11.5px; font-weight: 500; }
+  .ck-ok  { background: var(--green-bg); color: var(--green); }
+  .ck-bad { background: var(--red-bg); color: var(--red-text); }
+  .ck-na  { background: #f1f1f1; color: #555; }
+  .ck-empty { background: #f8f8f8; color: #bbb; }
+
+  .check-mini-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  .check-mini-table td { padding: 5px 8px; border-bottom: 0.5px solid var(--border); }
+  .check-mini-table tr:last-child td { border-bottom: none; }
+
+  /* 미디어 그리드 */
+  .media-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 8px; margin-top: 8px; }
+  .media-grid-item { border-radius: var(--radius-sm); overflow: hidden; border: 1px solid var(--border); aspect-ratio: 1; cursor: pointer; background: #000; display: flex; align-items: center; justify-content: center; position: relative; transition: opacity 0.15s; }
+  .media-grid-item:hover { opacity: 0.85; }
+  .media-grid-item img { width: 100%; height: 100%; object-fit: cover; }
+  .media-grid-item .play-icon { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.35); }
+  .media-grid-item .play-icon i { color: #fff; font-size: 30px; }
+
+  /* 뷰어 */
+  .media-viewer { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.93); z-index: 2000; align-items: center; justify-content: center; }
+  .media-viewer.open { display: flex; }
+  .viewer-close { position: absolute; top: 16px; right: 20px; background: rgba(255,255,255,0.15); border: none; color: #fff; font-size: 20px; cursor: pointer; border-radius: 50%; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; }
+  #viewerContent img { max-width: 92vw; max-height: 88vh; object-fit: contain; border-radius: 6px; display: block; }
+  #viewerContent video { max-width: 92vw; max-height: 88vh; border-radius: 6px; outline: none; display: block; }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spinning { animation: spin 1s linear infinite; display: inline-block; }
+</style>
+</head>
+<body>
+
+<div class="login-wrap" id="loginWrap">
+  <div class="login-card">
+    <div style="font-size:32px;margin-bottom:10px">🔒</div>
+    <h1>캐스케이드 관리자</h1>
+    <p>현장조사 체크리스트 조회 및 관리</p>
+    <input type="email" id="loginEmail" placeholder="이메일" onkeydown="if(event.key==='Enter')doLogin()">
+    <input type="password" id="loginPw" placeholder="비밀번호" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="login-btn" onclick="doLogin()">로그인</button>
+    <div class="login-err" id="loginErr">이메일 또는 비밀번호가 올바르지 않습니다.</div>
+  </div>
+</div>
+
+<div class="admin" id="adminWrap">
+  <div class="topbar">
+    <h1><i class="ti ti-clipboard-list"></i> 캐스케이드 현장조사 관리자 <span style="background:rgba(255,255,255,0.2);font-size:11px;padding:2px 8px;border-radius:20px;font-weight:500">v1.0</span></h1>
+    <div class="topbar-right">
+      <a class="topbar-btn" href="cascade.html"><i class="ti ti-forms"></i> 설문지</a>
+      <a class="topbar-btn" href="admin.html"><i class="ti ti-box"></i> 파란박스</a>
+      <button class="topbar-btn" onclick="doLogout()"><i class="ti ti-logout"></i> 로그아웃</button>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="stats">
+      <div class="stat-card"><div class="label">전체 제출</div><div class="value" id="statTotal">-</div></div>
+      <div class="stat-card"><div class="label">이번 달</div><div class="value" id="statMonth">-</div></div>
+      <div class="stat-card"><div class="label">미디어 첨부</div><div class="value" id="statMedia">-</div></div>
+    </div>
+
+    <div class="toolbar">
+      <input type="text" id="searchInput" placeholder="현장명, 담당자, 조사자 이름으로 검색..." oninput="renderTable()">
+      <button class="icon-btn" onclick="loadData()"><i class="ti ti-refresh" id="refreshIcon"></i> 새로고침</button>
+      <button class="icon-btn green" onclick="downloadExcel()"><i class="ti ti-file-spreadsheet"></i> 엑셀 다운로드</button>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>제출일시</th><th>현장명</th><th>주소</th><th>담당자</th>
+            <th>방문일자</th><th>모델/수량</th><th>조사자</th><th>녹취</th><th>미디어</th><th>관리</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+      <div class="empty" id="emptyMsg">데이터를 불러오는 중...</div>
+    </div>
+  </div>
+</div>
+
+<!-- 상세 모달 -->
+<div class="modal-bg" id="detailModal" onclick="if(event.target===this)closeModal('detailModal')">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="detailTitle">현장조사 상세</h2>
+      <button class="modal-close" onclick="closeModal('detailModal')">✕</button>
+    </div>
+    <div id="detailBody"></div>
+    <div class="modal-footer">
+      <button class="modal-footer btn-cancel" onclick="closeModal('detailModal')">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 삭제 확인 -->
+<div class="modal-bg" id="deleteModal" onclick="if(event.target===this)closeModal('deleteModal')">
+  <div class="modal sm">
+    <div class="modal-header"><h2>현장조사 삭제</h2><button class="modal-close" onclick="closeModal('deleteModal')">✕</button></div>
+    <p style="font-size:14px;color:var(--text-muted);line-height:1.7">이 항목을 삭제하면 복구할 수 없습니다.<br>정말 삭제하시겠습니까?</p>
+    <div class="modal-footer">
+      <button class="modal-footer btn-cancel" onclick="closeModal('deleteModal')">취소</button>
+      <button class="modal-footer btn-danger" onclick="confirmDelete()"><i class="ti ti-trash"></i> 삭제</button>
+    </div>
+  </div>
+</div>
+
+<!-- 미디어 뷰어 -->
+<div class="media-viewer" id="mediaViewer" onclick="if(event.target===this)closeViewer()">
+  <button class="viewer-close" onclick="closeViewer()">✕</button>
+  <div id="viewerContent"></div>
+</div>
+
+<script type="module">
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+  import { getFirestore, collection, getDocs, doc, deleteDoc, orderBy, query } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+  import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+  const firebaseConfig = {
+    apiKey:"AIzaSyAcxGPyL-Tg-yB8pAwqqp8tCLOspTJzKIc",
+    authDomain:"bluebox-9471f.firebaseapp.com",
+    projectId:"bluebox-9471f",
+    storageBucket:"bluebox-9471f.firebasestorage.app",
+    messagingSenderId:"764690233349",
+    appId:"1:764690233349:web:fc22418ed9c2f101a6c46c"
+  };
+  const app=initializeApp(firebaseConfig);
+  const db=getFirestore(app), auth=getAuth(app);
+  window._fb={db,auth,collection,getDocs,doc,deleteDoc,orderBy,query,signInWithEmailAndPassword,signOut,onAuthStateChanged};
+  onAuthStateChanged(auth,user=>{
+    if(user){
+      document.getElementById('loginWrap').style.display='none';
+      document.getElementById('adminWrap').style.display='block';
+      loadData();
+    } else {
+      document.getElementById('loginWrap').style.display='flex';
+      document.getElementById('adminWrap').style.display='none';
+    }
+  });
+</script>
+
+<script>
+let allData=[], deletingId=null;
+
+async function doLogin(){
+  const email=document.getElementById('loginEmail').value.trim();
+  const pw=document.getElementById('loginPw').value;
+  try{await window._fb.signInWithEmailAndPassword(window._fb.auth,email,pw);}
+  catch{document.getElementById('loginErr').style.display='block';}
+}
+window.doLogin=doLogin;
+
+async function doLogout(){await window._fb.signOut(window._fb.auth);}
+window.doLogout=doLogout;
+
+async function loadData(){
+  const icon=document.getElementById('refreshIcon');
+  icon.classList.add('spinning');
+  document.getElementById('emptyMsg').style.display='block';
+  document.getElementById('emptyMsg').textContent='데이터를 불러오는 중...';
+  document.getElementById('tableBody').innerHTML='';
+  try{
+    const {db,collection,getDocs,orderBy,query}=window._fb;
+    const snap=await getDocs(query(collection(db,'cascade_surveys'),orderBy('submittedAt','desc')));
+    allData=snap.docs.map(d=>({id:d.id,...d.data()}));
+    updateStats(); renderTable();
+  }catch(e){document.getElementById('emptyMsg').textContent='불러오기 실패: '+e.message;}
+  icon.classList.remove('spinning');
+}
+window.loadData=loadData;
+
+function updateStats(){
+  const now=new Date(), thisMonth=now.getMonth(), thisYear=now.getFullYear();
+  document.getElementById('statTotal').textContent=allData.length;
+  document.getElementById('statMonth').textContent=allData.filter(r=>{
+    if(!r.submittedAt) return false;
+    const d=r.submittedAt.toDate?r.submittedAt.toDate():new Date(r.submittedAt);
+    return d.getMonth()===thisMonth && d.getFullYear()===thisYear;
+  }).length;
+  document.getElementById('statMedia').textContent=allData.filter(r=>r.media&&r.media.length>0).length;
+}
+
+function fmtDate(ts){
+  if(!ts) return '-';
+  const d=ts.toDate?ts.toDate():new Date(ts);
+  return d.toLocaleDateString('ko-KR')+' '+d.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
+}
+
+function renderTable(){
+  const q=document.getElementById('searchInput').value.toLowerCase();
+  const filtered=allData.filter(r=>!q||[r.fieldName,r.contactName,r.inspectorName,r.address].some(v=>v&&v.toLowerCase().includes(q)));
+  const body=document.getElementById('tableBody'), empty=document.getElementById('emptyMsg');
+  if(!filtered.length){body.innerHTML='';empty.style.display='block';empty.textContent=allData.length?'검색 결과가 없습니다.':'아직 제출된 데이터가 없습니다.';return;}
+  empty.style.display='none';
+
+  body.innerHTML=filtered.map(r=>{
+    const media=r.media||[];
+    const idx=allData.indexOf(r);
+    const thumbs=media.slice(0,4).map((m,mi)=>
+      m.kind==='video'
+        ?`<div class="video-thumb" onclick="openViewer(${idx},${mi})" title="${m.name}"><i class="ti ti-player-play"></i></div>`
+        :`<img class="thumb" src="${m.url}" onclick="openViewer(${idx},${mi})" title="${m.name}">`
+    ).join('')+(media.length>4?`<span style="font-size:11px;color:var(--text-muted)">+${media.length-4}</span>`:'');
+
+    return `<tr>
+      <td style="white-space:nowrap;font-size:12px">${fmtDate(r.submittedAt)}</td>
+      <td><strong>${r.fieldName||'-'}</strong></td>
+      <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.address||''}">${r.address||'-'}</td>
+      <td>${r.contactName||'-'}</td>
+      <td style="white-space:nowrap">${r.visitDate||'-'}</td>
+      <td>${r.modelQty||'-'}</td>
+      <td>${r.inspectorName||'-'}</td>
+      <td style="text-align:center">${(r.audio&&r.audio.length)?`<span style="background:#e6f1fb;color:#1a56b0;border-radius:20px;padding:2px 8px;font-size:11.5px;font-weight:500">${r.audio.length}개</span>`:'-'}</td>
+      <td><div class="media-cell">${thumbs||'-'}</div></td>
+      <td style="white-space:nowrap">
+        <button class="action-btn" onclick="openDetail(${idx})"><i class="ti ti-eye"></i> 상세</button>
+        <button class="action-btn del" onclick="openDelete(${idx})"><i class="ti ti-trash"></i></button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+window.renderTable=renderTable;
+
+function ckBadge(val){
+  if(!val) return '<span class="ck ck-empty">-</span>';
+  if(val==='양호') return '<span class="ck ck-ok">양호</span>';
+  if(val==='불량') return '<span class="ck ck-bad">불량</span>';
+  if(val==='해당없음') return '<span class="ck ck-na">해당없음</span>';
+  return val;
+}
+
+function openDetail(idx){
+  const r=allData[idx];
+  document.getElementById('detailTitle').textContent=r.fieldName+' · '+r.contactName;
+  const media=r.media||[];
+  const audio=r.audio||[];
+  const audioHtml=audio.map((a,ai)=>`
+    <div style="display:flex;align-items:center;gap:10px;background:#f7fbff;border:1px solid #c7d7fa;border-radius:6px;padding:8px 12px">
+      <i class="ti ti-file-music" style="color:#1a56b0;font-size:18px;flex-shrink:0"></i>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:500;margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${a.name}</div>
+        <audio controls src="${a.url}" style="width:100%;height:28px"></audio>
+      </div>
+      <a href="${a.url}" download="${a.name}" style="color:#1a56b0;font-size:12px;text-decoration:none;white-space:nowrap"><i class="ti ti-download"></i></a>
+    </div>`).join('');
+  const mediaHtml=media.map((m,mi)=>
+    m.kind==='video'
+      ?`<div class="media-grid-item" onclick="openViewer(${idx},${mi})"><video src="${m.url}"></video><div class="play-icon"><i class="ti ti-player-play"></i></div></div>`
+      :`<div class="media-grid-item" onclick="openViewer(${idx},${mi})"><img src="${m.url}" alt="${m.name}"></div>`
+  ).join('');
+
+  const checks2=(r.check2||[]).map(c=>`<tr><td style="color:var(--text-muted);width:36px;text-align:center">${c.no}</td><td>${c.item}</td><td>${ckBadge(c.result)}</td><td style="color:var(--text-muted);font-size:12px">${c.note||''}</td></tr>`).join('');
+  const checks3=(r.check3||[]).map(c=>`<tr><td style="color:var(--text-muted);width:36px;text-align:center">${c.no}</td><td>${c.item}</td><td>${ckBadge(c.result)}</td><td style="color:var(--text-muted);font-size:12px">${c.note||''}</td></tr>`).join('');
+  const ivs=(r.interviews||[]).map((iv,i)=>`<div style="margin-bottom:10px;font-size:13.5px"><div style="font-weight:500;margin-bottom:4px">${i+1}. ${iv.question}</div><div style="color:var(--text-muted);padding-left:12px;line-height:1.6">${iv.answer||'<span style="color:#bbb">미입력</span>'}</div></div>`).join('');
+
+  document.getElementById('detailBody').innerHTML=`
+    <div class="modal-section">
+      <div class="modal-section-title">기본 정보</div>
+      <div class="modal-row"><span class="lbl">제출일시</span><span>${fmtDate(r.submittedAt)}</span></div>
+      <div class="modal-row"><span class="lbl">현장명</span><span>${r.fieldName||'-'}</span></div>
+      <div class="modal-row"><span class="lbl">방문일자</span><span>${r.visitDate||'-'}</span></div>
+      <div class="modal-row"><span class="lbl">주소</span><span>${r.address||'-'}</span></div>
+      <div class="modal-row"><span class="lbl">담당자</span><span>${r.contactName||'-'} ${r.contactTitle?'('+r.contactTitle+')':''}</span></div>
+      <div class="modal-row"><span class="lbl">연락처</span><span>${r.phone||'-'}</span></div>
+      <div class="modal-row"><span class="lbl">이메일</span><span>${r.email||'-'}</span></div>
+      <div class="modal-row"><span class="lbl">모델/수량</span><span>${r.modelQty||'-'}</span></div>
+      <div class="modal-row"><span class="lbl">설치일자</span><span>${r.installDate||'-'}</span></div>
+    </div>
+    <div class="modal-divider"></div>
+    <div class="modal-section">
+      <div class="modal-section-title">사용 현황 점검</div>
+      <table class="check-mini-table"><tbody>${checks2}</tbody></table>
+    </div>
+    <div class="modal-divider"></div>
+    <div class="modal-section">
+      <div class="modal-section-title">보일러·온수기 상태 점검</div>
+      <table class="check-mini-table"><tbody>${checks3}</tbody></table>
+    </div>
+    <div class="modal-divider"></div>
+    <div class="modal-section">
+      <div class="modal-section-title">현장 담당자 인터뷰</div>
+      ${ivs||'<span style="color:#bbb;font-size:13px">미입력</span>'}
+    </div>
+    <div class="modal-divider"></div>
+    <div class="modal-section">
+      <div class="modal-section-title">종합 의견</div>
+      <div style="font-size:13.5px;color:var(--text-muted);line-height:1.7">${r.overallOpinion||'미입력'}</div>
+      <div style="margin-top:10px;font-size:13px"><strong>조사자:</strong> ${r.inspectorName||'-'} &nbsp;|&nbsp; <strong>확인일자:</strong> ${r.confirmDate||'-'}</div>
+    </div>
+    ${mediaHtml?`<div class="modal-divider"></div><div class="modal-section"><div class="modal-section-title">첨부 미디어 (${media.length}개)</div><div class="media-grid">${mediaHtml}</div></div>`:''}
+    ${audioHtml?`<div class="modal-divider"></div><div class="modal-section"><div class="modal-section-title">음성 녹취 (${(r.audio||[]).length}개)</div><div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">${audioHtml}</div></div>`:''}
+  `;
+  document.getElementById('detailModal').classList.add('open');
+}
+window.openDetail=openDetail;
+
+function openDelete(idx){deletingId=allData[idx].id;document.getElementById('deleteModal').classList.add('open');}
+window.openDelete=openDelete;
+
+async function confirmDelete(){
+  if(!deletingId) return;
+  const {db,doc,deleteDoc}=window._fb;
+  try{await deleteDoc(doc(db,'cascade_surveys',deletingId));closeModal('deleteModal');await loadData();}
+  catch(e){alert('삭제 실패: '+e.message);}
+}
+window.confirmDelete=confirmDelete;
+
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+window.closeModal=closeModal;
+
+function openViewer(rowIdx,mediaIdx){
+  const m=(allData[rowIdx].media||[])[mediaIdx];
+  if(!m) return;
+  document.getElementById('viewerContent').innerHTML=m.kind==='video'
+    ?`<video src="${m.url}" controls autoplay style="max-width:92vw;max-height:88vh;border-radius:6px;outline:none"></video>`
+    :`<img src="${m.url}" style="max-width:92vw;max-height:88vh;border-radius:6px;object-fit:contain">`;
+  document.getElementById('mediaViewer').classList.add('open');
+}
+window.openViewer=openViewer;
+
+function closeViewer(){document.getElementById('mediaViewer').classList.remove('open');document.getElementById('viewerContent').innerHTML='';}
+window.closeViewer=closeViewer;
+
+function downloadExcel(){
+  if(!allData.length){alert('다운로드할 데이터가 없습니다.');return;}
+  const rows=allData.map(r=>{
+    const media=r.media||[];
+    const photos=media.filter(m=>m.kind==='photo');
+    const videos=media.filter(m=>m.kind==='video');
+    const row={
+      '제출일시':r.submittedAt?(r.submittedAt.toDate?r.submittedAt.toDate().toLocaleString('ko-KR'):r.submittedAt):'',
+      '현장명':r.fieldName||'','방문일자':r.visitDate||'','현장주소':r.address||'',
+      '담당자성명':r.contactName||'','직책':r.contactTitle||'',
+      '연락처':r.phone||'','이메일':r.email||'',
+      '설치모델수량':r.modelQty||'','설치일자':r.installDate||'',
+      '조사자':r.inspectorName||'','확인일자':r.confirmDate||'',
+    };
+    // 체크리스트
+    (r.check2||[]).forEach(c=>{row[`점검2_${c.no}`]=c.result||''; if(c.note)row[`점검2_${c.no}_비고`]=c.note;});
+    (r.check3||[]).forEach(c=>{row[`점검3_${c.no}`]=c.result||''; if(c.note)row[`점검3_${c.no}_비고`]=c.note;});
+    // 인터뷰
+    (r.interviews||[]).forEach((iv,i)=>{row[`인터뷰${i+1}`]=iv.answer||'';});
+    row['종합소견']=r.overallOpinion||'';
+    const audioList=r.audio||[];
+    row['사진수']=photos.length; row['동영상수']=videos.length; row['녹취수']=audioList.length;
+    photos.forEach((p,i)=>{row[`사진${i+1}_URL`]=p.url;});
+    videos.forEach((v,i)=>{row[`동영상${i+1}_URL`]=v.url;});
+    audioList.forEach((a,i)=>{row[`녹취${i+1}_파일명`]=a.name; row[`녹취${i+1}_URL`]=a.url;});
+    return row;
+  });
+  const wb=XLSX.utils.book_new();
+  const ws=XLSX.utils.json_to_sheet(rows);
+  XLSX.utils.book_append_sheet(wb,ws,'현장조사');
+  XLSX.writeFile(wb,`캐스케이드_현장조사_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+window.downloadExcel=downloadExcel;
+</script>
+</body>
+</html>
