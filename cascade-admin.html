@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>캐스케이드 현장조사 관리자</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
@@ -74,15 +74,16 @@
   /* 상세 모달 */
   .modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 1000; align-items: flex-start; justify-content: center; padding: 1rem; overflow-y: auto; }
   .modal-bg.open { display: flex; }
-  .modal { background: var(--card); border-radius: var(--radius); width: 100%; max-width: 780px; padding: 1.5rem; margin: auto; }
+  .modal { background: var(--card); border-radius: var(--radius); width: 100%; max-width: 780px; padding: 1.5rem; margin: auto; overflow: hidden; word-break: break-word; overflow-wrap: break-word; }
   .modal.sm { max-width: 460px; }
   .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
-  .modal-header h2 { font-size: 16px; }
-  .modal-close { background: none; border: none; font-size: 22px; cursor: pointer; color: var(--text-muted); }
+  .modal-header h2 { font-size: 16px; word-break: break-word; }
+  .modal-close { background: none; border: none; font-size: 22px; cursor: pointer; color: var(--text-muted); flex-shrink: 0; }
   .modal-section { margin-bottom: 1.25rem; }
   .modal-section-title { font-size: 12px; font-weight: 600; color: var(--blue); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
-  .modal-row { display: flex; gap: 8px; margin-bottom: 8px; font-size: 13.5px; }
+  .modal-row { display: flex; gap: 8px; margin-bottom: 8px; font-size: 13.5px; min-width: 0; }
   .modal-row .lbl { width: 110px; flex-shrink: 0; color: var(--text-muted); font-weight: 500; }
+  .modal-row span:last-child { min-width: 0; word-break: break-word; overflow-wrap: break-word; }
   .modal-divider { height: 1px; background: var(--border); margin: 12px 0; }
   .modal-footer { display: flex; gap: 8px; justify-content: flex-end; margin-top: 1rem; }
   .modal-footer button { padding: 9px 18px; border-radius: var(--radius-sm); font-size: 13.5px; font-weight: 500; cursor: pointer; font-family: inherit; border: 1px solid var(--border); display: flex; align-items: center; gap: 5px; }
@@ -140,7 +141,6 @@
     <h1><i class="ti ti-clipboard-list"></i> 캐스케이드 현장조사 <span id="modeLabel" style="background:rgba(255,255,255,0.2);font-size:11px;padding:2px 8px;border-radius:20px;font-weight:500">뷰어</span></h1>
     <div class="topbar-right">
       <a class="topbar-btn" href="cascade.html"><i class="ti ti-forms"></i> 설문지</a>
-      <a class="topbar-btn" href="admin.html"><i class="ti ti-box"></i> 파란박스</a>
       <button class="topbar-btn" id="authBtn" onclick="openLoginModal()"><i class="ti ti-lock"></i> 관리자 로그인</button>
     </div>
   </div>
@@ -155,7 +155,7 @@
     <div class="toolbar">
       <input type="text" id="searchInput" placeholder="현장명, 담당자, 조사자 이름으로 검색..." oninput="renderTable()">
       <button class="icon-btn" onclick="loadData()"><i class="ti ti-refresh" id="refreshIcon"></i> 새로고침</button>
-      <button class="icon-btn green" onclick="downloadExcel()"><i class="ti ti-file-spreadsheet"></i> 엑셀 다운로드</button>
+      <button class="icon-btn green" onclick="downloadPPT()"><i class="ti ti-presentation"></i> PPT 다운로드</button>
     </div>
 
     <div class="table-wrap">
@@ -495,41 +495,77 @@ h1{font-size:17px;margin-bottom:18px;padding-bottom:10px;border-bottom:2px solid
 }
 window.printDetail=printDetail;
 
-function downloadExcel(){
+async function downloadPPT(){
   if(!allData.length){alert('다운로드할 데이터가 없습니다.');return;}
-  const rows=allData.map(r=>{
-    const media=r.media||{};
-    const groupLabelsXls={frontView:'설치전경',nameplate:'제품명판',interior:'제품내부',defect:'이상부위',environment:'설치공간',operationVideo:'가동동영상'};
-    const row={
-      '제출일시':r.submittedAt?(r.submittedAt.toDate?r.submittedAt.toDate().toLocaleString('ko-KR'):r.submittedAt):'',
-      '현장명':r.fieldName||'','방문일자':r.visitDate||'','현장주소':r.address||'',
-      '담당자성명':r.contactName||'','직책':r.contactTitle||'',
-      '연락처':r.phone||'','이메일':r.email||'',
-      '설치모델수량':r.modelQty||'','설치일자':r.installDate||'',
-      '조사자':r.inspectorName||'','확인일자':r.confirmDate||'',
+  const pptx = new PptxGenJS();
+  pptx.layout = 'LAYOUT_WIDE';
+
+  const BLUE='1a56b0', DARK='1a1a1a', GRAY='666666', LIGHT='e6f1fb', WHITE='ffffff';
+
+  allData.forEach(r=>{
+    const slide = pptx.addSlide();
+    slide.background = {color: WHITE};
+
+    // 헤더 바
+    slide.addShape(pptx.ShapeType.rect,{x:0,y:0,w:'100%',h:0.6,fill:{color:BLUE}});
+    slide.addText('캐스케이드 현장조사 체크리스트',{x:0.3,y:0.08,w:8,h:0.44,color:WHITE,fontSize:16,bold:true});
+    slide.addText(fmtDate(r.submittedAt),{x:8.5,y:0.08,w:4,h:0.44,color:WHITE,fontSize:10,align:'right'});
+
+    // 현장명 타이틀
+    slide.addText(r.fieldName||'-',{x:0.3,y:0.75,w:12,h:0.5,color:BLUE,fontSize:20,bold:true});
+    slide.addText(`방문일자: ${r.visitDate||'-'}  |  조사자: ${r.inspectorName||'-'}`,{x:0.3,y:1.25,w:12,h:0.3,color:GRAY,fontSize:10});
+
+    // 구분선
+    slide.addShape(pptx.ShapeType.line,{x:0.3,y:1.6,w:12.4,h:0,line:{color:'e2e2e2',width:1}});
+
+    // 왼쪽 컬럼: 기본정보 + 점검결과
+    const col1x=0.3, col2x=6.6, rowH=0.28, startY=1.75;
+    const addSection=(x,y,title,rows)=>{
+      slide.addText(title,{x,y,w:5.8,h:0.26,color:BLUE,fontSize:9,bold:true});
+      rows.forEach(([lbl,val],i)=>{
+        const ry=y+0.3+(i*rowH);
+        slide.addText(lbl,{x,y:ry,w:1.6,h:rowH,color:GRAY,fontSize:9});
+        slide.addText(String(val||'-'),{x:x+1.65,y:ry,w:4.1,h:rowH,color:DARK,fontSize:9,breakLine:false});
+      });
+      return y+0.3+(rows.length*rowH)+0.15;
     };
-    // 체크리스트
-    (r.check2||[]).forEach(c=>{row[`점검2_${c.no}`]=c.result||''; if(c.note)row[`점검2_${c.no}_비고`]=c.note;});
-    (r.check3||[]).forEach(c=>{row[`점검3_${c.no}`]=c.result||''; if(c.note)row[`점검3_${c.no}_비고`]=c.note;});
-    // 인터뷰
-    (r.interviews||[]).forEach((iv,i)=>{row[`인터뷰${i+1}`]=iv.answer||'';});
-    row['종합소견']=r.overallOpinion||'';
-    const audioList=r.audio||[];
-    Object.entries(groupLabelsXls).forEach(([gk,label])=>{
-      const items=media[gk]||[];
-      row[`${label}_수`]=items.length;
-      items.forEach((m,i)=>{row[`${label}_${i+1}_URL`]=m.url;});
+
+    let y1 = addSection(col1x, startY, '■ 기본 정보',[
+      ['현장명',r.fieldName],['주소',r.address],['담당자',r.contactName+(r.contactTitle?' ('+r.contactTitle+')':'')],
+      ['연락처',r.phone],['이메일',r.email],['모델/수량',r.modelQty],['설치일자',r.installDate]
+    ]);
+
+    // 체크리스트 요약
+    const badCk2=(r.check2||[]).filter(c=>c.result==='불량');
+    const badCk3=(r.check3||[]).filter(c=>c.result==='불량');
+    addSection(col1x, y1, '■ 불량 항목 요약',[
+      ...badCk2.map(c=>['점검2-'+c.no, c.item+(c.note?' ('+c.note+')':'')]),
+      ...badCk3.map(c=>['점검3-'+c.no, c.item+(c.note?' ('+c.note+')':'')]),
+      ...(badCk2.length+badCk3.length===0?[['','불량 항목 없음']]: [])
+    ]);
+
+    // 오른쪽 컬럼: 인터뷰
+    let y2=startY;
+    slide.addText('■ 현장 담당자 인터뷰',{x:col2x,y:y2,w:6,h:0.26,color:BLUE,fontSize:9,bold:true});
+    y2+=0.3;
+    (r.interviews||[]).forEach((iv,i)=>{
+      slide.addText(`Q${i+1}. ${iv.question}`,{x:col2x,y:y2,w:6,h:0.22,color:GRAY,fontSize:8,italic:true});
+      y2+=0.22;
+      slide.addText(iv.answer||'미입력',{x:col2x,y:y2,w:6,h:0.26,color:DARK,fontSize:9});
+      y2+=0.3;
+      if(y2>6.8) return;
     });
-    row['녹취수']=audioList.length;
-    audioList.forEach((a,i)=>{row[`녹취${i+1}_파일명`]=a.name; row[`녹취${i+1}_URL`]=a.url;});
-    return row;
+
+    // 종합 의견
+    if(r.overallOpinion){
+      slide.addShape(pptx.ShapeType.rect,{x:0.3,y:6.85,w:12.4,h:0.8,fill:{color:LIGHT},line:{color:'c5d8f0',width:0.5}});
+      slide.addText('종합 의견: '+r.overallOpinion,{x:0.5,y:6.92,w:12,h:0.66,color:DARK,fontSize:9,wrap:true});
+    }
   });
-  const wb=XLSX.utils.book_new();
-  const ws=XLSX.utils.json_to_sheet(rows);
-  XLSX.utils.book_append_sheet(wb,ws,'현장조사');
-  XLSX.writeFile(wb,`캐스케이드_현장조사_${new Date().toISOString().slice(0,10)}.xlsx`);
+
+  await pptx.writeFile({fileName:`캐스케이드_현장조사_${new Date().toISOString().slice(0,10)}.pptx`});
 }
-window.downloadExcel=downloadExcel;
+window.downloadPPT=downloadPPT;
 </script>
 </body>
 </html>
