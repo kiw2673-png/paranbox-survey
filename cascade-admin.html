@@ -184,13 +184,14 @@
     <div class="toolbar">
       <input type="text" id="searchInput" placeholder="현장명, 담당자, 조사자 이름으로 검색..." oninput="renderTable()">
       <button class="icon-btn" onclick="loadData()"><i class="ti ti-refresh" id="refreshIcon"></i> 새로고침</button>
-      <button class="icon-btn green" onclick="downloadPPT()"><i class="ti ti-presentation"></i> PPT 다운로드</button>
+      <button class="icon-btn green" id="pptBtn" onclick="downloadPPT()"><i class="ti ti-presentation"></i> PPT 다운로드 <span id="selBadge" style="display:none;background:rgba(255,255,255,0.35);border-radius:10px;padding:1px 7px;font-size:11px;margin-left:2px"></span></button>
     </div>
 
     <div class="table-wrap">
       <table>
         <thead>
           <tr>
+            <th style="width:36px;text-align:center"><input type="checkbox" id="selAll" onchange="toggleSelAll(this)" style="cursor:pointer"></th>
             <th>제출일시</th><th>현장명</th><th>주소</th><th>담당자</th>
             <th>방문일자</th><th>모델/수량</th><th>조사자</th><th>녹취</th><th>미디어</th><th>관리</th>
           </tr>
@@ -270,7 +271,27 @@
 </script>
 
 <script>
-let allData=[], deletingId=null;
+let allData=[], deletingId=null, selectedIds=new Set();
+
+function toggleSelAll(cb){
+  document.querySelectorAll('.row-sel').forEach(c=>{
+    c.checked=cb.checked;
+    if(cb.checked) selectedIds.add(c.dataset.id); else selectedIds.delete(c.dataset.id);
+  });
+  updateSelBadge();
+}
+window.toggleSelAll=toggleSelAll;
+
+function updateSelBadge(){
+  const n=document.querySelectorAll('.row-sel:checked').length;
+  const badge=document.getElementById('selBadge');
+  if(!badge) return;
+  if(n>0){badge.style.display='inline';badge.textContent=n+'건 선택';}
+  else{badge.style.display='none';}
+  const sa=document.getElementById('selAll');
+  if(sa){const total=document.querySelectorAll('.row-sel').length;sa.indeterminate=(n>0&&n<total);sa.checked=(n>0&&n===total);}
+}
+window.updateSelBadge=updateSelBadge;
 
 function openLoginModal(){
   document.getElementById('loginEmail').value='';
@@ -346,6 +367,7 @@ function renderTable(){
     ).join('')+(allItems.length>4?`<span style="font-size:11px;color:var(--text-muted)">+${allItems.length-4}</span>`:'');
 
     return `<tr>
+      <td style="text-align:center"><input type="checkbox" class="row-sel" data-id="${r.id}" ${selectedIds.has(r.id)?'checked':''} onchange="selectedIds[this.checked?'add':'delete'](this.dataset.id);updateSelBadge()" style="cursor:pointer"></td>
       <td style="white-space:nowrap;font-size:12px">${fmtDate(r.submittedAt)}</td>
       <td><strong>${r.fieldName||'-'}</strong></td>
       <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.address||''}">${r.address||'-'}</td>
@@ -504,151 +526,200 @@ function printDetail(){
 window.printDetail=printDetail;
 
 async function downloadPPT(){
-  if(!allData.length){alert('다운로드할 데이터가 없습니다.');return;}
-  const pptx = new PptxGenJS();
-  pptx.layout = 'LAYOUT_WIDE';
+  // 선택된 건만 처리
+  const checkedEls=[...document.querySelectorAll('.row-sel:checked')];
+  if(!checkedEls.length){alert('PPT로 내보낼 항목을 먼저 선택해 주세요.');return;}
+  const checkedIds=new Set(checkedEls.map(c=>c.dataset.id));
+  const targets=allData.filter(r=>checkedIds.has(r.id));
 
-  // 색상 (# 없는 hex)
-  const C={
-    navy:'1F3864', lbl:'DCE6F1', white:'FFFFFF', gray:'F2F2F2',
-    dark:'222222', green:'3B6D11', red:'C00000', muted:'888888',
-    gBg:'EAF3DE', rBg:'FCEBEB', naBg:'F1F1F1', bdr:'C8D4E8'
-  };
-  const MX=0.3, CW=12.73; // 슬라이드 좌우 여백 0.3", 콘텐츠 폭 12.73"
+  const btn=document.getElementById('pptBtn');
+  const savedHtml=btn.innerHTML;
+  btn.disabled=true;
+  btn.innerHTML='<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> 생성 중...';
 
-  // addText로 셀 하나 그리기 (fill + 테두리 포함)
-  function cell(slide,x,y,w,h,text,opts){
-    const o=opts||{};
-    slide.addText(String(text??''),{
-      x,y,w,h,
-      fill:{color:o.fill||C.white},
-      line:{color:C.bdr,pt:0.5},
-      color:o.color||C.dark,
-      bold:o.bold||false,
-      fontSize:o.fontSize||9,
-      align:o.align||'left',
-      valign:'middle',
-      wrap:true,
-      margin:3
-    });
-  }
+  try{
+    const pptx=new PptxGenJS();
+    pptx.layout='LAYOUT_WIDE';
+    const C={navy:'1F3864',lbl:'DCE6F1',white:'FFFFFF',gray:'F2F2F2',
+             dark:'222222',green:'3B6D11',red:'C00000',muted:'888888',
+             gBg:'EAF3DE',rBg:'FCEBEB',naBg:'F1F1F1',bdr:'C8D4E8'};
+    const MX=0.3,CW=12.73;
 
-  function slideHdr(sl,rec){
-    sl.background={color:C.white};
-    sl.addShape(pptx.ShapeType.rect,{x:0,y:0,w:'100%',h:0.5,fill:{color:C.navy}});
-    sl.addText('캐스케이드 설치 현장 조사 체크리스트',{x:MX,y:0,w:9,h:0.5,color:C.white,fontSize:14,bold:true,valign:'middle'});
-    sl.addText(String(rec.fieldName||'-'),{x:9.3,y:0,w:3.73,h:0.5,color:C.white,fontSize:10,align:'right',valign:'middle'});
-    sl.addText(String(rec.fieldName||'-'),{x:MX,y:0.54,w:CW,h:0.28,color:C.navy,fontSize:12,bold:true,valign:'middle'});
-    sl.addText('방문일자: '+(rec.visitDate||'-')+'   조사자: '+(rec.inspectorName||'-'),{x:MX,y:0.82,w:CW,h:0.2,color:C.muted,fontSize:9,valign:'middle'});
-  }
+    function cell(sl,x,y,w,h,text,opts){
+      const o=opts||{};
+      sl.addText(String(text??''),{x,y,w,h,fill:{color:o.fill||C.white},line:{color:C.bdr,pt:0.5},
+        color:o.color||C.dark,bold:o.bold||false,fontSize:o.fontSize||9,align:o.align||'left',
+        valign:'middle',wrap:true,margin:3});
+    }
+    function slideHdr(sl,rec){
+      sl.background={color:C.white};
+      sl.addShape(pptx.ShapeType.rect,{x:0,y:0,w:'100%',h:0.5,fill:{color:C.navy}});
+      sl.addText('캐스케이드 설치 현장 조사 체크리스트',{x:MX,y:0,w:9,h:0.5,color:C.white,fontSize:14,bold:true,valign:'middle'});
+      sl.addText(String(rec.fieldName||'-'),{x:9.3,y:0,w:3.73,h:0.5,color:C.white,fontSize:10,align:'right',valign:'middle'});
+      sl.addText(String(rec.fieldName||'-'),{x:MX,y:0.54,w:CW,h:0.28,color:C.navy,fontSize:12,bold:true,valign:'middle'});
+      sl.addText('방문일자: '+(rec.visitDate||'-')+'   조사자: '+(rec.inspectorName||'-'),{x:MX,y:0.82,w:CW,h:0.2,color:C.muted,fontSize:9,valign:'middle'});
+    }
+    function secLabel(sl,y,text){
+      sl.addText(text,{x:MX,y,w:CW,h:0.25,color:C.navy,fontSize:9,bold:true,valign:'middle'});
+      return y+0.27;
+    }
+    const RH=0.27,LW=1.4,VA=4.5,VB=5.43;
+    const CK=[0.45,6.8,0.85,0.85,1.0,2.78];
+    const IV=[0.45,5.5,6.78];
 
-  function secLabel(sl,y,text){
-    sl.addText(text,{x:MX,y,w:CW,h:0.25,color:C.navy,fontSize:9,bold:true,valign:'middle'});
-    return y+0.27;
-  }
-
-  const RH=0.27;
-  // 기본정보 컬럼 폭: 라벨1.4 + 값4.5 + 라벨1.4 + 값5.43 = 12.73
-  const LW=1.4, VA=4.5, VB=5.43;
-  // 점검표 컬럼 폭: 0.45+6.8+0.85+0.85+1.0+2.78 = 12.73
-  const CK=[0.45,6.8,0.85,0.85,1.0,2.78];
-  // 인터뷰 컬럼 폭: 0.45+5.5+6.78 = 12.73
-  const IV=[0.45,5.5,6.78];
-
-  function drawCheckTable(sl,items,y){
-    const hTxts=['No','점검 항목','양호','불량','해당없음','비고'];
-    const hAligns=['center','left','center','center','center','left'];
-    let cx=MX;
-    hTxts.forEach((t,i)=>{
-      cell(sl,cx,y,CK[i],RH,t,{fill:C.navy,color:C.white,bold:true,align:hAligns[i],fontSize:i===4?8:9});
-      cx+=CK[i];
-    });
-    y+=RH;
-    (items||[]).forEach(c=>{
-      const res=c.result||'';
-      const isOk=res==='양호', isBad=res==='불량', isNa=res==='해당없음';
-      const pfx=String(c.no||'').includes('-')?' └ ':'';
-      cx=MX;
-      cell(sl,cx,y,CK[0],RH,String(c.no),{color:C.muted,align:'center'}); cx+=CK[0];
-      cell(sl,cx,y,CK[1],RH,pfx+String(c.item||'-'),{}); cx+=CK[1];
-      cell(sl,cx,y,CK[2],RH,isOk?'✓':'',{fill:isOk?C.gBg:C.white,color:C.green,bold:true,fontSize:12,align:'center'}); cx+=CK[2];
-      cell(sl,cx,y,CK[3],RH,isBad?'✗':'',{fill:isBad?C.rBg:C.white,color:C.red,bold:true,fontSize:12,align:'center'}); cx+=CK[3];
-      cell(sl,cx,y,CK[4],RH,isNa?'N/A':'',{fill:isNa?C.naBg:C.white,color:C.muted,fontSize:8,align:'center'}); cx+=CK[4];
-      cell(sl,cx,y,CK[5],RH,String(c.note||''),{color:C.muted,fontSize:8});
-      y+=RH;
-    });
-    return y;
-  }
-
-  allData.forEach(rec=>{
-    // ── 슬라이드 1: 기본정보 + 점검표 ──
-    const s1=pptx.addSlide();
-    slideHdr(s1,rec);
-    let y=1.07;
-
-    y=secLabel(s1,y,'1. 기본 정보');
-    // 기본정보 행 정의
-    const infoRows=[
-      [{t:'현장명',l:1},{t:rec.fieldName},{t:'방문일자',l:1},{t:rec.visitDate}],
-      [{t:'주소',l:1},{t:rec.address,sp:1}], // sp=1: 나머지 3칸 합치기
-      [{t:'담당자',l:1},{t:(rec.contactName||'-')+(rec.contactTitle?' ('+rec.contactTitle+')':'')},{t:'연락처',l:1},{t:rec.phone}],
-      [{t:'이메일',l:1},{t:rec.email},{t:'모델/수량',l:1},{t:rec.modelQty}],
-      [{t:'설치일자',l:1},{t:rec.installDate},{t:'조사자',l:1},{t:rec.inspectorName}],
-    ];
-    infoRows.forEach(cells=>{
+    function drawCheckTable(sl,items,y){
+      const hT=['No','점검 항목','양호','불량','해당없음','비고'];
+      const hA=['center','left','center','center','center','left'];
       let cx=MX;
-      if(cells[1]&&cells[1].sp){
-        cell(s1,cx,y,LW,RH,String(cells[0].t),{fill:C.lbl,color:C.navy,bold:true}); cx+=LW;
-        cell(s1,cx,y,VA+LW+VB,RH,String(cells[1].t||'-'),{});
-      } else {
-        const ws=[LW,VA,LW,VB];
-        cells.forEach((c,i)=>{
-          cell(s1,cx,y,ws[i],RH,String(c.t||'-'),c.l?{fill:C.lbl,color:C.navy,bold:true}:{});
-          cx+=ws[i];
-        });
-      }
+      hT.forEach((t,i)=>{cell(sl,cx,y,CK[i],RH,t,{fill:C.navy,color:C.white,bold:true,align:hA[i],fontSize:i===4?8:9});cx+=CK[i];});
       y+=RH;
-    });
-    y+=0.1;
+      (items||[]).forEach(c=>{
+        const res=c.result||'';
+        const isOk=res==='양호',isBad=res==='불량',isNa=res==='해당없음';
+        cx=MX;
+        cell(sl,cx,y,CK[0],RH,String(c.no),{color:C.muted,align:'center'});cx+=CK[0];
+        cell(sl,cx,y,CK[1],RH,(String(c.no||'').includes('-')?' └ ':'')+String(c.item||'-'),{});cx+=CK[1];
+        cell(sl,cx,y,CK[2],RH,isOk?'✓':'',{fill:isOk?C.gBg:C.white,color:C.green,bold:true,fontSize:12,align:'center'});cx+=CK[2];
+        cell(sl,cx,y,CK[3],RH,isBad?'✗':'',{fill:isBad?C.rBg:C.white,color:C.red,bold:true,fontSize:12,align:'center'});cx+=CK[3];
+        cell(sl,cx,y,CK[4],RH,isNa?'N/A':'',{fill:isNa?C.naBg:C.white,color:C.muted,fontSize:8,align:'center'});cx+=CK[4];
+        cell(sl,cx,y,CK[5],RH,String(c.note||''),{color:C.muted,fontSize:8});
+        y+=RH;
+      });
+      return y;
+    }
 
-    y=secLabel(s1,y,'2. 사용 현황 점검');
-    y=drawCheckTable(s1,rec.check2,y);
-    y+=0.1;
-    y=secLabel(s1,y,'3. 보일러·온수기 상태 점검 (육안 확인)');
-    drawCheckTable(s1,rec.check3,y);
+    // 이미지 → base64 (CORS 실패 시 null)
+    async function toB64(url){
+      try{
+        const res=await fetch(url);
+        if(!res.ok)return null;
+        const blob=await res.blob();
+        return new Promise(resolve=>{const r=new FileReader();r.onloadend=()=>resolve(r.result);r.readAsDataURL(blob);});
+      }catch(e){return null;}
+    }
 
-    // ── 슬라이드 2: 인터뷰 + 종합의견 ──
-    const s2=pptx.addSlide();
-    slideHdr(s2,rec);
-    y=1.07;
+    // 전체 사진 수 미리 집계 (진행 표시용)
+    const PKEYS=['전경','명판','내부','이상부위','설치환경'];
+    const SLBL={전경:'설치 전경',명판:'제품 명판',내부:'제품 내부',이상부위:'이상 부위',설치환경:'설치 환경'};
+    let totalPh=0,loadedPh=0;
+    targets.forEach(rec=>{const m=rec.media||{};PKEYS.forEach(k=>{totalPh+=(m[k]||[]).filter(x=>x.kind!=='video').length;});});
 
-    y=secLabel(s2,y,'4. 현장 담당자 인터뷰');
-    // 인터뷰 헤더
-    let cx=MX;
-    [{t:'No',a:'center'},{t:'질문',a:'left'},{t:'답변',a:'left'}].forEach((h,i)=>{
-      cell(s2,cx,y,IV[i],RH,h.t,{fill:C.navy,color:C.white,bold:true,align:h.a}); cx+=IV[i];
-    });
-    y+=RH;
-    (rec.interviews||[]).forEach((iv,i)=>{
-      const IH=0.36;
-      cx=MX;
-      cell(s2,cx,y,IV[0],IH,String(i+1),{color:C.muted,align:'center'}); cx+=IV[0];
-      cell(s2,cx,y,IV[1],IH,String(iv.question||'-'),{fill:C.lbl,color:C.dark}); cx+=IV[1];
-      cell(s2,cx,y,IV[2],IH,String(iv.answer||''),{color:iv.answer?C.dark:C.muted});
-      y+=IH;
-    });
-    y+=0.15;
+    for(const rec of targets){
+      // ── 슬라이드 1: 기본정보 + 점검표 ──
+      const s1=pptx.addSlide();
+      slideHdr(s1,rec);
+      let y=1.07;
+      y=secLabel(s1,y,'1. 기본 정보');
+      const IR=[
+        [{t:'현장명',l:1},{t:rec.fieldName},{t:'방문일자',l:1},{t:rec.visitDate}],
+        [{t:'주소',l:1},{t:rec.address,sp:1}],
+        [{t:'담당자',l:1},{t:(rec.contactName||'-')+(rec.contactTitle?' ('+rec.contactTitle+')':'')},{t:'연락처',l:1},{t:rec.phone}],
+        [{t:'이메일',l:1},{t:rec.email},{t:'모델/수량',l:1},{t:rec.modelQty}],
+        [{t:'설치일자',l:1},{t:rec.installDate},{t:'조사자',l:1},{t:rec.inspectorName}],
+      ];
+      IR.forEach(cells=>{
+        let cx=MX;
+        if(cells[1]&&cells[1].sp){
+          cell(s1,cx,y,LW,RH,String(cells[0].t),{fill:C.lbl,color:C.navy,bold:true});cx+=LW;
+          cell(s1,cx,y,VA+LW+VB,RH,String(cells[1].t||'-'),{});
+        }else{
+          const ws=[LW,VA,LW,VB];
+          cells.forEach((c,i)=>{cell(s1,cx,y,ws[i],RH,String(c.t||'-'),c.l?{fill:C.lbl,color:C.navy,bold:true}:{});cx+=ws[i];});
+        }
+        y+=RH;
+      });
+      y+=0.1;
+      y=secLabel(s1,y,'2. 사용 현황 점검');
+      y=drawCheckTable(s1,rec.check2,y);
+      y+=0.1;
+      y=secLabel(s1,y,'3. 보일러·온수기 상태 점검 (육안 확인)');
+      drawCheckTable(s1,rec.check3,y);
 
-    // 종합의견
-    cell(s2,MX,y,CW,0.26,'5. 종합 의견 및 후속 조치',{fill:C.navy,color:C.white,bold:true});
-    y+=0.26;
-    const opH=Math.max(0.5,Math.min(7.3-y-0.35,1.2));
-    cell(s2,MX,y,CW,opH,String(rec.overallOpinion||'(미입력)'),{fill:C.gray,color:rec.overallOpinion?C.dark:C.muted});
-    y+=opH+0.12;
-    s2.addText('조사자: '+(rec.inspectorName||'-')+'     확인일자: '+(rec.confirmDate||'-'),{x:MX,y,w:CW,h:0.28,color:C.dark,fontSize:9,align:'right',valign:'middle'});
-  });
+      // ── 슬라이드 2: 인터뷰 + 종합의견 ──
+      const s2=pptx.addSlide();
+      slideHdr(s2,rec);
+      y=1.07;
+      y=secLabel(s2,y,'4. 현장 담당자 인터뷰');
+      let cx=MX;
+      [{t:'No',a:'center'},{t:'질문',a:'left'},{t:'답변',a:'left'}].forEach((h,i)=>{cell(s2,cx,y,IV[i],RH,h.t,{fill:C.navy,color:C.white,bold:true,align:h.a});cx+=IV[i];});
+      y+=RH;
+      (rec.interviews||[]).forEach((iv,i)=>{
+        const IH=0.36;cx=MX;
+        cell(s2,cx,y,IV[0],IH,String(i+1),{color:C.muted,align:'center'});cx+=IV[0];
+        cell(s2,cx,y,IV[1],IH,String(iv.question||'-'),{fill:C.lbl,color:C.dark});cx+=IV[1];
+        cell(s2,cx,y,IV[2],IH,String(iv.answer||''),{color:iv.answer?C.dark:C.muted});
+        y+=IH;
+      });
+      y+=0.15;
+      cell(s2,MX,y,CW,0.26,'5. 종합 의견 및 후속 조치',{fill:C.navy,color:C.white,bold:true});
+      y+=0.26;
+      const opH=Math.max(0.5,Math.min(7.3-y-0.35,1.2));
+      cell(s2,MX,y,CW,opH,String(rec.overallOpinion||'(미입력)'),{fill:C.gray,color:rec.overallOpinion?C.dark:C.muted});
+      y+=opH+0.12;
+      s2.addText('조사자: '+(rec.inspectorName||'-')+'     확인일자: '+(rec.confirmDate||'-'),{x:MX,y,w:CW,h:0.28,color:C.dark,fontSize:9,align:'right',valign:'middle'});
 
-  await pptx.writeFile({fileName:'캐스케이드_현장조사_'+new Date().toISOString().slice(0,10)+'.pptx'});
+      // ── 슬라이드 3+: 첨부 사진 ──
+      const msecs=rec.media||{};
+      const photos=[];
+      PKEYS.forEach(k=>{(msecs[k]||[]).filter(m=>m.kind!=='video').forEach(m=>{photos.push({url:m.url,name:m.name||'',sec:SLBL[k]||k});});});
+      const videos=msecs['동영상']||[];
+      const audioFiles=rec.audio||[];
+
+      if(photos.length>0){
+        const GCOLS=3,GAP=0.06,CELL_W=(CW-GAP*(GCOLS-1))/GCOLS;
+        const GRID_Y=1.32,IMG_H=2.82,LBL_H=0.22,CELL_H=IMG_H+LBL_H,ROW_GAP=0.06,PER=6;
+        for(let pi=0;pi<photos.length;pi+=PER){
+          const page=photos.slice(pi,pi+PER);
+          const ms=pptx.addSlide();
+          slideHdr(ms,rec);
+          ms.addText('사진 첨부 ('+(pi+1)+'~'+Math.min(pi+PER,photos.length)+' / '+photos.length+'건)',{x:MX,y:1.07,w:CW,h:0.22,color:C.navy,fontSize:9,bold:true,valign:'middle'});
+          for(let i=0;i<page.length;i++){
+            const ph=page[i];
+            const col=i%GCOLS,row=Math.floor(i/GCOLS);
+            const px=MX+col*(CELL_W+GAP),py=GRID_Y+row*(CELL_H+ROW_GAP);
+            ms.addShape(pptx.ShapeType.rect,{x:px,y:py,w:CELL_W,h:IMG_H,fill:{color:'EEEEEE'},line:{color:C.bdr,width:0.5}});
+            btn.innerHTML='<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> 사진 '+(++loadedPh)+'/'+totalPh+' 로딩 중...';
+            const b64=await toB64(ph.url);
+            if(b64){ms.addImage({data:b64,x:px,y:py,w:CELL_W,h:IMG_H,sizing:{type:'contain',w:CELL_W,h:IMG_H}});}
+            else{ms.addText('이미지 로드 실패',{x:px,y:py,w:CELL_W,h:IMG_H,color:C.muted,fontSize:8,align:'center',valign:'middle'});}
+            ms.addText(ph.sec,{x:px,y:py+IMG_H,w:CELL_W,h:LBL_H,fill:{color:C.lbl},line:{color:C.bdr,pt:0.5},color:C.navy,fontSize:8,bold:true,align:'center',valign:'middle'});
+          }
+        }
+      }
+
+      // ── 슬라이드: 동영상 + 음성 파일 목록 ──
+      if(videos.length>0||audioFiles.length>0){
+        const rs=pptx.addSlide();
+        slideHdr(rs,rec);
+        let ry=1.07;
+        if(videos.length>0){
+          ry=secLabel(rs,ry,'동영상 파일 목록');
+          videos.forEach((v,i)=>{
+            const hl=v.url?{hyperlink:{url:v.url,tooltip:v.name||''}}:{};
+            rs.addText('🎬  ['+(i+1)+'] '+(v.name||'동영상 파일'),{x:MX,y:ry,w:CW,h:0.3,color:C.dark,fontSize:9,valign:'middle',...hl});
+            ry+=0.3;
+          });
+          ry+=0.12;
+        }
+        if(audioFiles.length>0){
+          ry=secLabel(rs,ry,'음성 녹취 파일 목록');
+          audioFiles.forEach((a,i)=>{
+            const hl=a.url?{hyperlink:{url:a.url,tooltip:a.name||''}}:{};
+            rs.addText('🎙  ['+(i+1)+'] '+(a.name||'음성 파일'),{x:MX,y:ry,w:CW,h:0.3,color:C.dark,fontSize:9,valign:'middle',...hl});
+            ry+=0.3;
+          });
+        }
+      }
+    }
+
+    await pptx.writeFile({fileName:'캐스케이드_현장조사_'+new Date().toISOString().slice(0,10)+'.pptx'});
+  }catch(e){
+    console.error(e);
+    alert('PPT 생성 중 오류가 발생했습니다: '+e.message);
+  }finally{
+    btn.disabled=false;
+    btn.innerHTML=savedHtml;
+  }
 }
 window.downloadPPT=downloadPPT;
 </script>
