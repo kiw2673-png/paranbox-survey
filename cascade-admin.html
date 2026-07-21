@@ -619,11 +619,40 @@ async function downloadPPT(){
       });
     }
 
-    // 전체 사진 수 미리 집계 (진행 표시용)
     const PKEYS=['전경','명판','내부','이상부위','설치환경'];
     const SLBL={전경:'설치 전경',명판:'제품 명판',내부:'제품 내부',이상부위:'이상 부위',설치환경:'설치 환경'};
-    let totalPh=0,loadedPh=0;
-    targets.forEach(rec=>{const m=rec.media||{};PKEYS.forEach(k=>{totalPh+=(m[k]||[]).filter(x=>x.kind!=='video').length;});});
+
+    // 각 레코드의 미디어 목록 미리 정리
+    targets.forEach(rec=>{
+      const msecs=rec.media||{};
+      const photos=[];
+      PKEYS.forEach(k=>{(msecs[k]||[]).filter(m=>m.kind!=='video').forEach(m=>{photos.push({url:m.url,name:m.name||'',sec:SLBL[k]||k});});});
+      rec._photos=photos;
+      rec._videos=msecs['동영상']||[];
+      rec._audioFiles=rec.audio||[];
+    });
+
+    // 모든 미디어 URL 수집 후 병렬 다운로드
+    const allPhotoUrls=[...new Set(targets.flatMap(r=>r._photos.map(p=>p.url)))];
+    const allAudioUrls=[...new Set(targets.flatMap(r=>r._audioFiles.map(a=>a.url).filter(Boolean)))];
+    const totalMedia=allPhotoUrls.length+allAudioUrls.length;
+
+    if(totalMedia>0){
+      btn.innerHTML=`<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> 미디어 로딩 중... (0/${totalMedia})`;
+      let done=0;
+      const tick=()=>{ done++; btn.innerHTML=`<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> 미디어 로딩 중... (${done}/${totalMedia})`; };
+
+      const [photoResults,audioResults]=await Promise.all([
+        Promise.all(allPhotoUrls.map(url=>toB64(url).then(r=>{tick();return r;}))),
+        Promise.all(allAudioUrls.map(url=>toAudioB64(url).then(r=>{tick();return r;})))
+      ]);
+
+      const photoMap=new Map(allPhotoUrls.map((u,i)=>[u,photoResults[i]]));
+      const audioMap=new Map(allAudioUrls.map((u,i)=>[u,audioResults[i]]));
+      targets.forEach(rec=>{ rec._photoMap=photoMap; rec._audioMap=audioMap; });
+    }
+
+    btn.innerHTML='<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> 슬라이드 생성 중...';
 
     for(const rec of targets){
       // ── 슬라이드 1: 기본정보 + 점검표 ──
@@ -680,12 +709,7 @@ async function downloadPPT(){
       s2.addText('조사자: '+(rec.inspectorName||'-')+'     확인일자: '+(rec.confirmDate||'-'),{x:MX,y,w:CW,h:0.28,color:C.dark,fontSize:9,align:'right',valign:'middle'});
 
       // ── 슬라이드 3+: 첨부 사진 ──
-      const msecs=rec.media||{};
-      const photos=[];
-      PKEYS.forEach(k=>{(msecs[k]||[]).filter(m=>m.kind!=='video').forEach(m=>{photos.push({url:m.url,name:m.name||'',sec:SLBL[k]||k});});});
-      const videos=msecs['동영상']||[];
-      const audioFiles=rec.audio||[];
-
+      const photos=rec._photos, pMap=rec._photoMap||new Map();
       if(photos.length>0){
         const GCOLS=3,GAP=0.06,CELL_W=(CW-GAP*(GCOLS-1))/GCOLS;
         const GRID_Y=1.32,IMG_H=2.82,LBL_H=0.22,CELL_H=IMG_H+LBL_H,ROW_GAP=0.06,PER=6;
@@ -699,8 +723,7 @@ async function downloadPPT(){
             const col=i%GCOLS,row=Math.floor(i/GCOLS);
             const px=MX+col*(CELL_W+GAP),py=GRID_Y+row*(CELL_H+ROW_GAP);
             ms.addShape(pptx.ShapeType.rect,{x:px,y:py,w:CELL_W,h:IMG_H,fill:{color:'EEEEEE'},line:{color:C.bdr,width:0.5}});
-            btn.innerHTML='<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> 사진 '+(++loadedPh)+'/'+totalPh+' 로딩 중...';
-            const b64=await toB64(ph.url);
+            const b64=pMap.get(ph.url);
             if(b64){ms.addImage({data:b64,x:px,y:py,w:CELL_W,h:IMG_H,sizing:{type:'contain',w:CELL_W,h:IMG_H}});}
             else{ms.addText('이미지 로드 실패',{x:px,y:py,w:CELL_W,h:IMG_H,color:C.muted,fontSize:8,align:'center',valign:'middle'});}
             ms.addText(ph.sec,{x:px,y:py+IMG_H,w:CELL_W,h:LBL_H,fill:{color:C.lbl},line:{color:C.bdr,pt:0.5},color:C.navy,fontSize:8,bold:true,align:'center',valign:'middle'});
@@ -709,6 +732,7 @@ async function downloadPPT(){
       }
 
       // ── 슬라이드: 동영상 (3열 썸네일 그리드) ──
+      const videos=rec._videos;
       if(videos.length>0){
         const GCOLS=3,GAP=0.06,CELL_W=(CW-GAP*(GCOLS-1))/GCOLS;
         const GRID_Y=1.32,VID_H=2.82,LBL_H=0.28,CELL_H=VID_H+LBL_H,ROW_GAP=0.06,PER=6;
@@ -721,10 +745,8 @@ async function downloadPPT(){
             const v=page[i];
             const col=i%GCOLS,row=Math.floor(i/GCOLS);
             const px=MX+col*(CELL_W+GAP),py=GRID_Y+row*(CELL_H+ROW_GAP);
-            // 검정 배경 + 재생 아이콘
             vs.addShape(pptx.ShapeType.rect,{x:px,y:py,w:CELL_W,h:VID_H,fill:{color:'111111'},line:{color:'333333',width:0.5}});
             vs.addText('▶',{x:px,y:py,w:CELL_W,h:VID_H,color:'ffffff',fontSize:28,align:'center',valign:'middle'});
-            // 파일명 + 클릭 링크
             const fname=v.name||('동영상'+(i+1));
             vs.addText(fname+(v.url?'  (클릭하여 재생)':''),{
               x:px,y:py+VID_H,w:CELL_W,h:LBL_H,
@@ -737,6 +759,7 @@ async function downloadPPT(){
       }
 
       // ── 슬라이드: 음성 (임베드 또는 링크) ──
+      const audioFiles=rec._audioFiles, aMap=rec._audioMap||new Map();
       if(audioFiles.length>0){
         const ACOLS=2,GAP=0.08,AW=(CW-GAP*(ACOLS-1))/ACOLS,AH=0.9;
         const GRID_Y=1.32,ROW_GAP=0.08,PER_A=8;
@@ -750,14 +773,11 @@ async function downloadPPT(){
             const col=i%ACOLS,row=Math.floor(i/ACOLS);
             const ax=MX+col*(AW+GAP),ay=GRID_Y+row*(AH+ROW_GAP);
             const ext=(a.name||'mp3').split('.').pop().toLowerCase()||'mp3';
-            btn.innerHTML='<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> 음성 '+(pi+i+1)+'/'+audioFiles.length+' 로딩 중...';
-            const ab64=a.url?await toAudioB64(a.url):null;
+            const ab64=a.url?aMap.get(a.url):null;
             if(ab64){
-              // PPT에 오디오 임베드 (재생 가능)
               as.addMedia({type:'audio',data:ab64,extn:ext,x:ax,y:ay,w:AW,h:AH});
               as.addText((a.name||'음성파일'),{x:ax,y:ay+AH-0.22,w:AW,h:0.2,color:C.muted,fontSize:7.5,align:'center',valign:'middle'});
             }else{
-              // 임베드 실패 시 링크 박스
               as.addShape(pptx.ShapeType.rect,{x:ax,y:ay,w:AW,h:AH,fill:{color:'F0F4FF'},line:{color:C.bdr,width:0.5}});
               as.addText('🎙',{x:ax,y:ay,w:AW,h:AH*0.6,fontSize:20,align:'center',valign:'bottom'});
               as.addText((a.name||'음성파일')+(a.url?'\n(클릭하여 재생)':''),{
