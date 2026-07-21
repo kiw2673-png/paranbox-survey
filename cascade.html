@@ -130,8 +130,10 @@
       <div class="header-icon"><i class="ti ti-clipboard-list" style="font-size:22px;color:#fff"></i></div>
       <h1>캐스케이드 현장조사 체크리스트</h1>
       <span style="background:rgba(255,255,255,0.2);font-size:11px;padding:2px 8px;border-radius:20px;font-weight:500">v2.0</span>
+      <button onclick="newForm()" style="margin-left:auto;background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.45);border-radius:20px;color:#fff;padding:5px 13px;font-size:12px;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0">새로작성하기</button>
     </div>
     <p>Field Survey Checklist for Cascade Boiler / Water Heater Installations</p>
+    <div style="margin-top:5px;font-size:11px;color:rgba(255,255,255,0.6);text-align:right;min-height:15px"><span id="autoSaveInd"></span></div>
   </div>
 
   <div id="formWrap">
@@ -358,6 +360,7 @@ function setCheck(sec,idx,val,btn){
   if(sec==='2')cState2[idx]=val; else cState3[idx]=val;
   btn.closest('tr').querySelectorAll('.chk-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
+  scheduleSave();
 }
 window.setCheck=setCheck;
 
@@ -372,6 +375,8 @@ function renderInterview(){
 renderCheckTable(check2Items,'check2Body','2');
 renderCheckTable(check3Items,'check3Body','3');
 renderInterview();
+restoreDraft();
+document.getElementById('formWrap').addEventListener('input', scheduleSave);
 
 // ── 섹션별 미디어 ──
 const sectionKeys=['s1','s2','s3','s4','s5','s6'];
@@ -530,6 +535,7 @@ async function submitForm(){
       overallOpinion:document.getElementById('overallOpinion').value.trim(),
     });
 
+    localStorage.removeItem('cascade_draft');
     document.getElementById('formWrap').style.display='none';
     document.getElementById('success').style.display='block';
 
@@ -541,6 +547,68 @@ async function submitForm(){
   }
 }
 window.submitForm=submitForm;
+
+// ── 자동저장 ──
+const DRAFT_KEY = 'cascade_draft';
+const TEXT_IDS = ['inspectorName','confirmDate','fieldName','visitDate','address','contactName','contactTitle','phone','email','modelQty','installDate','overallOpinion'];
+let _saveTmr = null;
+
+function scheduleSave(){
+  clearTimeout(_saveTmr);
+  _saveTmr = setTimeout(saveDraft, 500);
+}
+window.scheduleSave = scheduleSave;
+
+function saveDraft(){
+  const draft = {notes:{}, ivs:{}};
+  TEXT_IDS.forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) draft[id] = el.value;
+  });
+  for(let i=0;i<2;i++){const el=document.getElementById(`note_2_${i}`);if(el)draft.notes[`note_2_${i}`]=el.value;}
+  for(let i=0;i<9;i++){const el=document.getElementById(`note_3_${i}`);if(el)draft.notes[`note_3_${i}`]=el.value;}
+  for(let i=0;i<8;i++){const el=document.getElementById(`iv_${i}`);if(el)draft.ivs[`iv_${i}`]=el.value;}
+  draft.cState2 = {...cState2};
+  draft.cState3 = {...cState3};
+  const now = new Date();
+  draft.savedAt = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+  try{ localStorage.setItem(DRAFT_KEY, JSON.stringify(draft)); }catch(e){}
+  const ind = document.getElementById('autoSaveInd');
+  if(ind) ind.textContent = `저장됨 ${draft.savedAt}`;
+}
+
+function restoreDraft(){
+  let draft;
+  try{ draft = JSON.parse(localStorage.getItem(DRAFT_KEY)||'null'); }catch(e){}
+  if(!draft) return;
+  TEXT_IDS.forEach(id=>{
+    const el = document.getElementById(id);
+    if(el && draft[id] !== undefined) el.value = draft[id];
+  });
+  Object.entries(draft.notes||{}).forEach(([id,v])=>{const el=document.getElementById(id);if(el)el.value=v;});
+  Object.entries(draft.ivs||{}).forEach(([id,v])=>{const el=document.getElementById(id);if(el)el.value=v;});
+  const restoreChecks = (sec, state) => {
+    Object.entries(state).forEach(([idx,val])=>{
+      const tbody = document.getElementById(`check${sec}Body`);
+      if(!tbody) return;
+      const row = tbody.querySelectorAll('tr')[+idx];
+      if(!row) return;
+      row.querySelectorAll('.chk-btn').forEach(b=>b.classList.remove('active'));
+      const btn = Array.from(row.querySelectorAll('.chk-btn')).find(b=>b.textContent.trim()===val);
+      if(btn){ btn.classList.add('active'); if(sec==='2')cState2[+idx]=val; else cState3[+idx]=val; }
+    });
+  };
+  if(draft.cState2) restoreChecks('2', draft.cState2);
+  if(draft.cState3) restoreChecks('3', draft.cState3);
+  if(draft.savedAt){ const ind=document.getElementById('autoSaveInd'); if(ind) ind.textContent=`저장됨 ${draft.savedAt}`; }
+}
+
+function newForm(){
+  if(!confirm('작성 중인 내용을 모두 지우고 새로 시작하시겠습니까?')) return;
+  localStorage.removeItem(DRAFT_KEY);
+  location.reload();
+}
+window.newForm = newForm;
 </script>
 </body>
 </html>
