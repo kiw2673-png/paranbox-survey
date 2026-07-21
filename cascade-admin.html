@@ -240,6 +240,7 @@
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
   import { getFirestore, collection, getDocs, doc, deleteDoc, orderBy, query } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
   import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+  import { getStorage, ref as sRef, getBlob } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js';
   const firebaseConfig = {
     apiKey:"AIzaSyAcxGPyL-Tg-yB8pAwqqp8tCLOspTJzKIc",
     authDomain:"bluebox-9471f.firebaseapp.com",
@@ -250,7 +251,8 @@
   };
   const app=initializeApp(firebaseConfig);
   const db=getFirestore(app), auth=getAuth(app);
-  window._fb={db,auth,collection,getDocs,doc,deleteDoc,orderBy,query,signInWithEmailAndPassword,signOut,onAuthStateChanged};
+  const storage=getStorage(app);
+  window._fb={db,auth,storage,sRef,getBlob,collection,getDocs,doc,deleteDoc,orderBy,query,signInWithEmailAndPassword,signOut,onAuthStateChanged};
   onAuthStateChanged(auth,user=>{
     window._isAdmin = !!user;
     const modeLabel = document.getElementById('modeLabel');
@@ -588,14 +590,33 @@ async function downloadPPT(){
       return y;
     }
 
-    // 이미지 → base64 (CORS 실패 시 null)
-    async function toB64(url){
+    // Firebase Storage SDK로 파일 Blob 가져오기 (CORS 우회)
+    async function fbBlob(url){
       try{
-        const res=await fetch(url);
-        if(!res.ok)return null;
-        const blob=await res.blob();
-        return new Promise(resolve=>{const r=new FileReader();r.onloadend=()=>resolve(r.result);r.readAsDataURL(blob);});
+        const match=url.match(/\/o\/([^?#]+)/);
+        if(!match||!window._fb.getBlob)return null;
+        const path=decodeURIComponent(match[1]);
+        return await window._fb.getBlob(window._fb.sRef(window._fb.storage,path));
       }catch(e){return null;}
+    }
+    // 이미지 → base64 DataURL
+    async function toB64(url){
+      const blob=await fbBlob(url);
+      if(!blob)return null;
+      return new Promise(resolve=>{const r=new FileReader();r.onloadend=()=>resolve(r.result);r.readAsDataURL(blob);});
+    }
+    // 음성 → base64 원본 데이터(헤더 제외)
+    async function toAudioB64(url){
+      const blob=await fbBlob(url);
+      if(!blob)return null;
+      return new Promise(resolve=>{
+        const r=new FileReader();
+        r.onloadend=()=>{
+          const full=r.result; // data:audio/...;base64,XXXXX
+          resolve(full.split(',')[1]||null);
+        };
+        r.readAsDataURL(blob);
+      });
     }
 
     // 전체 사진 수 미리 집계 (진행 표시용)
@@ -687,27 +708,65 @@ async function downloadPPT(){
         }
       }
 
-      // ── 슬라이드: 동영상 + 음성 파일 목록 ──
-      if(videos.length>0||audioFiles.length>0){
-        const rs=pptx.addSlide();
-        slideHdr(rs,rec);
-        let ry=1.07;
-        if(videos.length>0){
-          ry=secLabel(rs,ry,'동영상 파일 목록');
-          videos.forEach((v,i)=>{
-            const hl=v.url?{hyperlink:{url:v.url,tooltip:v.name||''}}:{};
-            rs.addText('🎬  ['+(i+1)+'] '+(v.name||'동영상 파일'),{x:MX,y:ry,w:CW,h:0.3,color:C.dark,fontSize:9,valign:'middle',...hl});
-            ry+=0.3;
-          });
-          ry+=0.12;
+      // ── 슬라이드: 동영상 (3열 썸네일 그리드) ──
+      if(videos.length>0){
+        const GCOLS=3,GAP=0.06,CELL_W=(CW-GAP*(GCOLS-1))/GCOLS;
+        const GRID_Y=1.32,VID_H=2.82,LBL_H=0.28,CELL_H=VID_H+LBL_H,ROW_GAP=0.06,PER=6;
+        for(let pi=0;pi<videos.length;pi+=PER){
+          const page=videos.slice(pi,pi+PER);
+          const vs=pptx.addSlide();
+          slideHdr(vs,rec);
+          vs.addText('동영상 파일 ('+(pi+1)+'~'+Math.min(pi+PER,videos.length)+' / '+videos.length+'건)',{x:MX,y:1.07,w:CW,h:0.22,color:C.navy,fontSize:9,bold:true,valign:'middle'});
+          for(let i=0;i<page.length;i++){
+            const v=page[i];
+            const col=i%GCOLS,row=Math.floor(i/GCOLS);
+            const px=MX+col*(CELL_W+GAP),py=GRID_Y+row*(CELL_H+ROW_GAP);
+            // 검정 배경 + 재생 아이콘
+            vs.addShape(pptx.ShapeType.rect,{x:px,y:py,w:CELL_W,h:VID_H,fill:{color:'111111'},line:{color:'333333',width:0.5}});
+            vs.addText('▶',{x:px,y:py,w:CELL_W,h:VID_H,color:'ffffff',fontSize:28,align:'center',valign:'middle'});
+            // 파일명 + 클릭 링크
+            const fname=v.name||('동영상'+(i+1));
+            vs.addText(fname+(v.url?'  (클릭하여 재생)':''),{
+              x:px,y:py+VID_H,w:CELL_W,h:LBL_H,
+              fill:{color:C.navy},color:C.white,fontSize:7.5,bold:false,
+              align:'center',valign:'middle',wrap:true,
+              ...(v.url?{hyperlink:{url:v.url,tooltip:fname}}:{})
+            });
+          }
         }
-        if(audioFiles.length>0){
-          ry=secLabel(rs,ry,'음성 녹취 파일 목록');
-          audioFiles.forEach((a,i)=>{
-            const hl=a.url?{hyperlink:{url:a.url,tooltip:a.name||''}}:{};
-            rs.addText('🎙  ['+(i+1)+'] '+(a.name||'음성 파일'),{x:MX,y:ry,w:CW,h:0.3,color:C.dark,fontSize:9,valign:'middle',...hl});
-            ry+=0.3;
-          });
+      }
+
+      // ── 슬라이드: 음성 (임베드 또는 링크) ──
+      if(audioFiles.length>0){
+        const ACOLS=2,GAP=0.08,AW=(CW-GAP*(ACOLS-1))/ACOLS,AH=0.9;
+        const GRID_Y=1.32,ROW_GAP=0.08,PER_A=8;
+        for(let pi=0;pi<audioFiles.length;pi+=PER_A){
+          const page=audioFiles.slice(pi,pi+PER_A);
+          const as=pptx.addSlide();
+          slideHdr(as,rec);
+          as.addText('음성 녹취 파일 ('+(pi+1)+'~'+Math.min(pi+PER_A,audioFiles.length)+' / '+audioFiles.length+'건)',{x:MX,y:1.07,w:CW,h:0.22,color:C.navy,fontSize:9,bold:true,valign:'middle'});
+          for(let i=0;i<page.length;i++){
+            const a=page[i];
+            const col=i%ACOLS,row=Math.floor(i/ACOLS);
+            const ax=MX+col*(AW+GAP),ay=GRID_Y+row*(AH+ROW_GAP);
+            const ext=(a.name||'mp3').split('.').pop().toLowerCase()||'mp3';
+            btn.innerHTML='<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> 음성 '+(pi+i+1)+'/'+audioFiles.length+' 로딩 중...';
+            const ab64=a.url?await toAudioB64(a.url):null;
+            if(ab64){
+              // PPT에 오디오 임베드 (재생 가능)
+              as.addMedia({type:'audio',data:ab64,extn:ext,x:ax,y:ay,w:AW,h:AH});
+              as.addText((a.name||'음성파일'),{x:ax,y:ay+AH-0.22,w:AW,h:0.2,color:C.muted,fontSize:7.5,align:'center',valign:'middle'});
+            }else{
+              // 임베드 실패 시 링크 박스
+              as.addShape(pptx.ShapeType.rect,{x:ax,y:ay,w:AW,h:AH,fill:{color:'F0F4FF'},line:{color:C.bdr,width:0.5}});
+              as.addText('🎙',{x:ax,y:ay,w:AW,h:AH*0.6,fontSize:20,align:'center',valign:'bottom'});
+              as.addText((a.name||'음성파일')+(a.url?'\n(클릭하여 재생)':''),{
+                x:ax,y:ay+AH*0.55,w:AW,h:AH*0.45,color:C.navy,fontSize:8,
+                align:'center',valign:'middle',wrap:true,
+                ...(a.url?{hyperlink:{url:a.url,tooltip:a.name||''}}:{})
+              });
+            }
+          }
         }
       }
     }
