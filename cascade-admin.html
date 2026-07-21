@@ -18,7 +18,8 @@
   }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); }
 
-  .login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1rem; }
+  .login-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 500; align-items: center; justify-content: center; padding: 1rem; }
+  .login-modal.open { display: flex; }
   .login-card { background: var(--card); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 2rem; width: 100%; max-width: 360px; text-align: center; }
   .login-card h1 { font-size: 18px; margin-bottom: 4px; }
   .login-card p { font-size: 13px; color: var(--text-muted); margin-bottom: 1.5rem; }
@@ -28,7 +29,7 @@
   .login-btn:hover { background: #154698; }
   .login-err { color: var(--red-text); font-size: 13px; margin-top: 8px; display: none; }
 
-  .admin { display: none; min-height: 100vh; }
+  .admin { min-height: 100vh; }
   .topbar { background: #0f4c8a; color: #fff; padding: 0 1.5rem; height: 54px; display: flex; align-items: center; justify-content: space-between; }
   .topbar h1 { font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .topbar-right { display: flex; align-items: center; gap: 10px; }
@@ -120,25 +121,27 @@
 </head>
 <body>
 
-<div class="login-wrap" id="loginWrap">
+<!-- 관리자 로그인 모달 -->
+<div class="login-modal" id="loginModal" onclick="if(event.target===this)closeLoginModal()">
   <div class="login-card">
     <div style="font-size:32px;margin-bottom:10px">🔒</div>
-    <h1>캐스케이드 관리자</h1>
-    <p>현장조사 체크리스트 조회 및 관리</p>
+    <h1>관리자 로그인</h1>
+    <p>관리자 계정으로 로그인하면 삭제 기능이 활성화됩니다.</p>
     <input type="email" id="loginEmail" placeholder="이메일" onkeydown="if(event.key==='Enter')doLogin()">
     <input type="password" id="loginPw" placeholder="비밀번호" onkeydown="if(event.key==='Enter')doLogin()">
     <button class="login-btn" onclick="doLogin()">로그인</button>
     <div class="login-err" id="loginErr">이메일 또는 비밀번호가 올바르지 않습니다.</div>
+    <button onclick="closeLoginModal()" style="margin-top:10px;background:none;border:none;color:var(--text-muted);font-size:13px;cursor:pointer">취소</button>
   </div>
 </div>
 
 <div class="admin" id="adminWrap">
   <div class="topbar">
-    <h1><i class="ti ti-clipboard-list"></i> 캐스케이드 현장조사 관리자 <span style="background:rgba(255,255,255,0.2);font-size:11px;padding:2px 8px;border-radius:20px;font-weight:500">v1.0</span></h1>
+    <h1><i class="ti ti-clipboard-list"></i> 캐스케이드 현장조사 <span id="modeLabel" style="background:rgba(255,255,255,0.2);font-size:11px;padding:2px 8px;border-radius:20px;font-weight:500">뷰어</span></h1>
     <div class="topbar-right">
       <a class="topbar-btn" href="cascade.html"><i class="ti ti-forms"></i> 설문지</a>
       <a class="topbar-btn" href="admin.html"><i class="ti ti-box"></i> 파란박스</a>
-      <button class="topbar-btn" onclick="doLogout()"><i class="ti ti-logout"></i> 로그아웃</button>
+      <button class="topbar-btn" id="authBtn" onclick="openLoginModal()"><i class="ti ti-lock"></i> 관리자 로그인</button>
     </div>
   </div>
 
@@ -218,23 +221,42 @@
   const db=getFirestore(app), auth=getAuth(app);
   window._fb={db,auth,collection,getDocs,doc,deleteDoc,orderBy,query,signInWithEmailAndPassword,signOut,onAuthStateChanged};
   onAuthStateChanged(auth,user=>{
+    window._isAdmin = !!user;
+    const modeLabel = document.getElementById('modeLabel');
+    const authBtn = document.getElementById('authBtn');
     if(user){
-      document.getElementById('loginWrap').style.display='none';
-      document.getElementById('adminWrap').style.display='block';
-      loadData();
+      modeLabel.textContent = '관리자';
+      authBtn.innerHTML = '<i class="ti ti-logout"></i> 로그아웃';
+      authBtn.onclick = doLogout;
+      closeLoginModal();
     } else {
-      document.getElementById('loginWrap').style.display='flex';
-      document.getElementById('adminWrap').style.display='none';
+      modeLabel.textContent = '뷰어';
+      authBtn.innerHTML = '<i class="ti ti-lock"></i> 관리자 로그인';
+      authBtn.onclick = openLoginModal;
     }
+    renderTable();
   });
+  loadData();
 </script>
 
 <script>
 let allData=[], deletingId=null;
 
+function openLoginModal(){
+  document.getElementById('loginEmail').value='';
+  document.getElementById('loginPw').value='';
+  document.getElementById('loginErr').style.display='none';
+  document.getElementById('loginModal').classList.add('open');
+  setTimeout(()=>document.getElementById('loginEmail').focus(),80);
+}
+function closeLoginModal(){document.getElementById('loginModal').classList.remove('open');}
+window.openLoginModal=openLoginModal;
+window.closeLoginModal=closeLoginModal;
+
 async function doLogin(){
   const email=document.getElementById('loginEmail').value.trim();
   const pw=document.getElementById('loginPw').value;
+  document.getElementById('loginErr').style.display='none';
   try{await window._fb.signInWithEmailAndPassword(window._fb.auth,email,pw);}
   catch{document.getElementById('loginErr').style.display='block';}
 }
@@ -305,7 +327,7 @@ function renderTable(){
       <td><div class="media-cell">${thumbs||'-'}</div></td>
       <td style="white-space:nowrap">
         <button class="action-btn" onclick="openDetail(${idx})"><i class="ti ti-eye"></i> 상세</button>
-        <button class="action-btn del" onclick="openDelete(${idx})"><i class="ti ti-trash"></i></button>
+        ${window._isAdmin?`<button class="action-btn del" onclick="openDelete(${idx})"><i class="ti ti-trash"></i></button>`:''}
       </td>
     </tr>`;
   }).join('');
