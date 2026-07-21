@@ -508,67 +508,105 @@ async function downloadPPT(){
   const pptx = new PptxGenJS();
   pptx.layout = 'LAYOUT_WIDE';
 
-  const BLUE='1a56b0', DARK='1a1a1a', GRAY='666666', LIGHT='e6f1fb', WHITE='ffffff';
+  const NAVY='1F3864', LBLBG='DCE6F1', WHITE='FFFFFF', GRAY='F2F2F2',
+        DARK='1A1A1A', GREEN='3B6D11', RED='C00000', MUTED='666666',
+        GREEN_BG='EAF3DE', RED_BG='FCEBEB', NA_BG='F1F1F1', NA_C='555555';
+
+  const lbl = t => ({text:String(t??''), options:{fill:{color:LBLBG},color:NAVY,bold:true,fontSize:9,valign:'middle',margin:[0,4,0,4]}});
+  const val = t => ({text:String(t||'-'), options:{fill:{color:WHITE},color:DARK,fontSize:9,valign:'middle',margin:[0,4,0,4]}});
+  const hdr = (t,al) => ({text:t, options:{fill:{color:NAVY},color:WHITE,bold:true,fontSize:9,align:al||'center',valign:'middle',margin:[0,3,0,3]}});
+  const ckCell = (result,type) => {
+    const on = result===type;
+    if(type==='양호') return {text:on?'✓':'', options:{fill:{color:on?GREEN_BG:WHITE},color:GREEN,bold:true,fontSize:11,align:'center',valign:'middle'}};
+    if(type==='불량') return {text:on?'✗':'', options:{fill:{color:on?RED_BG:WHITE},color:RED,bold:true,fontSize:11,align:'center',valign:'middle'}};
+    return {text:on?'N/A':'', options:{fill:{color:on?NA_BG:WHITE},color:NA_C,fontSize:8,align:'center',valign:'middle'}};
+  };
+
+  const addSlideHeader = (slide, fieldName) => {
+    slide.background = {color:WHITE};
+    slide.addShape(pptx.ShapeType.rect,{x:0,y:0,w:'100%',h:0.5,fill:{color:NAVY}});
+    slide.addText('캐스케이드 설치 현장 조사 체크리스트',{x:0.3,y:0,w:9,h:0.5,color:WHITE,fontSize:14,bold:true,valign:'middle'});
+    slide.addText(String(fieldName||'-'),{x:9.3,y:0,w:3.73,h:0.5,color:WHITE,fontSize:10,align:'right',valign:'middle'});
+  };
+
+  const addSubtitle = (slide, r) => {
+    slide.addText(String(r.fieldName||'-'),{x:0.3,y:0.55,w:12.73,h:0.3,color:NAVY,fontSize:13,bold:true,valign:'middle'});
+    slide.addText(`방문일자: ${r.visitDate||'-'}  ·  조사자: ${r.inspectorName||'-'}`,{x:0.3,y:0.85,w:12.73,h:0.2,color:MUTED,fontSize:9,valign:'middle'});
+  };
+
+  const addSectionTitle = (slide, text, y) => {
+    slide.addText(text,{x:0.3,y,w:12.73,h:0.24,color:NAVY,fontSize:9,bold:true,valign:'middle'});
+    return y+0.28;
+  };
+
+  const CK_COLS = [0.45,6.8,0.85,0.85,1.0,2.78];
+  const CK_HDR = [hdr('No','center'),hdr('항목','left'),hdr('양호'),hdr('불량'),hdr('해당없음'),hdr('비고','left')];
 
   allData.forEach(r=>{
-    const slide = pptx.addSlide();
-    slide.background = {color: WHITE};
+    // ── Slide 1: 기본정보 + 점검표 ──
+    const s1 = pptx.addSlide();
+    addSlideHeader(s1, r.fieldName);
+    addSubtitle(s1, r);
 
-    // 헤더 바
-    slide.addShape(pptx.ShapeType.rect,{x:0,y:0,w:'100%',h:0.6,fill:{color:BLUE}});
-    slide.addText('캐스케이드 현장조사 체크리스트',{x:0.3,y:0.08,w:8,h:0.44,color:WHITE,fontSize:16,bold:true});
-    slide.addText(fmtDate(r.submittedAt),{x:8.5,y:0.08,w:4,h:0.44,color:WHITE,fontSize:10,align:'right'});
+    let y = 1.1;
+    y = addSectionTitle(s1, '1. 기본 정보', y);
 
-    // 현장명 타이틀
-    slide.addText(r.fieldName||'-',{x:0.3,y:0.75,w:12,h:0.5,color:BLUE,fontSize:20,bold:true});
-    slide.addText(`방문일자: ${r.visitDate||'-'}  |  조사자: ${r.inspectorName||'-'}`,{x:0.3,y:1.25,w:12,h:0.3,color:GRAY,fontSize:10});
+    const basicRows = [
+      [lbl('현장명'), val(r.fieldName), lbl('방문일자'), val(r.visitDate)],
+      [lbl('주소'), {text:String(r.address||'-'), options:{colspan:3,fill:{color:WHITE},color:DARK,fontSize:9,valign:'middle',margin:[0,4,0,4]}}],
+      [lbl('담당자'), val((r.contactName||'-')+(r.contactTitle?' ('+r.contactTitle+')':'')), lbl('연락처'), val(r.phone)],
+      [lbl('이메일'), val(r.email), lbl('모델/수량'), val(r.modelQty)],
+      [lbl('설치일자'), val(r.installDate), lbl('조사자'), val(r.inspectorName)],
+    ];
+    s1.addTable(basicRows,{x:0.3,y,w:12.73,rowH:0.28,colW:[1.4,4.87,1.4,5.06],border:{type:'solid',color:'C5D8F0',pt:0.3}});
+    y += 0.28*5+0.14;
 
-    // 구분선
-    slide.addShape(pptx.ShapeType.line,{x:0.3,y:1.6,w:12.4,h:0,line:{color:'e2e2e2',width:1}});
+    y = addSectionTitle(s1, '2. 사용 현황 점검', y);
+    const ck2Rows = [CK_HDR, ...(r.check2||[]).map(c=>[
+      {text:String(c.no), options:{fill:{color:WHITE},color:MUTED,fontSize:9,align:'center',valign:'middle'}},
+      {text:String(c.item||'-'), options:{fill:{color:WHITE},color:DARK,fontSize:9,valign:'middle',margin:[0,4,0,4]}},
+      ckCell(c.result,'양호'),ckCell(c.result,'불량'),ckCell(c.result,'해당없음'),
+      {text:String(c.note||''), options:{fill:{color:WHITE},color:MUTED,fontSize:8,valign:'middle',margin:[0,4,0,4]}},
+    ])];
+    s1.addTable(ck2Rows,{x:0.3,y,w:12.73,rowH:0.28,colW:CK_COLS,border:{type:'solid',color:'E2E2E2',pt:0.3}});
+    y += 0.28*(1+(r.check2||[]).length)+0.14;
 
-    // 왼쪽 컬럼: 기본정보 + 점검결과
-    const col1x=0.3, col2x=6.6, rowH=0.28, startY=1.75;
-    const addSection=(x,y,title,rows)=>{
-      slide.addText(title,{x,y,w:5.8,h:0.26,color:BLUE,fontSize:9,bold:true});
-      rows.forEach(([lbl,val],i)=>{
-        const ry=y+0.3+(i*rowH);
-        slide.addText(lbl,{x,y:ry,w:1.6,h:rowH,color:GRAY,fontSize:9});
-        slide.addText(String(val||'-'),{x:x+1.65,y:ry,w:4.1,h:rowH,color:DARK,fontSize:9,breakLine:false});
-      });
-      return y+0.3+(rows.length*rowH)+0.15;
-    };
+    y = addSectionTitle(s1, '3. 보일러·온수기 상태 점검 (육안 확인)', y);
+    const ck3Rows = [CK_HDR, ...(r.check3||[]).map(c=>[
+      {text:String(c.no), options:{fill:{color:WHITE},color:MUTED,fontSize:9,align:'center',valign:'middle'}},
+      {text:(c.no&&c.no.includes('-')?' └ ':'')+String(c.item||'-'), options:{fill:{color:WHITE},color:DARK,fontSize:9,valign:'middle',margin:[0,4,0,4]}},
+      ckCell(c.result,'양호'),ckCell(c.result,'불량'),ckCell(c.result,'해당없음'),
+      {text:String(c.note||''), options:{fill:{color:WHITE},color:MUTED,fontSize:8,valign:'middle',margin:[0,4,0,4]}},
+    ])];
+    s1.addTable(ck3Rows,{x:0.3,y,w:12.73,rowH:0.26,colW:CK_COLS,border:{type:'solid',color:'E2E2E2',pt:0.3}});
 
-    let y1 = addSection(col1x, startY, '■ 기본 정보',[
-      ['현장명',r.fieldName],['주소',r.address],['담당자',r.contactName+(r.contactTitle?' ('+r.contactTitle+')':'')],
-      ['연락처',r.phone],['이메일',r.email],['모델/수량',r.modelQty],['설치일자',r.installDate]
-    ]);
+    // ── Slide 2: 인터뷰 + 종합의견 ──
+    const s2 = pptx.addSlide();
+    addSlideHeader(s2, r.fieldName);
+    addSubtitle(s2, r);
 
-    // 체크리스트 요약
-    const badCk2=(r.check2||[]).filter(c=>c.result==='불량');
-    const badCk3=(r.check3||[]).filter(c=>c.result==='불량');
-    addSection(col1x, y1, '■ 불량 항목 요약',[
-      ...badCk2.map(c=>['점검2-'+c.no, c.item+(c.note?' ('+c.note+')':'')]),
-      ...badCk3.map(c=>['점검3-'+c.no, c.item+(c.note?' ('+c.note+')':'')]),
-      ...(badCk2.length+badCk3.length===0?[['','불량 항목 없음']]: [])
-    ]);
+    y = 1.1;
+    y = addSectionTitle(s2, '4. 현장 담당자 인터뷰', y);
+    const ivRows = [
+      [hdr('No','center'),hdr('질문','left'),hdr('답변','left')],
+      ...(r.interviews||[]).map((iv,i)=>[
+        {text:String(i+1), options:{fill:{color:WHITE},color:MUTED,fontSize:9,align:'center',valign:'top',margin:[4,2,4,2]}},
+        {text:String(iv.question||'-'), options:{fill:{color:LBLBG},color:DARK,fontSize:9,valign:'top',margin:[4,4,4,4]}},
+        {text:String(iv.answer||''), options:{fill:{color:WHITE},color:iv.answer?DARK:MUTED,fontSize:9,valign:'top',margin:[4,4,4,4]}},
+      ])
+    ];
+    s2.addTable(ivRows,{x:0.3,y,w:12.73,rowH:0.36,colW:[0.45,5.5,6.78],border:{type:'solid',color:'E2E2E2',pt:0.3}});
+    y += 0.36*(1+(r.interviews||[]).length)+0.2;
 
-    // 오른쪽 컬럼: 인터뷰
-    let y2=startY;
-    slide.addText('■ 현장 담당자 인터뷰',{x:col2x,y:y2,w:6,h:0.26,color:BLUE,fontSize:9,bold:true});
-    y2+=0.3;
-    (r.interviews||[]).forEach((iv,i)=>{
-      slide.addText(`Q${i+1}. ${iv.question}`,{x:col2x,y:y2,w:6,h:0.22,color:GRAY,fontSize:8,italic:true});
-      y2+=0.22;
-      slide.addText(iv.answer||'미입력',{x:col2x,y:y2,w:6,h:0.26,color:DARK,fontSize:9});
-      y2+=0.3;
-      if(y2>6.8) return;
-    });
+    // 종합의견
+    s2.addShape(pptx.ShapeType.rect,{x:0.3,y,w:12.73,h:0.28,fill:{color:NAVY}});
+    s2.addText('5. 종합 의견 및 후속 조치',{x:0.4,y:y+0.02,w:12.53,h:0.26,color:WHITE,fontSize:9,bold:true,valign:'middle'});
+    y += 0.28;
+    s2.addShape(pptx.ShapeType.rect,{x:0.3,y,w:12.73,h:1.1,fill:{color:GRAY},line:{color:'E2E2E2',pt:0.3}});
+    s2.addText(String(r.overallOpinion||'(미입력)'),{x:0.4,y:y+0.06,w:12.53,h:1.0,color:r.overallOpinion?DARK:MUTED,fontSize:9,valign:'top',wrap:true});
+    y += 1.2;
 
-    // 종합 의견
-    if(r.overallOpinion){
-      slide.addShape(pptx.ShapeType.rect,{x:0.3,y:6.85,w:12.4,h:0.8,fill:{color:LIGHT},line:{color:'c5d8f0',width:0.5}});
-      slide.addText('종합 의견: '+r.overallOpinion,{x:0.5,y:6.92,w:12,h:0.66,color:DARK,fontSize:9,wrap:true});
-    }
+    s2.addText(`조사자: ${r.inspectorName||'-'}     확인일자: ${r.confirmDate||'-'}`,{x:0.3,y,w:12.73,h:0.28,color:DARK,fontSize:9,align:'right',valign:'middle'});
   });
 
   await pptx.writeFile({fileName:`캐스케이드_현장조사_${new Date().toISOString().slice(0,10)}.pptx`});
