@@ -882,7 +882,7 @@ async function downloadWord(){
           for(let ci=0;ci<3;ci++){
             const ph=row[ci];
             if(ph){
-              body+=`<td style="border:0.5pt solid #C8D4E8;padding:4pt;text-align:center;width:33%"><img src="${ph.url}" style="max-width:155pt;max-height:116pt;display:block;margin:0 auto 2pt"><div style="background:#DCE6F1;color:#1F3864;font-size:8pt;font-weight:bold;padding:2pt">${esc(ph.sec)}</div></td>`;
+              body+=`<td style="border:0.5pt solid #C8D4E8;padding:4pt;text-align:center;width:33%"><img src="${ph.url}" style="width:5.8cm;height:auto;display:block;margin:0 auto 2pt"><div style="background:#DCE6F1;color:#1F3864;font-size:8pt;font-weight:bold;padding:2pt">${esc(ph.sec)}</div></td>`;
             }else{
               body+='<td style="border:0.5pt solid #C8D4E8;width:33%"></td>';
             }
