@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -6,7 +6,7 @@
 <title>캐스케이드 현장조사 관리자</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html-docx-js@0.3.1/dist/html-docx.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
@@ -817,22 +817,17 @@ async function downloadWord(){
   btn.disabled=true;
   btn.innerHTML='<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> 생성 중...';
 
-  async function getBlob(url){
+  async function getImgDataUrl(url){
     try{
       const match=url.match(/\/o\/([^?#]+)/);
       if(!match||!window._fb.getBlob)return null;
-      return await window._fb.getBlob(window._fb.sRef(window._fb.storage,decodeURIComponent(match[1])));
+      const blob=await window._fb.getBlob(window._fb.sRef(window._fb.storage,decodeURIComponent(match[1])));
+      return new Promise(res=>{const r=new FileReader();r.onloadend=()=>res(r.result);r.readAsDataURL(blob);});
     }catch{return null;}
   }
 
   try{
-    const D=window.docx;
-    const {Document,Packer,Paragraph,TextRun,Table,TableRow,TableCell,ImageRun}=D;
-    const AlignmentType=D.AlignmentType||{LEFT:'left',CENTER:'center',RIGHT:'right'};
-    const WidthType=D.WidthType||{DXA:'dxa',PERCENTAGE:'pct'};
-    const ShadingType=D.ShadingType||{CLEAR:'clear'};
-    const VerticalAlign=D.VerticalAlign||{CENTER:'center',TOP:'top'};
-    const BorderStyle=D.BorderStyle||{SINGLE:'single',NONE:'none'};
+    if(!window.htmlDocx){throw new Error('html-docx-js 라이브러리가 로드되지 않았습니다.');}
 
     const PKEYS=['전경','명판','내부','이상부위','설치환경'];
     const SLBL={전경:'설치 전경',명판:'제품 명판',내부:'제품 내부',이상부위:'이상 부위',설치환경:'설치 환경'};
@@ -849,132 +844,92 @@ async function downloadWord(){
       btn.innerHTML=`<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> 이미지 로딩 중... (0/${allPUrls.length})`;
       let done=0;
       await Promise.all(allPUrls.map(async url=>{
-        const blob=await getBlob(url);
-        if(blob) photoMap.set(url,await blob.arrayBuffer());
+        const d=await getImgDataUrl(url);
+        if(d) photoMap.set(url,d);
         btn.innerHTML=`<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> 이미지 로딩 중... (${++done}/${allPUrls.length})`;
       }));
     }
     btn.innerHTML='<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> 문서 생성 중...';
 
-    const N='1F3864',LBL='DCE6F1',WHT='FFFFFF',GRY='F2F2F2';
-    const GRN='3B6D11',GBG='EAF3DE',RED='C00000',RBG='FCEBEB',NBG='F1F1F1';
-    const bdr={style:BorderStyle.SINGLE,size:4,color:'C8D4E8'};
-    const borders={top:bdr,bottom:bdr,left:bdr,right:bdr};
-    const sh=(fill)=>({fill,type:ShadingType.CLEAR,color:'auto'});
+    function esc(t){return String(t??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+    const tdB='border:0.5pt solid #C8D4E8;padding:4pt 6pt;vertical-align:middle';
+    const tdL=`${tdB};background:#DCE6F1;color:#1F3864;font-weight:bold;white-space:nowrap`;
+    function secTitle(text){return `<p style="color:#1F3864;font-weight:bold;font-size:11pt;margin:10pt 0 3pt;border-bottom:1pt solid #1F3864;padding-bottom:2pt">${esc(text)}</p>`;}
+    function checkHdr(){return `<tr style="background:#1F3864"><th style="color:#fff;text-align:center;padding:4pt 6pt;border:0.5pt solid #C8D4E8;width:28pt">No</th><th style="color:#fff;padding:4pt 6pt;border:0.5pt solid #C8D4E8">점검 항목</th><th style="color:#fff;text-align:center;padding:4pt 6pt;border:0.5pt solid #C8D4E8;width:38pt">양호</th><th style="color:#fff;text-align:center;padding:4pt 6pt;border:0.5pt solid #C8D4E8;width:38pt">불량</th><th style="color:#fff;text-align:center;padding:4pt 6pt;border:0.5pt solid #C8D4E8;width:52pt">해당없음</th><th style="color:#fff;padding:4pt 6pt;border:0.5pt solid #C8D4E8;width:70pt">비고</th></tr>`;}
+    function checkRows(items){return (items||[]).map(c=>{
+      const r=c.result||'',ok=r==='양호',bad=r==='불량',na=r==='해당없음';
+      return `<tr>
+        <td style="${tdB};text-align:center;color:#888">${esc(c.no)}</td>
+        <td style="${tdB}">${(String(c.no||'').includes('-')?' └ ':'')+esc(c.item||'-')}</td>
+        <td style="${tdB};text-align:center;font-weight:bold;font-size:13pt;${ok?'background:#EAF3DE;color:#3B6D11':''}">${ok?'✓':''}</td>
+        <td style="${tdB};text-align:center;font-weight:bold;font-size:13pt;${bad?'background:#FCEBEB;color:#C00000':''}">${bad?'✗':''}</td>
+        <td style="${tdB};text-align:center;font-size:8.5pt;${na?'background:#F1F1F1;color:#555':''}">${na?'N/A':''}</td>
+        <td style="${tdB};color:#888;font-size:8.5pt">${esc(c.note||'')}</td>
+      </tr>`}).join('');}
 
-    function hCell(t,w,opts={}){
-      return new TableCell({children:[new Paragraph({children:[new TextRun({text:String(t??''),bold:true,color:WHT,size:18})],alignment:opts.c?AlignmentType.CENTER:AlignmentType.LEFT})],
-        shading:sh(N),verticalAlign:VerticalAlign.CENTER,width:{size:w,type:WidthType.DXA},borders});
-    }
-    function dCell(t,w,opts={}){
-      const co={children:[new Paragraph({children:[new TextRun({text:String(t??'-'),color:opts.clr||'333333',size:18,bold:opts.bold||false})],alignment:opts.c?AlignmentType.CENTER:AlignmentType.LEFT})],
-        shading:sh(opts.fill||WHT),verticalAlign:VerticalAlign.CENTER,width:{size:w,type:WidthType.DXA},borders};
-      if(opts.span) co.columnSpan=opts.span;
-      return new TableCell(co);
-    }
-    function secH(text){
-      return new Paragraph({children:[new TextRun({text,bold:true,color:N,size:22})],spacing:{before:280,after:120}});
-    }
-    function itype(url){const m=(url||'').match(/\.(jpe?g|png|gif|webp)/i);return m?(m[1].toLowerCase()==='jpeg'?'jpg':m[1].toLowerCase()):'jpg';}
-
-    function buildCheckTable(items){
-      const CW=[500,4000,800,800,1000,1900];
-      const hRow=new TableRow({children:[hCell('No',CW[0],{c:1}),hCell('점검 항목',CW[1]),hCell('양호',CW[2],{c:1}),hCell('불량',CW[3],{c:1}),hCell('해당없음',CW[4],{c:1}),hCell('비고',CW[5])]});
-      const dRows=(items||[]).map(c=>{
-        const r=c.result||'',ok=r==='양호',bad=r==='불량',na=r==='해당없음';
-        return new TableRow({children:[
-          dCell(String(c.no||''),CW[0],{c:1,clr:'888888'}),
-          dCell((String(c.no||'').includes('-')?' └ ':'')+String(c.item||'-'),CW[1]),
-          new TableCell({children:[new Paragraph({children:[new TextRun({text:ok?'✓':'',bold:true,color:GRN,size:22})],alignment:AlignmentType.CENTER})],shading:sh(ok?GBG:WHT),verticalAlign:VerticalAlign.CENTER,width:{size:CW[2],type:WidthType.DXA},borders}),
-          new TableCell({children:[new Paragraph({children:[new TextRun({text:bad?'✗':'',bold:true,color:RED,size:22})],alignment:AlignmentType.CENTER})],shading:sh(bad?RBG:WHT),verticalAlign:VerticalAlign.CENTER,width:{size:CW[3],type:WidthType.DXA},borders}),
-          new TableCell({children:[new Paragraph({children:[new TextRun({text:na?'N/A':'',color:'888888',size:16})],alignment:AlignmentType.CENTER})],shading:sh(na?NBG:WHT),verticalAlign:VerticalAlign.CENTER,width:{size:CW[4],type:WidthType.DXA},borders}),
-          dCell(String(c.note||''),CW[5],{clr:'888888'})
-        ]});
-      });
-      return new Table({rows:[hRow,...dRows],width:{size:9000,type:WidthType.DXA}});
-    }
-
-    const sections=[];
+    let body='';
     for(let ri=0;ri<targets.length;ri++){
       const rec=targets[ri];
-      const ch=[];
-      // 헤더
-      ch.push(new Paragraph({children:[new TextRun({text:'캐스케이드 설치 현장 조사 체크리스트',bold:true,color:WHT,size:28})],
-        shading:sh(N),spacing:{before:0,after:0},pageBreakBefore:ri>0}));
-      ch.push(new Paragraph({children:[new TextRun({text:rec.fieldName||'-',bold:true,color:N,size:26})],spacing:{before:120,after:60}}));
-      ch.push(new Paragraph({children:[new TextRun({text:'방문일자: '+(rec.visitDate||'-')+'   조사자: '+(rec.inspectorName||'-'),color:'666666',size:18})],spacing:{before:0,after:200}}));
-      // 1. 기본정보
-      ch.push(secH('1. 기본 정보'));
-      const BW=[1350,3150,1350,3150];
-      ch.push(new Table({rows:[
-        new TableRow({children:[hCell('현장명',BW[0]),dCell(rec.fieldName,BW[1]),hCell('방문일자',BW[2]),dCell(rec.visitDate,BW[3])]}),
-        new TableRow({children:[hCell('주소',BW[0]),dCell(rec.address,BW[1]+BW[2]+BW[3],{span:3})]}),
-        new TableRow({children:[hCell('담당자',BW[0]),dCell((rec.contactName||'-')+(rec.contactTitle?' ('+rec.contactTitle+')':''),BW[1]),hCell('연락처',BW[2]),dCell(rec.phone,BW[3])]}),
-        new TableRow({children:[hCell('이메일',BW[0]),dCell(rec.email,BW[1]),hCell('모델/수량',BW[2]),dCell(rec.modelQty,BW[3])]}),
-        new TableRow({children:[hCell('설치일자',BW[0]),dCell(rec.installDate,BW[1]),hCell('조사자',BW[2]),dCell(rec.inspectorName,BW[3])]})
-      ],width:{size:9000,type:WidthType.DXA}}));
-      // 2. 사용 현황 점검
-      ch.push(secH('2. 사용 현황 점검'));
-      ch.push(buildCheckTable(rec.check2));
-      // 3. 보일러 상태 점검
-      ch.push(secH('3. 보일러·온수기 상태 점검 (육안 확인)'));
-      ch.push(buildCheckTable(rec.check3));
-      // 4. 인터뷰
-      ch.push(secH('4. 현장 담당자 인터뷰'));
-      const IW=[500,3000,5500];
-      ch.push(new Table({rows:[
-        new TableRow({children:[hCell('No',IW[0],{c:1}),hCell('질문',IW[1]),hCell('답변',IW[2])]}),
-        ...(rec.interviews||[]).map((iv,i)=>new TableRow({children:[
-          dCell(String(i+1),IW[0],{c:1,clr:'888888'}),
-          dCell(String(iv.question||'-'),IW[1],{fill:LBL,clr:N}),
-          dCell(String(iv.answer||''),IW[2])
-        ]}))
-      ],width:{size:9000,type:WidthType.DXA}}));
-      // 5. 종합의견
-      ch.push(secH('5. 종합 의견 및 후속 조치'));
-      ch.push(new Paragraph({children:[new TextRun({text:rec.overallOpinion||'(미입력)',color:rec.overallOpinion?'333333':'888888',size:18})],
-        shading:sh(GRY),spacing:{before:0,after:80},indent:{left:80,right:80}}));
-      ch.push(new Paragraph({children:[new TextRun({text:'조사자: '+(rec.inspectorName||'-')+'   확인일자: '+(rec.confirmDate||'-'),size:18,color:'333333'})],
-        alignment:AlignmentType.RIGHT,spacing:{before:80,after:200}}));
-      // 6. 첨부 사진 (3열)
-      const photos=rec._wPhotos;
+      if(ri>0) body+='<div style="page-break-before:always"></div>';
+      body+=`<div style="background:#1F3864;color:#fff;padding:8pt 10pt;font-size:14pt;font-weight:bold">캐스케이드 설치 현장 조사 체크리스트</div>
+      <p style="color:#1F3864;font-size:13pt;font-weight:bold;margin:4pt 0 2pt">${esc(rec.fieldName||'-')}</p>
+      <p style="color:#666;font-size:9pt;margin:0 0 8pt">방문일자: ${esc(rec.visitDate||'-')}&nbsp;&nbsp;&nbsp;조사자: ${esc(rec.inspectorName||'-')}</p>`;
+      body+=secTitle('1. 기본 정보');
+      body+=`<table style="border-collapse:collapse;width:100%;font-size:9.5pt;margin-bottom:6pt">
+        <tr><td style="${tdL}">현장명</td><td style="${tdB}">${esc(rec.fieldName||'-')}</td><td style="${tdL}">방문일자</td><td style="${tdB}">${esc(rec.visitDate||'-')}</td></tr>
+        <tr><td style="${tdL}">주소</td><td colspan="3" style="${tdB}">${esc(rec.address||'-')}</td></tr>
+        <tr><td style="${tdL}">담당자</td><td style="${tdB}">${esc((rec.contactName||'-')+(rec.contactTitle?' ('+rec.contactTitle+')':''))}</td><td style="${tdL}">연락처</td><td style="${tdB}">${esc(rec.phone||'-')}</td></tr>
+        <tr><td style="${tdL}">이메일</td><td style="${tdB}">${esc(rec.email||'-')}</td><td style="${tdL}">모델/수량</td><td style="${tdB}">${esc(rec.modelQty||'-')}</td></tr>
+        <tr><td style="${tdL}">설치일자</td><td style="${tdB}">${esc(rec.installDate||'-')}</td><td style="${tdL}">조사자</td><td style="${tdB}">${esc(rec.inspectorName||'-')}</td></tr>
+      </table>`;
+      body+=secTitle('2. 사용 현황 점검');
+      body+=`<table style="border-collapse:collapse;width:100%;font-size:9.5pt;margin-bottom:6pt">${checkHdr()}${checkRows(rec.check2)}</table>`;
+      body+=secTitle('3. 보일러·온수기 상태 점검 (육안 확인)');
+      body+=`<table style="border-collapse:collapse;width:100%;font-size:9.5pt;margin-bottom:6pt">${checkHdr()}${checkRows(rec.check3)}</table>`;
+      body+=secTitle('4. 현장 담당자 인터뷰');
+      body+=`<table style="border-collapse:collapse;width:100%;font-size:9.5pt;margin-bottom:6pt">
+        <tr style="background:#1F3864"><th style="color:#fff;text-align:center;padding:4pt 6pt;border:0.5pt solid #C8D4E8;width:28pt">No</th><th style="color:#fff;padding:4pt 6pt;border:0.5pt solid #C8D4E8;width:35%">질문</th><th style="color:#fff;padding:4pt 6pt;border:0.5pt solid #C8D4E8">답변</th></tr>
+        ${(rec.interviews||[]).map((iv,i)=>`<tr><td style="${tdB};text-align:center;color:#888">${i+1}</td><td style="${tdB};background:#DCE6F1;color:#1F3864">${esc(iv.question||'-')}</td><td style="${tdB}">${esc(iv.answer||'')}</td></tr>`).join('')}
+      </table>`;
+      body+=secTitle('5. 종합 의견 및 후속 조치');
+      body+=`<div style="background:#F2F2F2;padding:6pt 8pt;min-height:18pt;font-size:9.5pt;margin-bottom:3pt">${esc(rec.overallOpinion||'(미입력)')}</div>
+      <p style="text-align:right;font-size:9pt;color:#333;margin:2pt 0 8pt">조사자: ${esc(rec.inspectorName||'-')}&nbsp;&nbsp;&nbsp;확인일자: ${esc(rec.confirmDate||'-')}</p>`;
+      const photos=rec._wPhotos||[];
       if(photos.length>0){
-        ch.push(secH('6. 첨부 사진'));
-        const COLS=3,CW_IMG=3000,IMG_W=185,IMG_H=139;
-        for(let pi=0;pi<photos.length;pi+=COLS){
-          const row=photos.slice(pi,pi+COLS);
-          const cells=row.map(ph=>{
-            const ab=photoMap.get(ph.url);
-            const inner=[];
-            if(ab){
-              try{inner.push(new Paragraph({children:[new ImageRun({data:ab,transformation:{width:IMG_W,height:IMG_H},type:itype(ph.url)})],alignment:AlignmentType.CENTER}));}
-              catch{inner.push(new Paragraph({children:[new TextRun({text:'이미지 오류',color:'888888',size:14})],alignment:AlignmentType.CENTER}));}
+        body+=secTitle('6. 첨부 사진');
+        body+='<table style="border-collapse:collapse;width:100%;margin-bottom:6pt">';
+        for(let pi=0;pi<photos.length;pi+=3){
+          const row=photos.slice(pi,pi+3);
+          body+='<tr>';
+          for(let ci=0;ci<3;ci++){
+            const ph=row[ci];
+            if(ph){
+              const d=photoMap.get(ph.url);
+              body+=`<td style="border:0.5pt solid #C8D4E8;padding:4pt;text-align:center;width:33%">${d?`<img src="${d}" style="max-width:155pt;max-height:116pt;display:block;margin:0 auto 2pt">`:'<span style="color:#888;font-size:8pt;display:block;padding:8pt 0">이미지 없음</span>'}<div style="background:#DCE6F1;color:#1F3864;font-size:8pt;font-weight:bold;padding:2pt">${esc(ph.sec)}</div></td>`;
             }else{
-              inner.push(new Paragraph({children:[new TextRun({text:'이미지 없음',color:'888888',size:14})],alignment:AlignmentType.CENTER,spacing:{before:160,after:160}}));
+              body+='<td style="border:0.5pt solid #C8D4E8;width:33%"></td>';
             }
-            inner.push(new Paragraph({children:[new TextRun({text:ph.sec,bold:true,color:N,size:15})],alignment:AlignmentType.CENTER,shading:sh(LBL)}));
-            return new TableCell({children:inner,verticalAlign:VerticalAlign.CENTER,width:{size:CW_IMG,type:WidthType.DXA},borders});
-          });
-          while(cells.length<COLS) cells.push(new TableCell({children:[new Paragraph({children:[new TextRun({text:''})],spacing:{before:140,after:140}})],width:{size:CW_IMG,type:WidthType.DXA},borders}));
-          ch.push(new Table({rows:[new TableRow({children:cells})],width:{size:9000,type:WidthType.DXA}}));
-          ch.push(new Paragraph({children:[],spacing:{before:0,after:40}}));
+          }
+          body+='</tr>';
         }
+        body+='</table>';
       }
-      // 7. 동영상
       if(rec._wVideos&&rec._wVideos.length>0){
-        ch.push(secH('7. 동영상 파일'));
-        rec._wVideos.forEach((v,i)=>{ch.push(new Paragraph({children:[new TextRun({text:(i+1)+'. '+(v.name||'동영상'+(i+1)),size:18})],spacing:{before:0,after:80}}));});
+        body+=secTitle('7. 동영상 파일');
+        body+='<ul style="font-size:9.5pt;margin:0 0 6pt">';
+        rec._wVideos.forEach((v,i)=>{body+=`<li>${esc(v.name||'동영상'+(i+1))}</li>`;});
+        body+='</ul>';
       }
-      // 8. 음성
       if(rec._wAudio&&rec._wAudio.length>0){
-        ch.push(secH('8. 음성 녹취'));
-        rec._wAudio.forEach((a,i)=>{ch.push(new Paragraph({children:[new TextRun({text:(i+1)+'. '+(a.name||'음성파일'+(i+1)),size:18})],spacing:{before:0,after:80}}));});
+        body+=secTitle('8. 음성 녹취');
+        body+='<ul style="font-size:9.5pt;margin:0 0 6pt">';
+        rec._wAudio.forEach((a,i)=>{body+=`<li>${esc(a.name||'음성파일'+(i+1))}</li>`;});
+        body+='</ul>';
       }
-      sections.push({children:ch});
     }
 
-    const doc=new Document({creator:'cascade-admin',title:'캐스케이드_현장조사',sections});
-    const blob=await Packer.toBlob(doc);
+    const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{font-family:'맑은 고딕','Malgun Gothic',sans-serif;font-size:10pt;line-height:1.4;margin:0}table{border-collapse:collapse}th{text-align:left}</style></head><body>${body}</body></html>`;
+    const blob=window.htmlDocx.asBlob(html,{orientation:'portrait',margins:{top:720,right:720,bottom:720,left:720}});
     const a=document.createElement('a');
     a.href=URL.createObjectURL(blob);
     a.download='캐스케이드_현장조사_'+new Date().toISOString().slice(0,10)+'.docx';
