@@ -817,15 +817,6 @@ async function downloadWord(){
   btn.disabled=true;
   btn.innerHTML='<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> 생성 중...';
 
-  async function getImgDataUrl(url){
-    try{
-      const match=url.match(/\/o\/([^?#]+)/);
-      if(!match||!window._fb.getBlob)return null;
-      const blob=await window._fb.getBlob(window._fb.sRef(window._fb.storage,decodeURIComponent(match[1])));
-      return new Promise(res=>{const r=new FileReader();r.onloadend=()=>res(r.result);r.readAsDataURL(blob);});
-    }catch{return null;}
-  }
-
   try{
     if(!window.htmlDocx){throw new Error('html-docx-js 라이브러리가 로드되지 않았습니다.');}
 
@@ -837,19 +828,6 @@ async function downloadWord(){
       PKEYS.forEach(k=>{(ms[k]||[]).filter(m=>m.kind!=='video').forEach(m=>photos.push({url:m.url,name:m.name||'',sec:SLBL[k]||k}));});
       rec._wPhotos=photos; rec._wVideos=ms['동영상']||[]; rec._wAudio=rec.audio||[];
     });
-
-    const allPUrls=[...new Set(targets.flatMap(r=>r._wPhotos.map(p=>p.url)))];
-    const photoMap=new Map();
-    if(allPUrls.length>0){
-      btn.innerHTML=`<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> 이미지 로딩 중... (0/${allPUrls.length})`;
-      let done=0;
-      await Promise.all(allPUrls.map(async url=>{
-        const d=await getImgDataUrl(url);
-        if(d) photoMap.set(url,d);
-        btn.innerHTML=`<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> 이미지 로딩 중... (${++done}/${allPUrls.length})`;
-      }));
-    }
-    btn.innerHTML='<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> 문서 생성 중...';
 
     function esc(t){return String(t??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
     const tdB='border:0.5pt solid #C8D4E8;padding:4pt 6pt;vertical-align:middle';
@@ -904,8 +882,7 @@ async function downloadWord(){
           for(let ci=0;ci<3;ci++){
             const ph=row[ci];
             if(ph){
-              const d=photoMap.get(ph.url);
-              body+=`<td style="border:0.5pt solid #C8D4E8;padding:4pt;text-align:center;width:33%">${d?`<img src="${d}" style="max-width:155pt;max-height:116pt;display:block;margin:0 auto 2pt">`:'<span style="color:#888;font-size:8pt;display:block;padding:8pt 0">이미지 없음</span>'}<div style="background:#DCE6F1;color:#1F3864;font-size:8pt;font-weight:bold;padding:2pt">${esc(ph.sec)}</div></td>`;
+              body+=`<td style="border:0.5pt solid #C8D4E8;padding:4pt;text-align:center;width:33%"><img src="${ph.url}" style="max-width:155pt;max-height:116pt;display:block;margin:0 auto 2pt"><div style="background:#DCE6F1;color:#1F3864;font-size:8pt;font-weight:bold;padding:2pt">${esc(ph.sec)}</div></td>`;
             }else{
               body+='<td style="border:0.5pt solid #C8D4E8;width:33%"></td>';
             }
