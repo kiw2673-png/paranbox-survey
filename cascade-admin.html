@@ -6,6 +6,7 @@
 <title>캐스케이드 현장조사 관리자</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.min.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
@@ -185,6 +186,7 @@
       <input type="text" id="searchInput" placeholder="현장명, 담당자, 조사자 이름으로 검색..." oninput="renderTable()">
       <button class="icon-btn" onclick="loadData()"><i class="ti ti-refresh" id="refreshIcon"></i> 새로고침</button>
       <button class="icon-btn green" id="pptBtn" onclick="downloadPPT()"><i class="ti ti-presentation"></i> PPT 다운로드 <span id="selBadge" style="display:none;background:rgba(255,255,255,0.35);border-radius:10px;padding:1px 7px;font-size:11px;margin-left:2px"></span></button>
+      <button class="icon-btn" style="background:#2e74b5;color:#fff;border-color:#2e74b5" id="wordBtn" onclick="downloadWord()"><i class="ti ti-file-word"></i> Word 다운로드 <span id="wordBadge" style="display:none;background:rgba(255,255,255,0.35);border-radius:10px;padding:1px 7px;font-size:11px;margin-left:2px"></span></button>
     </div>
 
     <div class="table-wrap">
@@ -287,9 +289,11 @@ window.toggleSelAll=toggleSelAll;
 function updateSelBadge(){
   const n=document.querySelectorAll('.row-sel:checked').length;
   const badge=document.getElementById('selBadge');
+  const wBadge=document.getElementById('wordBadge');
   if(!badge) return;
   if(n>0){badge.style.display='inline';badge.textContent=n+'건 선택';}
   else{badge.style.display='none';}
+  if(wBadge){if(n>0){wBadge.style.display='inline';wBadge.textContent=n+'건 선택';}else{wBadge.style.display='none';}}
   const sa=document.getElementById('selAll');
   if(sa){const total=document.querySelectorAll('.row-sel').length;sa.indeterminate=(n>0&&n<total);sa.checked=(n>0&&n===total);}
 }
@@ -801,6 +805,191 @@ async function downloadPPT(){
   }
 }
 window.downloadPPT=downloadPPT;
+
+async function downloadWord(){
+  const checkedEls=[...document.querySelectorAll('.row-sel:checked')];
+  if(!checkedEls.length){alert('Word로 내보낼 항목을 먼저 선택해 주세요.');return;}
+  const checkedIds=new Set(checkedEls.map(c=>c.dataset.id));
+  const targets=allData.filter(r=>checkedIds.has(r.id));
+
+  const btn=document.getElementById('wordBtn');
+  const savedHtml=btn.innerHTML;
+  btn.disabled=true;
+  btn.innerHTML='<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> 생성 중...';
+
+  async function getBlob(url){
+    try{
+      const match=url.match(/\/o\/([^?#]+)/);
+      if(!match||!window._fb.getBlob)return null;
+      return await window._fb.getBlob(window._fb.sRef(window._fb.storage,decodeURIComponent(match[1])));
+    }catch{return null;}
+  }
+
+  try{
+    const D=window.docx;
+    const {Document,Packer,Paragraph,TextRun,Table,TableRow,TableCell,ImageRun}=D;
+    const AlignmentType=D.AlignmentType||{LEFT:'left',CENTER:'center',RIGHT:'right'};
+    const WidthType=D.WidthType||{DXA:'dxa',PERCENTAGE:'pct'};
+    const ShadingType=D.ShadingType||{CLEAR:'clear'};
+    const VerticalAlign=D.VerticalAlign||{CENTER:'center',TOP:'top'};
+    const BorderStyle=D.BorderStyle||{SINGLE:'single',NONE:'none'};
+
+    const PKEYS=['전경','명판','내부','이상부위','설치환경'];
+    const SLBL={전경:'설치 전경',명판:'제품 명판',내부:'제품 내부',이상부위:'이상 부위',설치환경:'설치 환경'};
+    targets.forEach(rec=>{
+      const ms=rec.media||{};
+      const photos=[];
+      PKEYS.forEach(k=>{(ms[k]||[]).filter(m=>m.kind!=='video').forEach(m=>photos.push({url:m.url,name:m.name||'',sec:SLBL[k]||k}));});
+      rec._wPhotos=photos; rec._wVideos=ms['동영상']||[]; rec._wAudio=rec.audio||[];
+    });
+
+    const allPUrls=[...new Set(targets.flatMap(r=>r._wPhotos.map(p=>p.url)))];
+    const photoMap=new Map();
+    if(allPUrls.length>0){
+      btn.innerHTML=`<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> 이미지 로딩 중... (0/${allPUrls.length})`;
+      let done=0;
+      await Promise.all(allPUrls.map(async url=>{
+        const blob=await getBlob(url);
+        if(blob) photoMap.set(url,await blob.arrayBuffer());
+        btn.innerHTML=`<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> 이미지 로딩 중... (${++done}/${allPUrls.length})`;
+      }));
+    }
+    btn.innerHTML='<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> 문서 생성 중...';
+
+    const N='1F3864',LBL='DCE6F1',WHT='FFFFFF',GRY='F2F2F2';
+    const GRN='3B6D11',GBG='EAF3DE',RED='C00000',RBG='FCEBEB',NBG='F1F1F1';
+    const bdr={style:BorderStyle.SINGLE,size:4,color:'C8D4E8'};
+    const borders={top:bdr,bottom:bdr,left:bdr,right:bdr};
+    const sh=(fill)=>({fill,type:ShadingType.CLEAR,color:'auto'});
+
+    function hCell(t,w,opts={}){
+      return new TableCell({children:[new Paragraph({children:[new TextRun({text:String(t??''),bold:true,color:WHT,size:18})],alignment:opts.c?AlignmentType.CENTER:AlignmentType.LEFT})],
+        shading:sh(N),verticalAlign:VerticalAlign.CENTER,width:{size:w,type:WidthType.DXA},borders});
+    }
+    function dCell(t,w,opts={}){
+      const co={children:[new Paragraph({children:[new TextRun({text:String(t??'-'),color:opts.clr||'333333',size:18,bold:opts.bold||false})],alignment:opts.c?AlignmentType.CENTER:AlignmentType.LEFT})],
+        shading:sh(opts.fill||WHT),verticalAlign:VerticalAlign.CENTER,width:{size:w,type:WidthType.DXA},borders};
+      if(opts.span) co.columnSpan=opts.span;
+      return new TableCell(co);
+    }
+    function secH(text){
+      return new Paragraph({children:[new TextRun({text,bold:true,color:N,size:22})],spacing:{before:280,after:120}});
+    }
+    function itype(url){const m=(url||'').match(/\.(jpe?g|png|gif|webp)/i);return m?(m[1].toLowerCase()==='jpeg'?'jpg':m[1].toLowerCase()):'jpg';}
+
+    function buildCheckTable(items){
+      const CW=[500,4000,800,800,1000,1900];
+      const hRow=new TableRow({children:[hCell('No',CW[0],{c:1}),hCell('점검 항목',CW[1]),hCell('양호',CW[2],{c:1}),hCell('불량',CW[3],{c:1}),hCell('해당없음',CW[4],{c:1}),hCell('비고',CW[5])]});
+      const dRows=(items||[]).map(c=>{
+        const r=c.result||'',ok=r==='양호',bad=r==='불량',na=r==='해당없음';
+        return new TableRow({children:[
+          dCell(String(c.no||''),CW[0],{c:1,clr:'888888'}),
+          dCell((String(c.no||'').includes('-')?' └ ':'')+String(c.item||'-'),CW[1]),
+          new TableCell({children:[new Paragraph({children:[new TextRun({text:ok?'✓':'',bold:true,color:GRN,size:22})],alignment:AlignmentType.CENTER})],shading:sh(ok?GBG:WHT),verticalAlign:VerticalAlign.CENTER,width:{size:CW[2],type:WidthType.DXA},borders}),
+          new TableCell({children:[new Paragraph({children:[new TextRun({text:bad?'✗':'',bold:true,color:RED,size:22})],alignment:AlignmentType.CENTER})],shading:sh(bad?RBG:WHT),verticalAlign:VerticalAlign.CENTER,width:{size:CW[3],type:WidthType.DXA},borders}),
+          new TableCell({children:[new Paragraph({children:[new TextRun({text:na?'N/A':'',color:'888888',size:16})],alignment:AlignmentType.CENTER})],shading:sh(na?NBG:WHT),verticalAlign:VerticalAlign.CENTER,width:{size:CW[4],type:WidthType.DXA},borders}),
+          dCell(String(c.note||''),CW[5],{clr:'888888'})
+        ]});
+      });
+      return new Table({rows:[hRow,...dRows],width:{size:9000,type:WidthType.DXA}});
+    }
+
+    const sections=[];
+    for(let ri=0;ri<targets.length;ri++){
+      const rec=targets[ri];
+      const ch=[];
+      // 헤더
+      ch.push(new Paragraph({children:[new TextRun({text:'캐스케이드 설치 현장 조사 체크리스트',bold:true,color:WHT,size:28})],
+        shading:sh(N),spacing:{before:0,after:0},pageBreakBefore:ri>0}));
+      ch.push(new Paragraph({children:[new TextRun({text:rec.fieldName||'-',bold:true,color:N,size:26})],spacing:{before:120,after:60}}));
+      ch.push(new Paragraph({children:[new TextRun({text:'방문일자: '+(rec.visitDate||'-')+'   조사자: '+(rec.inspectorName||'-'),color:'666666',size:18})],spacing:{before:0,after:200}}));
+      // 1. 기본정보
+      ch.push(secH('1. 기본 정보'));
+      const BW=[1350,3150,1350,3150];
+      ch.push(new Table({rows:[
+        new TableRow({children:[hCell('현장명',BW[0]),dCell(rec.fieldName,BW[1]),hCell('방문일자',BW[2]),dCell(rec.visitDate,BW[3])]}),
+        new TableRow({children:[hCell('주소',BW[0]),dCell(rec.address,BW[1]+BW[2]+BW[3],{span:3})]}),
+        new TableRow({children:[hCell('담당자',BW[0]),dCell((rec.contactName||'-')+(rec.contactTitle?' ('+rec.contactTitle+')':''),BW[1]),hCell('연락처',BW[2]),dCell(rec.phone,BW[3])]}),
+        new TableRow({children:[hCell('이메일',BW[0]),dCell(rec.email,BW[1]),hCell('모델/수량',BW[2]),dCell(rec.modelQty,BW[3])]}),
+        new TableRow({children:[hCell('설치일자',BW[0]),dCell(rec.installDate,BW[1]),hCell('조사자',BW[2]),dCell(rec.inspectorName,BW[3])]})
+      ],width:{size:9000,type:WidthType.DXA}}));
+      // 2. 사용 현황 점검
+      ch.push(secH('2. 사용 현황 점검'));
+      ch.push(buildCheckTable(rec.check2));
+      // 3. 보일러 상태 점검
+      ch.push(secH('3. 보일러·온수기 상태 점검 (육안 확인)'));
+      ch.push(buildCheckTable(rec.check3));
+      // 4. 인터뷰
+      ch.push(secH('4. 현장 담당자 인터뷰'));
+      const IW=[500,3000,5500];
+      ch.push(new Table({rows:[
+        new TableRow({children:[hCell('No',IW[0],{c:1}),hCell('질문',IW[1]),hCell('답변',IW[2])]}),
+        ...(rec.interviews||[]).map((iv,i)=>new TableRow({children:[
+          dCell(String(i+1),IW[0],{c:1,clr:'888888'}),
+          dCell(String(iv.question||'-'),IW[1],{fill:LBL,clr:N}),
+          dCell(String(iv.answer||''),IW[2])
+        ]}))
+      ],width:{size:9000,type:WidthType.DXA}}));
+      // 5. 종합의견
+      ch.push(secH('5. 종합 의견 및 후속 조치'));
+      ch.push(new Paragraph({children:[new TextRun({text:rec.overallOpinion||'(미입력)',color:rec.overallOpinion?'333333':'888888',size:18})],
+        shading:sh(GRY),spacing:{before:0,after:80},indent:{left:80,right:80}}));
+      ch.push(new Paragraph({children:[new TextRun({text:'조사자: '+(rec.inspectorName||'-')+'   확인일자: '+(rec.confirmDate||'-'),size:18,color:'333333'})],
+        alignment:AlignmentType.RIGHT,spacing:{before:80,after:200}}));
+      // 6. 첨부 사진 (3열)
+      const photos=rec._wPhotos;
+      if(photos.length>0){
+        ch.push(secH('6. 첨부 사진'));
+        const COLS=3,CW_IMG=3000,IMG_W=185,IMG_H=139;
+        for(let pi=0;pi<photos.length;pi+=COLS){
+          const row=photos.slice(pi,pi+COLS);
+          const cells=row.map(ph=>{
+            const ab=photoMap.get(ph.url);
+            const inner=[];
+            if(ab){
+              try{inner.push(new Paragraph({children:[new ImageRun({data:ab,transformation:{width:IMG_W,height:IMG_H},type:itype(ph.url)})],alignment:AlignmentType.CENTER}));}
+              catch{inner.push(new Paragraph({children:[new TextRun({text:'이미지 오류',color:'888888',size:14})],alignment:AlignmentType.CENTER}));}
+            }else{
+              inner.push(new Paragraph({children:[new TextRun({text:'이미지 없음',color:'888888',size:14})],alignment:AlignmentType.CENTER,spacing:{before:160,after:160}}));
+            }
+            inner.push(new Paragraph({children:[new TextRun({text:ph.sec,bold:true,color:N,size:15})],alignment:AlignmentType.CENTER,shading:sh(LBL)}));
+            return new TableCell({children:inner,verticalAlign:VerticalAlign.CENTER,width:{size:CW_IMG,type:WidthType.DXA},borders});
+          });
+          while(cells.length<COLS) cells.push(new TableCell({children:[new Paragraph({children:[new TextRun({text:''})],spacing:{before:140,after:140}})],width:{size:CW_IMG,type:WidthType.DXA},borders}));
+          ch.push(new Table({rows:[new TableRow({children:cells})],width:{size:9000,type:WidthType.DXA}}));
+          ch.push(new Paragraph({children:[],spacing:{before:0,after:40}}));
+        }
+      }
+      // 7. 동영상
+      if(rec._wVideos&&rec._wVideos.length>0){
+        ch.push(secH('7. 동영상 파일'));
+        rec._wVideos.forEach((v,i)=>{ch.push(new Paragraph({children:[new TextRun({text:(i+1)+'. '+(v.name||'동영상'+(i+1)),size:18})],spacing:{before:0,after:80}}));});
+      }
+      // 8. 음성
+      if(rec._wAudio&&rec._wAudio.length>0){
+        ch.push(secH('8. 음성 녹취'));
+        rec._wAudio.forEach((a,i)=>{ch.push(new Paragraph({children:[new TextRun({text:(i+1)+'. '+(a.name||'음성파일'+(i+1)),size:18})],spacing:{before:0,after:80}}));});
+      }
+      sections.push({children:ch});
+    }
+
+    const doc=new Document({creator:'cascade-admin',title:'캐스케이드_현장조사',sections});
+    const blob=await Packer.toBlob(doc);
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download='캐스케이드_현장조사_'+new Date().toISOString().slice(0,10)+'.docx';
+    document.body.appendChild(a);a.click();document.body.removeChild(a);
+    URL.revokeObjectURL(a.href);
+
+  }catch(e){
+    console.error(e);
+    alert('Word 생성 중 오류가 발생했습니다: '+e.message);
+  }finally{
+    btn.disabled=false;
+    btn.innerHTML=savedHtml;
+  }
+}
+window.downloadWord=downloadWord;
 </script>
 <div id="printArea"></div>
 </body>
