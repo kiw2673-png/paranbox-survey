@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -598,10 +598,11 @@ async function downloadPPT(){
     async function fbBlob(url){
       try{
         const match=url.match(/\/o\/([^?#]+)/);
-        if(!match||!window._fb.getBlob)return null;
+        if(!match){console.error('fbBlob: URL 패턴 불일치',url);return null;}
+        if(!window._fb.getBlob){console.error('fbBlob: getBlob 함수 없음');return null;}
         const path=decodeURIComponent(match[1]);
         return await window._fb.getBlob(window._fb.sRef(window._fb.storage,path));
-      }catch(e){return null;}
+      }catch(e){console.error('fbBlob 실패:',url,e);return null;}
     }
     // 이미지 → base64 DataURL
     async function toB64(url){
