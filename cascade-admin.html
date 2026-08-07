@@ -747,9 +747,9 @@ async function downloadPPT(){
             const v=page[i];
             const col=i%GCOLS,row=Math.floor(i/GCOLS);
             const px=MX+col*(CELL_W+GAP),py=GRID_Y+row*(CELL_H+ROW_GAP);
-            vs.addShape(pptx.ShapeType.rect,{x:px,y:py,w:CELL_W,h:VID_H,fill:{color:'111111'},line:{color:'333333',width:0.5}});
-            vs.addText('▶',{x:px,y:py,w:CELL_W,h:VID_H,color:'ffffff',fontSize:28,align:'center',valign:'middle'});
             const fname=v.name||('동영상'+(i+1));
+            vs.addShape(pptx.ShapeType.rect,{x:px,y:py,w:CELL_W,h:VID_H,fill:{color:'111111'},line:{color:'333333',width:0.5},...(v.url?{hyperlink:{url:v.url,tooltip:fname}}:{})});
+            vs.addText('▶',{x:px,y:py,w:CELL_W,h:VID_H,color:'ffffff',fontSize:28,align:'center',valign:'middle',...(v.url?{hyperlink:{url:v.url,tooltip:fname}}:{})});
             vs.addText(fname+(v.url?'  (클릭하여 재생)':''),{
               x:px,y:py+VID_H,w:CELL_W,h:LBL_H,
               fill:{color:C.navy},color:C.white,fontSize:7.5,bold:false,
