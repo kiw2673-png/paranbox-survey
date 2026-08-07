@@ -892,7 +892,7 @@ async function downloadWord(){
           for(let ci=0;ci<3;ci++){
             const ph=row[ci];
             if(ph){
-              body+=`<td style="border:0.5pt solid #C8D4E8;padding:4pt;text-align:center;width:33%"><img src="${ph.url}" style="width:5.8cm;height:auto;display:block;margin:0 auto 2pt"><div style="background:#DCE6F1;color:#1F3864;font-size:8pt;font-weight:bold;padding:2pt">${esc(ph.sec)}</div></td>`;
+              body+=`<td style="border:0.5pt solid #C8D4E8;padding:4pt;text-align:center;width:33%"><img src="${ph.url}" width="220" style="display:block;margin:0 auto 2pt"><div style="background:#DCE6F1;color:#1F3864;font-size:8pt;font-weight:bold;padding:2pt">${esc(ph.sec)}</div></td>`;
             }else{
               body+='<td style="border:0.5pt solid #C8D4E8;width:33%"></td>';
             }
@@ -902,15 +902,21 @@ async function downloadWord(){
         body+='</table>';
       }
       if(rec._wVideos&&rec._wVideos.length>0){
-        body+=secTitle('7. 동영상 파일');
+        body+=secTitle('7. 동영상 파일 (※ Word는 재생 기능이 없어 링크 클릭 시 브라우저에서 재생됩니다)');
         body+='<ul style="font-size:9.5pt;margin:0 0 6pt">';
-        rec._wVideos.forEach((v,i)=>{body+=`<li>${esc(v.name||'동영상'+(i+1))}</li>`;});
+        rec._wVideos.forEach((v,i)=>{
+          const nm=esc(v.name||'동영상'+(i+1));
+          body+=`<li>${v.url?`<a href="${esc(v.url)}">${nm}</a>`:nm}</li>`;
+        });
         body+='</ul>';
       }
       if(rec._wAudio&&rec._wAudio.length>0){
-        body+=secTitle('8. 음성 녹취');
+        body+=secTitle('8. 음성 녹취 (※ Word는 재생 기능이 없어 링크 클릭 시 브라우저에서 재생됩니다)');
         body+='<ul style="font-size:9.5pt;margin:0 0 6pt">';
-        rec._wAudio.forEach((a,i)=>{body+=`<li>${esc(a.name||'음성파일'+(i+1))}</li>`;});
+        rec._wAudio.forEach((a,i)=>{
+          const nm=esc(a.name||'음성파일'+(i+1));
+          body+=`<li>${a.url?`<a href="${esc(a.url)}">${nm}</a>`:nm}</li>`;
+        });
         body+='</ul>';
       }
     }
