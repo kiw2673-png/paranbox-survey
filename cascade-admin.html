@@ -610,7 +610,7 @@ async function downloadPPT(){
       if(!blob)return null;
       return new Promise(resolve=>{const r=new FileReader();r.onloadend=()=>resolve(r.result);r.readAsDataURL(blob);});
     }
-    // 음성 → addMedia가 요구하는 'mime/type;base64,XXXX' 형식 (data: 접두어 제외)
+    // 음성/동영상 → addMedia가 요구하는 'mime/type;base64,XXXX' 형식 (data: 접두어 제외)
     async function toAudioB64(url){
       const blob=await fbBlob(url);
       if(!blob)return null;
@@ -620,6 +620,7 @@ async function downloadPPT(){
         r.readAsDataURL(blob);
       });
     }
+    const toVideoB64=toAudioB64;
 
     const PKEYS=['전경','명판','내부','이상부위','설치환경'];
     const SLBL={전경:'설치 전경',명판:'제품 명판',내부:'제품 내부',이상부위:'이상 부위',설치환경:'설치 환경'};
@@ -637,21 +638,24 @@ async function downloadPPT(){
     // 모든 미디어 URL 수집 후 병렬 다운로드
     const allPhotoUrls=[...new Set(targets.flatMap(r=>r._photos.map(p=>p.url)))];
     const allAudioUrls=[...new Set(targets.flatMap(r=>r._audioFiles.map(a=>a.url).filter(Boolean)))];
-    const totalMedia=allPhotoUrls.length+allAudioUrls.length;
+    const allVideoUrls=[...new Set(targets.flatMap(r=>r._videos.map(v=>v.url).filter(Boolean)))];
+    const totalMedia=allPhotoUrls.length+allAudioUrls.length+allVideoUrls.length;
 
     if(totalMedia>0){
       btn.innerHTML=`<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> 미디어 로딩 중... (0/${totalMedia})`;
       let done=0;
       const tick=()=>{ done++; btn.innerHTML=`<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> 미디어 로딩 중... (${done}/${totalMedia})`; };
 
-      const [photoResults,audioResults]=await Promise.all([
+      const [photoResults,audioResults,videoResults]=await Promise.all([
         Promise.all(allPhotoUrls.map(url=>toB64(url).then(r=>{tick();return r;}))),
-        Promise.all(allAudioUrls.map(url=>toAudioB64(url).then(r=>{tick();return r;})))
+        Promise.all(allAudioUrls.map(url=>toAudioB64(url).then(r=>{tick();return r;}))),
+        Promise.all(allVideoUrls.map(url=>toVideoB64(url).then(r=>{tick();return r;})))
       ]);
 
       const photoMap=new Map(allPhotoUrls.map((u,i)=>[u,photoResults[i]]));
       const audioMap=new Map(allAudioUrls.map((u,i)=>[u,audioResults[i]]));
-      targets.forEach(rec=>{ rec._photoMap=photoMap; rec._audioMap=audioMap; });
+      const videoMap=new Map(allVideoUrls.map((u,i)=>[u,videoResults[i]]));
+      targets.forEach(rec=>{ rec._photoMap=photoMap; rec._audioMap=audioMap; rec._videoMap=videoMap; });
     }
 
     btn.innerHTML='<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> 슬라이드 생성 중...';
@@ -733,8 +737,8 @@ async function downloadPPT(){
         }
       }
 
-      // ── 슬라이드: 동영상 (3열 썸네일 그리드) ──
-      const videos=rec._videos;
+      // ── 슬라이드: 동영상 (3열 그리드, 가능하면 임베드 재생) ──
+      const videos=rec._videos, vMap=rec._videoMap||new Map();
       if(videos.length>0){
         const GCOLS=3,GAP=0.06,CELL_W=(CW-GAP*(GCOLS-1))/GCOLS;
         const GRID_Y=1.32,VID_H=2.82,LBL_H=0.28,CELL_H=VID_H+LBL_H,ROW_GAP=0.06,PER=6;
@@ -748,16 +752,22 @@ async function downloadPPT(){
             const col=i%GCOLS,row=Math.floor(i/GCOLS);
             const px=MX+col*(CELL_W+GAP),py=GRID_Y+row*(CELL_H+ROW_GAP);
             const fname=v.name||('동영상'+(i+1));
-            vs.addShape(pptx.ShapeType.rect,{x:px,y:py,w:CELL_W,h:VID_H,fill:{color:'111111'},line:{color:'333333',width:0.5},...(v.url?{hyperlink:{url:v.url,tooltip:fname}}:{})});
-            vs.addText('▶',{x:px,y:py,w:CELL_W,h:VID_H,color:'ffffff',fontSize:28,align:'center',valign:'middle',...(v.url?{hyperlink:{url:v.url,tooltip:fname}}:{})});
-            vs.addText(fname+(v.url?'  (클릭하여 재생)':''),{
+            const ext=(fname.split('.').pop()||'mp4').toLowerCase();
+            const vb64=v.url?vMap.get(v.url):null;
+            if(vb64){
+              vs.addMedia({type:'video',data:vb64,extn:ext,x:px,y:py,w:CELL_W,h:VID_H});
+            }else{
+              vs.addShape(pptx.ShapeType.rect,{x:px,y:py,w:CELL_W,h:VID_H,fill:{color:'111111'},line:{color:'333333',width:0.5},...(v.url?{hyperlink:{url:v.url,tooltip:fname}}:{})});
+              vs.addText('▶',{x:px,y:py,w:CELL_W,h:VID_H,color:'ffffff',fontSize:28,align:'center',valign:'middle',...(v.url?{hyperlink:{url:v.url,tooltip:fname}}:{})});
+            }
+            vs.addText(fname+(!vb64&&v.url?'  (클릭하여 재생)':''),{
               x:px,y:py+VID_H,w:CELL_W,h:LBL_H,
               fill:{color:C.navy},color:C.white,fontSize:7.5,bold:false,
               align:'center',valign:'middle',wrap:true,
-              ...(v.url?{hyperlink:{url:v.url,tooltip:fname}}:{})
+              ...(!vb64&&v.url?{hyperlink:{url:v.url,tooltip:fname}}:{})
             });
           }
-          vs.addNotes('※ PowerPoint 하이퍼링크 클릭이 안 되면, 아래 주소를 그대로 복사해서 브라우저에 붙여넣으세요.\n\n'+page.map((v,i)=>(v.name||('동영상'+(i+1)))+'\n'+(v.url||'-')).join('\n\n'));
+          vs.addNotes('※ 동영상이 재생되지 않거나 PowerPoint 하이퍼링크 클릭이 안 되면, 아래 주소를 그대로 복사해서 브라우저에 붙여넣으세요.\n\n'+page.map((v,i)=>(v.name||('동영상'+(i+1)))+'\n'+(v.url||'-')).join('\n\n'));
         }
       }
 
