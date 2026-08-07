@@ -610,18 +610,11 @@ async function downloadPPT(){
       if(!blob)return null;
       return new Promise(resolve=>{const r=new FileReader();r.onloadend=()=>resolve(r.result);r.readAsDataURL(blob);});
     }
-    // 음성 → base64 원본 데이터(헤더 제외)
+    // 음성 → base64 DataURL (addMedia는 헤더 포함 형식을 요구함)
     async function toAudioB64(url){
       const blob=await fbBlob(url);
       if(!blob)return null;
-      return new Promise(resolve=>{
-        const r=new FileReader();
-        r.onloadend=()=>{
-          const full=r.result; // data:audio/...;base64,XXXXX
-          resolve(full.split(',')[1]||null);
-        };
-        r.readAsDataURL(blob);
-      });
+      return new Promise(resolve=>{const r=new FileReader();r.onloadend=()=>resolve(r.result||null);r.readAsDataURL(blob);});
     }
 
     const PKEYS=['전경','명판','내부','이상부위','설치환경'];
