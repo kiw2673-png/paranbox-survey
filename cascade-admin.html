@@ -248,6 +248,9 @@
     </div>
 
     <div id="statsTab" style="display:none">
+      <div class="toolbar" style="justify-content:flex-end">
+        <button class="icon-btn green" id="statsPptBtn" onclick="downloadStatsPPT()"><i class="ti ti-presentation"></i> 통계 PPT 다운로드</button>
+      </div>
       <div class="stats">
         <div class="stat-card"><div class="label">전체 조사 건수</div><div class="value" id="statAllCount">-</div></div>
         <div class="stat-card"><div class="label">불량 항목 발견 건수</div><div class="value" id="statBadRecords">-</div></div>
@@ -1094,6 +1097,110 @@ async function downloadWord(){
   }
 }
 window.downloadWord=downloadWord;
+
+async function downloadStatsPPT(){
+  if(!allData.length){alert('통계 PPT로 만들 데이터가 없습니다.');return;}
+  const btn=document.getElementById('statsPptBtn');
+  const savedHtml=btn.innerHTML;
+  btn.disabled=true;
+  btn.innerHTML='<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> 생성 중...';
+
+  try{
+    const pptx=new PptxGenJS();
+    pptx.layout='LAYOUT_WIDE';
+    const C={navy:'1F3864',lbl:'DCE6F1',white:'FFFFFF',gray:'F2F2F2',
+             dark:'222222',green:'3B6D11',red:'C00000',muted:'888888',bdr:'C8D4E8'};
+    const MX=0.3,CW=12.73;
+
+    function cell(sl,x,y,w,h,text,opts){
+      const o=opts||{};
+      sl.addText(String(text??''),{x,y,w,h,fill:{color:o.fill||C.white},line:{color:C.bdr,pt:0.5},
+        color:o.color||C.dark,bold:o.bold||false,fontSize:o.fontSize||9,align:o.align||'left',
+        valign:'middle',wrap:true,margin:3});
+    }
+    function pageHdr(sl){
+      sl.background={color:C.white};
+      sl.addShape(pptx.ShapeType.rect,{x:0,y:0,w:'100%',h:0.5,fill:{color:C.navy}});
+      sl.addText('캐스케이드 현장조사 점검 통계',{x:MX,y:0,w:9,h:0.5,color:C.white,fontSize:14,bold:true,valign:'middle'});
+      sl.addText(new Date().toLocaleDateString('ko-KR'),{x:9.3,y:0,w:3.73,h:0.5,color:C.white,fontSize:10,align:'right',valign:'middle'});
+    }
+    function secBar(sl,y,text){
+      sl.addText(text,{x:MX,y,w:CW,h:0.3,fill:{color:C.navy},color:C.white,bold:true,fontSize:11,valign:'middle',align:'left',margin:6});
+      return y+0.3;
+    }
+
+    // ── 슬라이드 1: 전체 요약 ──
+    const s1=pptx.addSlide();
+    pageHdr(s1);
+    let y=secBar(s1,1.0,'전체 요약');
+    y+=0.15;
+
+    const totalCount=allData.length;
+    const badRecords=allData.filter(r=>[...(r.check2||[]),...(r.check3||[])].some(c=>c.result==='불량')).length;
+    const allChecks=allData.flatMap(r=>[...(r.check2||[]),...(r.check3||[])]);
+    const scored=allChecks.filter(c=>c.result==='양호'||c.result==='불량');
+    const badCount=allChecks.filter(c=>c.result==='불량').length;
+    const badRateAll=scored.length?Math.round(badCount/scored.length*100)+'%':'-';
+
+    const cardGap=0.2,cardW=(CW-cardGap*2)/3;
+    [['전체 조사 건수',String(totalCount)],['불량 항목 발견 건수',String(badRecords)],['전체 점검 항목 불량률',badRateAll]]
+      .forEach(([label,val],i)=>{
+        const cx=MX+i*(cardW+cardGap);
+        s1.addShape(pptx.ShapeType.rect,{x:cx,y,w:cardW,h:1.1,fill:{color:C.gray},line:{color:C.bdr,width:0.5}});
+        s1.addText(label,{x:cx,y:y+0.12,w:cardW,h:0.3,color:C.muted,fontSize:10,align:'center'});
+        s1.addText(val,{x:cx,y:y+0.42,w:cardW,h:0.6,color:C.navy,fontSize:22,bold:true,align:'center',valign:'middle'});
+      });
+
+    // ── 항목별 통계 표 ──
+    const HDRS=['No','점검 항목','양호','불량','해당없음','미입력','불량률','불량 내용'];
+    const COLW=[0.5,3.0,0.75,0.75,0.95,0.85,0.75,5.18];
+    const HALN=['center','left','center','center','center','center','center','left'];
+
+    function drawStatTable(sl,title,items){
+      let ty=secBar(sl,1.0,title);
+      ty+=0.06;
+      let cx=MX;
+      HDRS.forEach((h,i)=>{cell(sl,cx,ty,COLW[i],0.3,h,{fill:C.lbl,color:C.navy,bold:true,align:HALN[i]});cx+=COLW[i];});
+      ty+=0.3;
+      items.forEach(it=>{
+        const rowH=0.34;
+        const applicable=it.ok+it.bad;
+        const rate=applicable?Math.round(it.bad/applicable*100)+'%':'-';
+        const noteTxt=(it.badNotes&&it.badNotes.length)?it.badNotes.join(' · '):'-';
+        cx=MX;
+        cell(sl,cx,ty,COLW[0],rowH,it.no,{align:'center',color:C.muted});cx+=COLW[0];
+        cell(sl,cx,ty,COLW[1],rowH,(it.sub?'└ ':'')+it.text,{fontSize:8.5});cx+=COLW[1];
+        cell(sl,cx,ty,COLW[2],rowH,String(it.ok),{align:'center',color:C.green,bold:true});cx+=COLW[2];
+        cell(sl,cx,ty,COLW[3],rowH,String(it.bad),{align:'center',color:it.bad>0?C.red:C.dark,bold:it.bad>0});cx+=COLW[3];
+        cell(sl,cx,ty,COLW[4],rowH,String(it.na),{align:'center',color:C.muted});cx+=COLW[4];
+        cell(sl,cx,ty,COLW[5],rowH,String(it.empty),{align:'center',color:C.muted});cx+=COLW[5];
+        cell(sl,cx,ty,COLW[6],rowH,rate,{align:'center',color:it.bad>0?C.red:C.muted,bold:it.bad>0});cx+=COLW[6];
+        cell(sl,cx,ty,COLW[7],rowH,noteTxt,{fontSize:7.5,color:it.bad>0?C.red:C.muted,align:'left'});
+        ty+=rowH;
+      });
+    }
+
+    const c2=computeItemStats(CHECK2_ITEMS,'check2');
+    const c3=computeItemStats(CHECK3_ITEMS,'check3');
+
+    const s2=pptx.addSlide();
+    pageHdr(s2);
+    drawStatTable(s2,'사용 현황 점검',c2);
+
+    const s3=pptx.addSlide();
+    pageHdr(s3);
+    drawStatTable(s3,'보일러·온수기 상태 점검',c3);
+
+    await pptx.writeFile({fileName:'캐스케이드_점검통계_'+new Date().toISOString().slice(0,10)+'.pptx'});
+  }catch(e){
+    console.error(e);
+    alert('통계 PPT 생성 중 오류가 발생했습니다: '+e.message);
+  }finally{
+    btn.disabled=false;
+    btn.innerHTML=savedHtml;
+  }
+}
+window.downloadStatsPPT=downloadStatsPPT;
 </script>
 <div id="printArea"></div>
 </body>
