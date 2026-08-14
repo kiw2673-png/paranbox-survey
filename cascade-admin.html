@@ -74,6 +74,9 @@
   .stat-table th:nth-child(5), .stat-table td:nth-child(5),
   .stat-table th:nth-child(6), .stat-table td:nth-child(6) { width: 64px; }
   .stat-table th:nth-child(7), .stat-table td:nth-child(7) { width: 70px; }
+  .stat-table th:nth-child(8), .stat-table td:nth-child(8) { width: 160px; }
+  .stat-table th:nth-child(8) { text-align: left; }
+  .stat-table td:nth-child(8) { text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .stat-table tr:last-child td { border-bottom: none; }
   .stat-table td.sub-item { color: var(--text-muted); padding-left: 20px; }
   .stat-table .cnt-ok { color: var(--green); font-weight: 600; }
@@ -81,6 +84,8 @@
   .stat-table .cnt-na, .stat-table .cnt-empty { color: var(--text-muted); }
   .stat-table .rate-cell { font-weight: 600; color: var(--text-muted); }
   .stat-table .rate-cell.has-bad { color: #C00000; }
+  .stat-table .note-cell { color: #C00000; font-size: 12px; }
+  .stat-table .note-cell.no-note { color: var(--text-muted); }
   .stat-empty-note { text-align: center; padding: 2rem; color: var(--text-muted); font-size: 13.5px; }
 
   .table-wrap { background: var(--card); border: 0.5px solid var(--border); border-radius: var(--radius); overflow: auto; }
@@ -384,22 +389,33 @@ const CHECK3_ITEMS=[
 function computeItemStats(items,key){
   return items.map(item=>{
     let ok=0,bad=0,na=0,empty=0;
+    const badNotes=[];
     allData.forEach(r=>{
       const rec=(r[key]||[]).find(c=>c.no===item.no);
       const val=rec?rec.result:'';
       if(val==='양호')ok++;
-      else if(val==='불량')bad++;
+      else if(val==='불량'){bad++; if(rec.note&&rec.note.trim())badNotes.push(rec.note.trim());}
       else if(val==='해당없음')na++;
       else empty++;
     });
-    return {...item,ok,bad,na,empty};
+    return {...item,ok,bad,na,empty,badNotes};
   });
+}
+
+function escStat(t){return String(t??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+function noteSummary(notes){
+  if(!notes||!notes.length) return {short:'-',full:'',has:false};
+  const shown=notes.slice(0,2).join(' · ');
+  const short=notes.length>2?shown+` 외 ${notes.length-2}건`:shown;
+  return {short:escStat(short),full:escStat(notes.join(' · ')),has:true};
 }
 
 function checkTableHtml(items){
   const rows=items.map(s=>{
     const applicable=s.ok+s.bad;
     const badRate=applicable?Math.round(s.bad/applicable*100):0;
+    const note=noteSummary(s.badNotes);
     return `<tr>
       <td>${s.no}</td>
       <td${s.sub?' class="sub-item"':''}>${s.sub?'└ ':''}${s.text}</td>
@@ -408,10 +424,11 @@ function checkTableHtml(items){
       <td class="cnt-na">${s.na}</td>
       <td class="cnt-empty">${s.empty}</td>
       <td class="rate-cell${s.bad>0?' has-bad':''}">${applicable?badRate+'%':'-'}</td>
+      <td class="note-cell${note.has?'':' no-note'}" title="${note.full}">${note.short}</td>
     </tr>`;
   }).join('');
   return `<table class="stat-table">
-    <thead><tr><th>No</th><th>점검 항목</th><th>양호</th><th>불량</th><th>해당없음</th><th>미입력</th><th>불량률</th></tr></thead>
+    <thead><tr><th>No</th><th>점검 항목</th><th>양호</th><th>불량</th><th>해당없음</th><th>미입력</th><th>불량률</th><th>불량 내용</th></tr></thead>
     <tbody>${rows}</tbody>
   </table>`;
 }
