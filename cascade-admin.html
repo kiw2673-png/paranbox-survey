@@ -59,29 +59,22 @@
   .tab-btn.active { color: var(--blue); border-bottom-color: var(--blue); }
 
   /* 통계 탭 */
-  .stat-legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12.5px; color: var(--text-muted); margin-bottom: 1rem; }
-  .stat-legend span { display: flex; align-items: center; gap: 6px; }
-  .stat-legend .dot { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
-  .dot.ok, .seg-ok { background: var(--green); }
-  .dot.bad, .seg-bad { background: #C00000; }
-  .dot.na, .seg-na { background: #b9b9b9; }
-  .dot-unfilled, .seg-unfilled { background: #e2e2e2; }
-
   .stat-panel { background: var(--card); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 1.25rem 1.5rem; margin-bottom: 1.25rem; }
   .stat-panel-title { font-size: 14px; font-weight: 600; color: var(--blue); margin-bottom: 4px; }
   .stat-panel-sub { font-size: 12px; color: var(--text-muted); margin-bottom: 1rem; }
 
-  .stat-row { display: grid; grid-template-columns: minmax(160px, 340px) 1fr auto; align-items: center; gap: 14px; padding: 9px 0; border-bottom: 0.5px solid var(--border); }
-  .stat-row:last-child { border-bottom: none; }
-  .stat-item-label { font-size: 13px; line-height: 1.4; }
-  .stat-item-label.sub { color: var(--text-muted); padding-left: 14px; }
-  .stat-bar { display: flex; gap: 2px; height: 14px; border-radius: 4px; overflow: visible; background: #f4f4f4; min-width: 80px; }
-  .stat-bar .seg { height: 100%; }
-  .stat-bar .seg:first-child { border-radius: 4px 0 0 4px; }
-  .stat-bar .seg:last-child { border-radius: 0 4px 4px 0; }
-  .stat-counts { font-size: 12px; color: var(--text-muted); white-space: nowrap; text-align: right; min-width: 150px; }
-  .stat-counts b { color: var(--text); }
-  .stat-counts .bad-rate { color: #C00000; font-weight: 600; margin-left: 6px; }
+  .stat-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .stat-table th { background: #f8f9fa; padding: 8px 10px; text-align: center; font-size: 11.5px; font-weight: 600; color: var(--text-muted); border-bottom: 1px solid var(--border); white-space: nowrap; }
+  .stat-table th:nth-child(2) { text-align: left; }
+  .stat-table td { padding: 8px 10px; border-bottom: 0.5px solid var(--border); text-align: center; }
+  .stat-table td:nth-child(2) { text-align: left; }
+  .stat-table tr:last-child td { border-bottom: none; }
+  .stat-table td.sub-item { color: var(--text-muted); padding-left: 20px; }
+  .stat-table .cnt-ok { color: var(--green); font-weight: 600; }
+  .stat-table .cnt-bad { color: #C00000; font-weight: 600; }
+  .stat-table .cnt-na, .stat-table .cnt-empty { color: var(--text-muted); }
+  .stat-table .rate-cell { font-weight: 600; color: var(--text-muted); }
+  .stat-table .rate-cell.has-bad { color: #C00000; }
   .stat-empty-note { text-align: center; padding: 2rem; color: var(--text-muted); font-size: 13.5px; }
 
   .table-wrap { background: var(--card); border: 0.5px solid var(--border); border-radius: var(--radius); overflow: auto; }
@@ -248,20 +241,14 @@
         <div class="stat-card"><div class="label">불량 항목 발견 건수</div><div class="value" id="statBadRecords">-</div></div>
         <div class="stat-card"><div class="label">전체 점검 항목 불량률</div><div class="value" id="statBadRate">-</div></div>
       </div>
-      <div class="stat-legend">
-        <span><i class="dot ok"></i> 양호</span>
-        <span><i class="dot bad"></i> 불량</span>
-        <span><i class="dot na"></i> 해당없음</span>
-        <span><i class="dot dot-unfilled"></i> 미입력</span>
-      </div>
       <div class="stat-panel">
         <div class="stat-panel-title">사용 현황 점검</div>
-        <div class="stat-panel-sub">항목별 양호 / 불량 / 해당없음 / 미입력 비율 (마우스를 올리면 상세 건수 표시)</div>
+        <div class="stat-panel-sub">항목별 양호 / 불량 / 해당없음 / 미입력 건수</div>
         <div id="statCheck2"></div>
       </div>
       <div class="stat-panel">
         <div class="stat-panel-title">보일러·온수기 상태 점검</div>
-        <div class="stat-panel-sub">항목별 양호 / 불량 / 해당없음 / 미입력 비율 (마우스를 올리면 상세 건수 표시)</div>
+        <div class="stat-panel-sub">항목별 양호 / 불량 / 해당없음 / 미입력 건수</div>
         <div id="statCheck3"></div>
       </div>
     </div>
@@ -403,26 +390,31 @@ function computeItemStats(items,key){
   });
 }
 
-function statRowHtml(s){
-  const seg=(cls,n)=>n>0?`<div class="seg ${cls}" style="flex:${n} 0 0"></div>`:'';
-  const applicable=s.ok+s.bad;
-  const badRate=applicable?Math.round(s.bad/applicable*100):0;
-  return `<div class="stat-row">
-    <div class="stat-item-label${s.sub?' sub':''}">${s.sub?'└ ':''}${s.no}. ${s.text}</div>
-    <div class="stat-bar" title="양호 ${s.ok}건 · 불량 ${s.bad}건 · 해당없음 ${s.na}건 · 미입력 ${s.empty}건">
-      ${seg('seg-ok',s.ok)}${seg('seg-bad',s.bad)}${seg('seg-na',s.na)}${seg('seg-unfilled',s.empty)}
-    </div>
-    <div class="stat-counts">
-      양호 <b>${s.ok}</b> · 불량 <b>${s.bad}</b> · 해당없음 <b>${s.na}</b>${s.bad>0?`<span class="bad-rate">불량률 ${badRate}%</span>`:''}
-    </div>
-  </div>`;
+function checkTableHtml(items){
+  const rows=items.map(s=>{
+    const applicable=s.ok+s.bad;
+    const badRate=applicable?Math.round(s.bad/applicable*100):0;
+    return `<tr>
+      <td>${s.no}</td>
+      <td${s.sub?' class="sub-item"':''}>${s.sub?'└ ':''}${s.text}</td>
+      <td class="cnt-ok">${s.ok}</td>
+      <td class="cnt-bad">${s.bad}</td>
+      <td class="cnt-na">${s.na}</td>
+      <td class="cnt-empty">${s.empty}</td>
+      <td class="rate-cell${s.bad>0?' has-bad':''}">${applicable?badRate+'%':'-'}</td>
+    </tr>`;
+  }).join('');
+  return `<table class="stat-table">
+    <thead><tr><th>No</th><th>점검 항목</th><th>양호</th><th>불량</th><th>해당없음</th><th>미입력</th><th>불량률</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
 }
 
 function renderCheckStats(){
   const c2=computeItemStats(CHECK2_ITEMS,'check2');
   const c3=computeItemStats(CHECK3_ITEMS,'check3');
-  document.getElementById('statCheck2').innerHTML = allData.length ? c2.map(statRowHtml).join('') : '<div class="stat-empty-note">데이터가 없습니다.</div>';
-  document.getElementById('statCheck3').innerHTML = allData.length ? c3.map(statRowHtml).join('') : '<div class="stat-empty-note">데이터가 없습니다.</div>';
+  document.getElementById('statCheck2').innerHTML = allData.length ? checkTableHtml(c2) : '<div class="stat-empty-note">데이터가 없습니다.</div>';
+  document.getElementById('statCheck3').innerHTML = allData.length ? checkTableHtml(c3) : '<div class="stat-empty-note">데이터가 없습니다.</div>';
 
   document.getElementById('statAllCount').textContent = allData.length;
   const badRecords = allData.filter(r=>[...(r.check2||[]),...(r.check3||[])].some(c=>c.result==='불량')).length;
