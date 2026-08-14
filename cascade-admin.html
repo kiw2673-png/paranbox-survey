@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -51,6 +51,38 @@
   .icon-btn:hover { border-color: var(--blue); color: var(--blue); }
   .icon-btn.green { background: var(--green); color: #fff; border-color: var(--green); }
   .icon-btn.green:hover { background: #27500A; }
+
+  /* 탭 */
+  .tab-bar { display: flex; gap: 4px; margin-bottom: 1.25rem; border-bottom: 1px solid var(--border); }
+  .tab-btn { background: none; border: none; border-bottom: 2px solid transparent; padding: 10px 16px; font-size: 13.5px; font-weight: 500; color: var(--text-muted); cursor: pointer; font-family: inherit; display: flex; align-items: center; gap: 6px; margin-bottom: -1px; }
+  .tab-btn:hover { color: var(--blue); }
+  .tab-btn.active { color: var(--blue); border-bottom-color: var(--blue); }
+
+  /* 통계 탭 */
+  .stat-legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12.5px; color: var(--text-muted); margin-bottom: 1rem; }
+  .stat-legend span { display: flex; align-items: center; gap: 6px; }
+  .stat-legend .dot { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+  .dot.ok, .seg-ok { background: var(--green); }
+  .dot.bad, .seg-bad { background: #C00000; }
+  .dot.na, .seg-na { background: #b9b9b9; }
+  .dot-unfilled, .seg-unfilled { background: #e2e2e2; }
+
+  .stat-panel { background: var(--card); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 1.25rem 1.5rem; margin-bottom: 1.25rem; }
+  .stat-panel-title { font-size: 14px; font-weight: 600; color: var(--blue); margin-bottom: 4px; }
+  .stat-panel-sub { font-size: 12px; color: var(--text-muted); margin-bottom: 1rem; }
+
+  .stat-row { display: grid; grid-template-columns: minmax(160px, 340px) 1fr auto; align-items: center; gap: 14px; padding: 9px 0; border-bottom: 0.5px solid var(--border); }
+  .stat-row:last-child { border-bottom: none; }
+  .stat-item-label { font-size: 13px; line-height: 1.4; }
+  .stat-item-label.sub { color: var(--text-muted); padding-left: 14px; }
+  .stat-bar { display: flex; gap: 2px; height: 14px; border-radius: 4px; overflow: visible; background: #f4f4f4; min-width: 80px; }
+  .stat-bar .seg { height: 100%; }
+  .stat-bar .seg:first-child { border-radius: 4px 0 0 4px; }
+  .stat-bar .seg:last-child { border-radius: 0 4px 4px 0; }
+  .stat-counts { font-size: 12px; color: var(--text-muted); white-space: nowrap; text-align: right; min-width: 150px; }
+  .stat-counts b { color: var(--text); }
+  .stat-counts .bad-rate { color: #C00000; font-weight: 600; margin-left: 6px; }
+  .stat-empty-note { text-align: center; padding: 2rem; color: var(--text-muted); font-size: 13.5px; }
 
   .table-wrap { background: var(--card); border: 0.5px solid var(--border); border-radius: var(--radius); overflow: auto; }
   table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 800px; }
@@ -176,31 +208,62 @@
   </div>
 
   <div class="content">
-    <div class="stats">
-      <div class="stat-card"><div class="label">전체 제출</div><div class="value" id="statTotal">-</div></div>
-      <div class="stat-card"><div class="label">이번 달</div><div class="value" id="statMonth">-</div></div>
-      <div class="stat-card"><div class="label">미디어 첨부</div><div class="value" id="statMedia">-</div></div>
+    <div class="tab-bar">
+      <button class="tab-btn active" id="tabBtnList" onclick="switchTab('list')"><i class="ti ti-list"></i> 현장조사 목록</button>
+      <button class="tab-btn" id="tabBtnStats" onclick="switchTab('stats')"><i class="ti ti-chart-bar"></i> 점검 통계</button>
     </div>
 
-    <div class="toolbar">
-      <input type="text" id="searchInput" placeholder="현장명, 담당자, 조사자 이름으로 검색..." oninput="renderTable()">
-      <button class="icon-btn" onclick="loadData()"><i class="ti ti-refresh" id="refreshIcon"></i> 새로고침</button>
-      <button class="icon-btn green" id="pptBtn" onclick="downloadPPT()"><i class="ti ti-presentation"></i> PPT 다운로드 <span id="selBadge" style="display:none;background:rgba(255,255,255,0.35);border-radius:10px;padding:1px 7px;font-size:11px;margin-left:2px"></span></button>
-      <button class="icon-btn" style="background:#2e74b5;color:#fff;border-color:#2e74b5" id="wordBtn" onclick="downloadWord()"><i class="ti ti-file-word"></i> Word 다운로드 <span id="wordBadge" style="display:none;background:rgba(255,255,255,0.35);border-radius:10px;padding:1px 7px;font-size:11px;margin-left:2px"></span></button>
+    <div id="listTab">
+      <div class="stats">
+        <div class="stat-card"><div class="label">전체 제출</div><div class="value" id="statTotal">-</div></div>
+        <div class="stat-card"><div class="label">이번 달</div><div class="value" id="statMonth">-</div></div>
+        <div class="stat-card"><div class="label">미디어 첨부</div><div class="value" id="statMedia">-</div></div>
+      </div>
+
+      <div class="toolbar">
+        <input type="text" id="searchInput" placeholder="현장명, 담당자, 조사자 이름으로 검색..." oninput="renderTable()">
+        <button class="icon-btn" onclick="loadData()"><i class="ti ti-refresh" id="refreshIcon"></i> 새로고침</button>
+        <button class="icon-btn green" id="pptBtn" onclick="downloadPPT()"><i class="ti ti-presentation"></i> PPT 다운로드 <span id="selBadge" style="display:none;background:rgba(255,255,255,0.35);border-radius:10px;padding:1px 7px;font-size:11px;margin-left:2px"></span></button>
+        <button class="icon-btn" style="background:#2e74b5;color:#fff;border-color:#2e74b5" id="wordBtn" onclick="downloadWord()"><i class="ti ti-file-word"></i> Word 다운로드 <span id="wordBadge" style="display:none;background:rgba(255,255,255,0.35);border-radius:10px;padding:1px 7px;font-size:11px;margin-left:2px"></span></button>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:36px;text-align:center"><input type="checkbox" id="selAll" onchange="toggleSelAll(this)" style="cursor:pointer"></th>
+              <th>제출일시</th><th>현장명</th><th>주소</th><th>담당자</th>
+              <th>방문일자</th><th>모델/수량</th><th>조사자</th><th>녹취</th><th>미디어</th><th>관리</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+        <div class="empty" id="emptyMsg">데이터를 불러오는 중...</div>
+      </div>
     </div>
 
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th style="width:36px;text-align:center"><input type="checkbox" id="selAll" onchange="toggleSelAll(this)" style="cursor:pointer"></th>
-            <th>제출일시</th><th>현장명</th><th>주소</th><th>담당자</th>
-            <th>방문일자</th><th>모델/수량</th><th>조사자</th><th>녹취</th><th>미디어</th><th>관리</th>
-          </tr>
-        </thead>
-        <tbody id="tableBody"></tbody>
-      </table>
-      <div class="empty" id="emptyMsg">데이터를 불러오는 중...</div>
+    <div id="statsTab" style="display:none">
+      <div class="stats">
+        <div class="stat-card"><div class="label">전체 조사 건수</div><div class="value" id="statAllCount">-</div></div>
+        <div class="stat-card"><div class="label">불량 항목 발견 건수</div><div class="value" id="statBadRecords">-</div></div>
+        <div class="stat-card"><div class="label">전체 점검 항목 불량률</div><div class="value" id="statBadRate">-</div></div>
+      </div>
+      <div class="stat-legend">
+        <span><i class="dot ok"></i> 양호</span>
+        <span><i class="dot bad"></i> 불량</span>
+        <span><i class="dot na"></i> 해당없음</span>
+        <span><i class="dot dot-unfilled"></i> 미입력</span>
+      </div>
+      <div class="stat-panel">
+        <div class="stat-panel-title">사용 현황 점검</div>
+        <div class="stat-panel-sub">항목별 양호 / 불량 / 해당없음 / 미입력 비율 (마우스를 올리면 상세 건수 표시)</div>
+        <div id="statCheck2"></div>
+      </div>
+      <div class="stat-panel">
+        <div class="stat-panel-title">보일러·온수기 상태 점검</div>
+        <div class="stat-panel-sub">항목별 양호 / 불량 / 해당없음 / 미입력 비율 (마우스를 올리면 상세 건수 표시)</div>
+        <div id="statCheck3"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -299,6 +362,78 @@ function updateSelBadge(){
 }
 window.updateSelBadge=updateSelBadge;
 
+function switchTab(tab){
+  const isList=tab==='list';
+  document.getElementById('listTab').style.display=isList?'':'none';
+  document.getElementById('statsTab').style.display=isList?'none':'';
+  document.getElementById('tabBtnList').classList.toggle('active',isList);
+  document.getElementById('tabBtnStats').classList.toggle('active',!isList);
+  if(!isList) renderCheckStats();
+}
+window.switchTab=switchTab;
+
+const CHECK2_ITEMS=[
+  {no:'1',text:'현재 캐스케이드 시스템이 정상적으로 가동되고 있는가'},
+  {no:'2',text:'최근 1년 이내 고장 또는 에러 이력이 있는가 (비고에 일자·내용 기재)'}
+];
+const CHECK3_ITEMS=[
+  {no:'1',text:'본체 외관에 이상 흔적이 있는가'},
+  {no:'2',text:'본체 내부에 이상 흔적이 있는가'},
+  {no:'2-1',text:'연소실 상태 확인 (누수 등)',sub:true},
+  {no:'2-2',text:'PCB (기판 이상 등)',sub:true},
+  {no:'2-3',text:'FAN (이상소음 등)',sub:true},
+  {no:'2-4',text:'PUMP 상태 (누수 및 이상 소음 등)',sub:true},
+  {no:'2-5',text:'기타 부위 상태 확인 (부식 및 누수 등)',sub:true},
+  {no:'3',text:'가동 중 이상 소음 또는 진동이 있는가'},
+  {no:'4',text:'명판 확인'}
+];
+
+function computeItemStats(items,key){
+  return items.map(item=>{
+    let ok=0,bad=0,na=0,empty=0;
+    allData.forEach(r=>{
+      const rec=(r[key]||[]).find(c=>c.no===item.no);
+      const val=rec?rec.result:'';
+      if(val==='양호')ok++;
+      else if(val==='불량')bad++;
+      else if(val==='해당없음')na++;
+      else empty++;
+    });
+    return {...item,ok,bad,na,empty};
+  });
+}
+
+function statRowHtml(s){
+  const seg=(cls,n)=>n>0?`<div class="seg ${cls}" style="flex:${n} 0 0"></div>`:'';
+  const applicable=s.ok+s.bad;
+  const badRate=applicable?Math.round(s.bad/applicable*100):0;
+  return `<div class="stat-row">
+    <div class="stat-item-label${s.sub?' sub':''}">${s.sub?'└ ':''}${s.no}. ${s.text}</div>
+    <div class="stat-bar" title="양호 ${s.ok}건 · 불량 ${s.bad}건 · 해당없음 ${s.na}건 · 미입력 ${s.empty}건">
+      ${seg('seg-ok',s.ok)}${seg('seg-bad',s.bad)}${seg('seg-na',s.na)}${seg('seg-unfilled',s.empty)}
+    </div>
+    <div class="stat-counts">
+      양호 <b>${s.ok}</b> · 불량 <b>${s.bad}</b> · 해당없음 <b>${s.na}</b>${s.bad>0?`<span class="bad-rate">불량률 ${badRate}%</span>`:''}
+    </div>
+  </div>`;
+}
+
+function renderCheckStats(){
+  const c2=computeItemStats(CHECK2_ITEMS,'check2');
+  const c3=computeItemStats(CHECK3_ITEMS,'check3');
+  document.getElementById('statCheck2').innerHTML = allData.length ? c2.map(statRowHtml).join('') : '<div class="stat-empty-note">데이터가 없습니다.</div>';
+  document.getElementById('statCheck3').innerHTML = allData.length ? c3.map(statRowHtml).join('') : '<div class="stat-empty-note">데이터가 없습니다.</div>';
+
+  document.getElementById('statAllCount').textContent = allData.length;
+  const badRecords = allData.filter(r=>[...(r.check2||[]),...(r.check3||[])].some(c=>c.result==='불량')).length;
+  document.getElementById('statBadRecords').textContent = badRecords;
+  const allChecks = allData.flatMap(r=>[...(r.check2||[]),...(r.check3||[])]);
+  const scored = allChecks.filter(c=>c.result==='양호'||c.result==='불량');
+  const badCount = allChecks.filter(c=>c.result==='불량').length;
+  document.getElementById('statBadRate').textContent = scored.length ? Math.round(badCount/scored.length*100)+'%' : '-';
+}
+window.renderCheckStats=renderCheckStats;
+
 function openLoginModal(){
   document.getElementById('loginEmail').value='';
   document.getElementById('loginPw').value='';
@@ -332,7 +467,7 @@ async function loadData(){
     const {db,collection,getDocs,orderBy,query}=window._fb;
     const snap=await getDocs(query(collection(db,'cascade_surveys'),orderBy('submittedAt','desc')));
     allData=snap.docs.map(d=>({id:d.id,...d.data()}));
-    updateStats(); renderTable();
+    updateStats(); renderTable(); renderCheckStats();
   }catch(e){document.getElementById('emptyMsg').textContent='불러오기 실패: '+e.message;}
   icon.classList.remove('spinning');
 }
