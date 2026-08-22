@@ -296,6 +296,20 @@
   </div>
 </div>
 
+<!-- 불량건 상세 목록 모달 -->
+<div class="modal-bg" id="badDetailModal" onclick="if(event.target===this)closeModal('badDetailModal')">
+  <div class="modal" style="max-width:800px">
+    <div class="modal-header">
+      <h2 id="badDetailTitle">불량 상세</h2>
+      <button class="modal-close" onclick="closeModal('badDetailModal')">✕</button>
+    </div>
+    <div id="badDetailBody"></div>
+    <div class="modal-footer">
+      <button class="modal-footer btn-cancel" onclick="closeModal('badDetailModal')">닫기</button>
+    </div>
+  </div>
+</div>
+
 <!-- 미디어 뷰어 -->
 <div class="media-viewer" id="mediaViewer" onclick="if(event.target===this)closeViewer()">
   <button class="viewer-close" onclick="closeViewer()">✕</button>
@@ -414,16 +428,19 @@ function noteSummary(notes){
   return {short:escStat(short),full:escStat(notes.join(' · ')),has:true};
 }
 
-function checkTableHtml(items){
+function checkTableHtml(items, key){
   const rows=items.map(s=>{
     const applicable=s.ok+s.bad;
     const badRate=applicable?Math.round(s.bad/applicable*100):0;
     const note=noteSummary(s.badNotes);
+    const badCell=s.bad>0
+      ?`<td class="cnt-bad" style="cursor:pointer;text-decoration:underline;text-decoration-style:dotted" onclick="showBadDetail('${key}','${s.no}')" title="클릭하여 불량 건수 상세 보기">${s.bad}</td>`
+      :`<td class="cnt-bad">0</td>`;
     return `<tr>
       <td>${s.no}</td>
       <td${s.sub?' class="sub-item"':''}>${s.sub?'└ ':''}${s.text}</td>
       <td class="cnt-ok">${s.ok}</td>
-      <td class="cnt-bad">${s.bad}</td>
+      ${badCell}
       <td class="cnt-na">${s.na}</td>
       <td class="cnt-empty">${s.empty}</td>
       <td class="rate-cell${s.bad>0?' has-bad':''}">${applicable?badRate+'%':'-'}</td>
@@ -439,8 +456,8 @@ function checkTableHtml(items){
 function renderCheckStats(){
   const c2=computeItemStats(CHECK2_ITEMS,'check2');
   const c3=computeItemStats(CHECK3_ITEMS,'check3');
-  document.getElementById('statCheck2').innerHTML = allData.length ? checkTableHtml(c2) : '<div class="stat-empty-note">데이터가 없습니다.</div>';
-  document.getElementById('statCheck3').innerHTML = allData.length ? checkTableHtml(c3) : '<div class="stat-empty-note">데이터가 없습니다.</div>';
+  document.getElementById('statCheck2').innerHTML = allData.length ? checkTableHtml(c2,'check2') : '<div class="stat-empty-note">데이터가 없습니다.</div>';
+  document.getElementById('statCheck3').innerHTML = allData.length ? checkTableHtml(c3,'check3') : '<div class="stat-empty-note">데이터가 없습니다.</div>';
 
   document.getElementById('statAllCount').textContent = allData.length;
   const badRecords = allData.filter(r=>[...(r.check2||[]),...(r.check3||[])].some(c=>c.result==='불량')).length;
@@ -643,6 +660,45 @@ window.confirmDelete=confirmDelete;
 
 function closeModal(id){document.getElementById(id).classList.remove('open');}
 window.closeModal=closeModal;
+
+function showBadDetail(key, no){
+  const checkItems = key==='check2' ? CHECK2_ITEMS : CHECK3_ITEMS;
+  const item = checkItems.find(i=>i.no===no);
+  const label = key==='check2' ? '사용 현황 점검' : '보일러·온수기 상태 점검';
+
+  const badRows = allData.map((r,idx)=>{
+    const rec=(r[key]||[]).find(c=>c.no===no);
+    if(!rec||rec.result!=='불량') return null;
+    return {r, idx, note:rec.note||''};
+  }).filter(Boolean);
+
+  document.getElementById('badDetailTitle').textContent=`${label} · No.${no} — 불량 (${badRows.length}건)`;
+
+  if(!badRows.length){
+    document.getElementById('badDetailBody').innerHTML='<p style="text-align:center;color:var(--text-muted);padding:2rem;font-size:14px">해당 항목이 없습니다.</p>';
+  } else {
+    const TH=s=>`<th style="background:#f8f9fa;padding:8px 10px;text-align:left;font-size:11.5px;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--border);white-space:nowrap">${s}</th>`;
+    const rows=badRows.map(({r,idx,note},i)=>`<tr style="cursor:pointer" onclick="closeModal('badDetailModal');setTimeout(()=>openDetail(${idx}),150)" title="클릭하여 현장조사 상세 보기">
+      <td style="padding:8px 10px;border-bottom:0.5px solid var(--border);color:var(--text-muted);font-size:12px;text-align:center">${i+1}</td>
+      <td style="padding:8px 10px;border-bottom:0.5px solid var(--border);white-space:nowrap;font-size:12px">${r.visitDate||'-'}</td>
+      <td style="padding:8px 10px;border-bottom:0.5px solid var(--border)"><strong>${r.fieldName||'-'}</strong></td>
+      <td style="padding:8px 10px;border-bottom:0.5px solid var(--border);max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.address||''}">${r.address||'-'}</td>
+      <td style="padding:8px 10px;border-bottom:0.5px solid var(--border)">${r.contactName||'-'}</td>
+      <td style="padding:8px 10px;border-bottom:0.5px solid var(--border);color:#C00000;font-size:12.5px;line-height:1.5">${escStat(note)||'-'}</td>
+    </tr>`).join('');
+    document.getElementById('badDetailBody').innerHTML=`
+      <p style="font-size:12.5px;color:var(--text-muted);margin-bottom:10px;line-height:1.5">점검 항목: <strong style="color:var(--text)">${escStat(item?.text||no)}</strong></p>
+      <div style="overflow:auto;max-height:58vh">
+        <table style="width:100%;border-collapse:collapse;font-size:13px;min-width:600px">
+          <thead><tr>${TH('NO')}${TH('방문일자')}${TH('현장명')}${TH('주소')}${TH('담당자')}${TH('불량 내용')}</tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+      <p style="font-size:12px;color:var(--text-muted);margin-top:10px;text-align:right">행을 클릭하면 해당 현장조사 상세를 볼 수 있습니다.</p>`;
+  }
+  document.getElementById('badDetailModal').classList.add('open');
+}
+window.showBadDetail=showBadDetail;
 
 function openViewerByUrl(url, kind) {
   document.getElementById('viewerContent').innerHTML = kind === 'video'
