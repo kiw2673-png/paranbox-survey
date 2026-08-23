@@ -1496,6 +1496,8 @@ function renderSitePivot(){
   });
 
   // 항목별 합계 행
+  const totalVisits=allData.length||1;
+  const pct=n=>totalVisits>0?(n/totalVisits*100).toFixed(1)+'%':'0%';
   const c2tot=CHECK2_ITEMS.map(item=>{
     const n=sites.reduce((t,s)=>t+(s.c2[item.no]||0),0);
     return `<td style="${TS};background:#fdf7f7;font-weight:700;color:${n>0?'#C00000':'var(--text-muted)'}">${n}</td>`;
@@ -1503,6 +1505,14 @@ function renderSitePivot(){
   const c3tot=CHECK3_ITEMS.map(item=>{
     const n=sites.reduce((t,s)=>t+(s.c3[item.no]||0),0);
     return `<td style="${TS};background:#fdf7f7;font-weight:700;color:${n>0?'#C00000':'var(--text-muted)'}">${n}</td>`;
+  });
+  const c2rate=CHECK2_ITEMS.map(item=>{
+    const n=sites.reduce((t,s)=>t+(s.c2[item.no]||0),0);
+    return `<td style="${TS};background:#fef9f9;font-size:13px;color:${n>0?'#C00000':'var(--text-muted)'}">${pct(n)}</td>`;
+  });
+  const c3rate=CHECK3_ITEMS.map(item=>{
+    const n=sites.reduce((t,s)=>t+(s.c3[item.no]||0),0);
+    return `<td style="${TS};background:#fef9f9;font-size:13px;color:${n>0?'#C00000':'var(--text-muted)'}">${pct(n)}</td>`;
   });
   const grand=sites.reduce((t,s)=>t+CHECK2_ITEMS.reduce((a,i)=>a+s.c2[i.no],0)+CHECK3_ITEMS.reduce((a,i)=>a+s.c3[i.no],0),0);
 
@@ -1522,6 +1532,11 @@ function renderSitePivot(){
         <td style="${TS};background:#f8f9fa;font-weight:700;font-size:15px;color:var(--text-muted);text-align:left">항목별 불량 합계</td>
         ${c2tot.join('')}${c3tot.join('')}
         <td style="${TS};background:#fdf7f7;font-weight:700;color:#C00000;font-size:19px">${grand}</td>
+      </tr>
+      <tr>
+        <td style="${TS};background:#fef9f9;font-weight:600;font-size:13px;color:var(--text-muted);text-align:left">불량률 <span style="font-size:11px;font-weight:400">(불량÷${totalVisits}건)</span></td>
+        ${c2rate.join('')}${c3rate.join('')}
+        <td style="${TS};background:#fef9f9;font-weight:700;color:${grand>0?'#C00000':'var(--text-muted)'};font-size:15px">${pct(grand)}</td>
       </tr>
     </tbody>
   </table></div>`;
