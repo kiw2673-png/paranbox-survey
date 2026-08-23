@@ -273,11 +273,7 @@
         <div class="stat-panel-sub">항목별 양호 / 불량 / 해당없음 / 미입력 건수</div>
         <div id="statCheck3"></div>
       </div>
-      <div class="stat-panel">
-        <div class="stat-panel-title">현장별 불량 항목 현황</div>
-        <div class="stat-panel-sub">불량 항목이 발견된 현장을 행으로, 각 점검 항목을 열로 표시 · 행 클릭 시 상세 보기</div>
-        <div id="statFieldBad"></div>
-      </div>
+
       <div class="stat-panel">
         <div class="stat-panel-title">현장명 기준 불량 피벗</div>
         <div class="stat-panel-sub">현장명으로 묶어 항목별 불량 건수를 한 표로 표시 — 동일 현장 복수 방문 시 합산 · 숫자=불량 건수 · ✓=불량 없음</div>
@@ -484,91 +480,9 @@ function renderCheckStats(){
   const scored = allChecks.filter(c=>c.result==='양호'||c.result==='불량');
   const badCount = allChecks.filter(c=>c.result==='불량').length;
   document.getElementById('statBadRate').textContent = scored.length ? Math.round(badCount/scored.length*100)+'%' : '-';
-  renderFieldBadTable();
   renderSitePivot();
 }
 window.renderCheckStats=renderCheckStats;
-
-function renderFieldBadTable(){
-  const el=document.getElementById('statFieldBad');
-  if(!el) return;
-  if(!allData.length){el.innerHTML='<div class="stat-empty-note">데이터가 없습니다.</div>';return;}
-
-  const records=[...allData].filter(r=>[...(r.check2||[]),...(r.check3||[])].some(c=>c.result==='불량'));
-  records.sort((a,b)=>{
-    const ba=[...(a.check2||[]),...(a.check3||[])].filter(c=>c.result==='불량').length;
-    const bb=[...(b.check2||[]),...(b.check3||[])].filter(c=>c.result==='불량').length;
-    return bb-ba;
-  });
-  if(!records.length){el.innerHTML='<div class="stat-empty-note">불량 항목이 발견된 현장이 없습니다.</div>';return;}
-
-  const TS='border:0.5px solid var(--border);padding:9px 8px;font-size:15px;text-align:center;vertical-align:middle';
-  const thS=`${TS};background:#f8f9fa;font-weight:600;color:var(--text-muted);white-space:nowrap`;
-
-  const c2h=CHECK2_ITEMS.map(i=>`<th title="사용현황점검 No.${i.no}: ${escStat(i.text)}" style="${thS};min-width:58px;background:#f1f8ec">No.${i.no}</th>`).join('');
-  const c3h=CHECK3_ITEMS.map(i=>`<th title="보일러·온수기 상태점검 No.${i.no}: ${escStat(i.text)}" style="${thS};min-width:58px;background:#eef4fc">No.${i.no}</th>`).join('');
-
-  const rows=records.map(r=>{
-    const gi=allData.indexOf(r);
-    const c2cells=CHECK2_ITEMS.map(item=>{
-      const rec=(r.check2||[]).find(c=>c.no===item.no);
-      if(rec&&rec.result==='불량'){
-        const tip=rec.note?` title="${escStat(rec.note)}"` :'';
-        return `<td${tip} style="${TS};background:#fcebeb;color:#C00000;font-weight:700;font-size:18px">✗</td>`;
-      }
-      return `<td style="${TS}"></td>`;
-    });
-    const c3cells=CHECK3_ITEMS.map(item=>{
-      const rec=(r.check3||[]).find(c=>c.no===item.no);
-      if(rec&&rec.result==='불량'){
-        const tip=rec.note?` title="${escStat(rec.note)}"` :'';
-        return `<td${tip} style="${TS};background:#fcebeb;color:#C00000;font-weight:700;font-size:18px">✗</td>`;
-      }
-      return `<td style="${TS}"></td>`;
-    });
-    const tot=[...(r.check2||[]),...(r.check3||[])].filter(c=>c.result==='불량').length;
-    return `<tr style="cursor:pointer" onclick="openDetail(${gi})" title="${escStat(r.fieldName||'')} 상세 보기"
-      onmouseover="this.querySelectorAll('td').forEach(td=>{if(!td.style.background||td.style.background==='')td.style.background='#f9fafb'})"
-      onmouseout="this.querySelectorAll('td').forEach(td=>{if(td.style.background==='rgb(249, 250, 251)')td.style.background=''})">
-      <td style="${TS};text-align:left;font-size:16px;font-weight:600;min-width:140px">${escStat(r.fieldName||'-')}<br><span style="font-size:13px;font-weight:400;color:var(--text-muted)">${escStat(r.contactName||'')}</span></td>
-      <td style="${TS};font-size:14px;white-space:nowrap">${escStat(r.visitDate||'-')}</td>
-      ${c2cells.join('')}${c3cells.join('')}
-      <td style="${TS};font-weight:700;color:#C00000;font-size:19px">${tot}</td>
-    </tr>`;
-  });
-
-  const c2tot=CHECK2_ITEMS.map(item=>{
-    const n=records.filter(r=>(r.check2||[]).some(c=>c.no===item.no&&c.result==='불량')).length;
-    return `<td style="${TS};background:#fdf7f7;font-weight:700;color:${n>0?'#C00000':'var(--text-muted)'}">${n}</td>`;
-  });
-  const c3tot=CHECK3_ITEMS.map(item=>{
-    const n=records.filter(r=>(r.check3||[]).some(c=>c.no===item.no&&c.result==='불량')).length;
-    return `<td style="${TS};background:#fdf7f7;font-weight:700;color:${n>0?'#C00000':'var(--text-muted)'}">${n}</td>`;
-  });
-  const grand=records.reduce((s,r)=>s+[...(r.check2||[]),...(r.check3||[])].filter(c=>c.result==='불량').length,0);
-
-  el.innerHTML=`<div style="overflow-x:auto"><table style="border-collapse:collapse;width:100%;min-width:700px">
-    <thead>
-      <tr>
-        <th rowspan="2" style="${thS};text-align:left;min-width:140px">현장명</th>
-        <th rowspan="2" style="${thS};min-width:90px">방문일자</th>
-        <th colspan="${CHECK2_ITEMS.length}" style="${thS};background:#eaf3de;color:#3B6D11;border-bottom:none">사용 현황 점검</th>
-        <th colspan="${CHECK3_ITEMS.length}" style="${thS};background:#e6f1fb;color:#1a56b0;border-bottom:none">보일러·온수기 상태 점검</th>
-        <th rowspan="2" style="${thS};min-width:64px;color:#C00000">불량<br>합계</th>
-      </tr>
-      <tr>${c2h}${c3h}</tr>
-    </thead>
-    <tbody>
-      ${rows.join('')}
-      <tr>
-        <td colspan="2" style="${TS};background:#f8f9fa;font-weight:700;font-size:15px;color:var(--text-muted)">항목별 불량 합계</td>
-        ${c2tot.join('')}${c3tot.join('')}
-        <td style="${TS};background:#fdf7f7;font-weight:700;color:#C00000;font-size:19px">${grand}</td>
-      </tr>
-    </tbody>
-  </table></div>`;
-}
-window.renderFieldBadTable=renderFieldBadTable;
 
 function openLoginModal(){
   document.getElementById('loginEmail').value='';
