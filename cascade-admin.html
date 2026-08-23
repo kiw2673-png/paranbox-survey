@@ -1449,10 +1449,11 @@ function renderSitePivot(){
   allData.forEach(r=>{
     const key=r.fieldName||'(현장명 없음)';
     if(!siteMap[key]){
-      siteMap[key]={name:key,visits:0,c2:{},c3:{}};
+      siteMap[key]={name:key,visits:0,installDate:'',c2:{},c3:{}};
       CHECK2_ITEMS.forEach(i=>{siteMap[key].c2[i.no]=0;});
       CHECK3_ITEMS.forEach(i=>{siteMap[key].c3[i.no]=0;});
     }
+    if(!siteMap[key].installDate&&r.installDate) siteMap[key].installDate=r.installDate;
     siteMap[key].visits++;
     (r.check2||[]).forEach(c=>{if(c.result==='불량'&&Object.prototype.hasOwnProperty.call(siteMap[key].c2,c.no))siteMap[key].c2[c.no]++;});
     (r.check3||[]).forEach(c=>{if(c.result==='불량'&&Object.prototype.hasOwnProperty.call(siteMap[key].c3,c.no))siteMap[key].c3[c.no]++;});
@@ -1488,7 +1489,7 @@ function renderSitePivot(){
     });
     const tot=CHECK2_ITEMS.reduce((t,i)=>t+s.c2[i.no],0)+CHECK3_ITEMS.reduce((t,i)=>t+s.c3[i.no],0);
     return `<tr style="${rowBg}">
-      <td style="${TS};text-align:left;font-size:15px;font-weight:600;min-width:140px">${escStat(s.name)}<br><span style="font-size:12px;font-weight:400;color:var(--text-muted)">${s.visits}회 방문</span></td>
+      <td style="${TS};text-align:left;font-size:15px;font-weight:600;min-width:140px">${escStat(s.name)}<br><span style="font-size:12px;font-weight:400;color:var(--text-muted)">${s.installDate?'설치: '+escStat(s.installDate)+'&nbsp;·&nbsp;':'' }${s.visits}회 방문</span></td>
       ${c2cells.join('')}${c3cells.join('')}
       <td style="${TS};font-weight:700;color:${tot>0?'#C00000':'var(--text-muted)'};font-size:19px">${tot}</td>
     </tr>`;
