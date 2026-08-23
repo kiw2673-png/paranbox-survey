@@ -43,6 +43,10 @@
   .stat-card { background: var(--card); border: 0.5px solid var(--border); border-radius: var(--radius-sm); padding: 14px 16px; }
   .stat-card .label { font-size: 12px; color: var(--text-muted); margin-bottom: 4px; }
   .stat-card .value { font-size: 26px; font-weight: 600; color: var(--blue); }
+  #statsTab .stat-card .label { font-size: 18px; }
+  #statsTab .stat-card .value { font-size: 32px; }
+  #statsTab .stat-card.clickable { cursor: pointer; transition: border-color 0.15s, box-shadow 0.15s; }
+  #statsTab .stat-card.clickable:hover { border-color: var(--blue); box-shadow: 0 2px 8px rgba(26,86,176,0.12); }
 
   .toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 1rem; flex-wrap: wrap; }
   .toolbar input { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 12px; font-size: 13.5px; outline: none; font-family: inherit; flex: 1; min-width: 180px; }
@@ -60,21 +64,21 @@
 
   /* 통계 탭 */
   .stat-panel { background: var(--card); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 1.25rem 1.5rem; margin-bottom: 1.25rem; }
-  .stat-panel-title { font-size: 14px; font-weight: 600; color: var(--blue); margin-bottom: 4px; }
-  .stat-panel-sub { font-size: 12px; color: var(--text-muted); margin-bottom: 1rem; }
+  .stat-panel-title { font-size: 20px; font-weight: 600; color: var(--blue); margin-bottom: 4px; }
+  .stat-panel-sub { font-size: 18px; color: var(--text-muted); margin-bottom: 1rem; }
 
-  .stat-table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; }
-  .stat-table th { background: #f8f9fa; padding: 8px 10px; text-align: center; font-size: 11.5px; font-weight: 600; color: var(--text-muted); border-bottom: 1px solid var(--border); white-space: nowrap; }
+  .stat-table { width: 100%; border-collapse: collapse; font-size: 19px; table-layout: fixed; }
+  .stat-table th { background: #f8f9fa; padding: 10px 12px; text-align: center; font-size: 18px; font-weight: 600; color: var(--text-muted); border-bottom: 1px solid var(--border); white-space: nowrap; }
   .stat-table th:nth-child(2) { text-align: left; }
-  .stat-table td { padding: 8px 10px; border-bottom: 0.5px solid var(--border); text-align: center; word-break: break-word; }
+  .stat-table td { padding: 10px 12px; border-bottom: 0.5px solid var(--border); text-align: center; word-break: break-word; }
   .stat-table td:nth-child(2) { text-align: left; }
-  .stat-table th:nth-child(1), .stat-table td:nth-child(1) { width: 40px; }
-  .stat-table th:nth-child(2), .stat-table td:nth-child(2) { width: 260px; }
+  .stat-table th:nth-child(1), .stat-table td:nth-child(1) { width: 50px; }
+  .stat-table th:nth-child(2), .stat-table td:nth-child(2) { width: 280px; }
   .stat-table th:nth-child(3), .stat-table td:nth-child(3),
-  .stat-table th:nth-child(4), .stat-table td:nth-child(4),
-  .stat-table th:nth-child(5), .stat-table td:nth-child(5),
-  .stat-table th:nth-child(6), .stat-table td:nth-child(6) { width: 64px; }
-  .stat-table th:nth-child(7), .stat-table td:nth-child(7) { width: 70px; }
+  .stat-table th:nth-child(4), .stat-table td:nth-child(4) { width: 76px; }
+  .stat-table th:nth-child(5), .stat-table td:nth-child(5) { width: 100px; }
+  .stat-table th:nth-child(6), .stat-table td:nth-child(6) { width: 84px; }
+  .stat-table th:nth-child(7), .stat-table td:nth-child(7) { width: 86px; }
   .stat-table th:nth-child(8) { text-align: left; }
   .stat-table td:nth-child(8) { text-align: left; white-space: normal; word-break: break-word; line-height: 1.5; }
   .stat-table tr:last-child td { border-bottom: none; }
@@ -84,9 +88,9 @@
   .stat-table .cnt-na, .stat-table .cnt-empty { color: var(--text-muted); }
   .stat-table .rate-cell { font-weight: 600; color: var(--text-muted); }
   .stat-table .rate-cell.has-bad { color: #C00000; }
-  .stat-table .note-cell { color: #C00000; font-size: 12px; }
+  .stat-table .note-cell { color: #C00000; font-size: 18px; }
   .stat-table .note-cell.no-note { color: var(--text-muted); }
-  .stat-empty-note { text-align: center; padding: 2rem; color: var(--text-muted); font-size: 13.5px; }
+  .stat-empty-note { text-align: center; padding: 2rem; color: var(--text-muted); font-size: 20px; }
 
   .table-wrap { background: var(--card); border: 0.5px solid var(--border); border-radius: var(--radius); overflow: auto; }
   table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 800px; }
@@ -252,7 +256,11 @@
       </div>
       <div class="stats">
         <div class="stat-card"><div class="label">전체 조사 건수</div><div class="value" id="statAllCount">-</div></div>
-        <div class="stat-card"><div class="label">불량 항목 발견 건수</div><div class="value" id="statBadRecords">-</div></div>
+        <div class="stat-card clickable" onclick="showBadRecordsDetail()" title="클릭하여 불량 발견 현장 상세 보기">
+          <div class="label">불량 항목 발견 건수 <i class="ti ti-zoom-in" style="font-size:0.75em;opacity:0.5;vertical-align:middle"></i></div>
+          <div class="value" id="statBadRecords">-</div>
+          <div style="font-size:13px;color:var(--text-muted);margin-top:4px">▸ 상세 항목 보기</div>
+        </div>
         <div class="stat-card"><div class="label">전체 점검 항목 불량률</div><div class="value" id="statBadRate">-</div></div>
       </div>
       <div class="stat-panel">
@@ -264,6 +272,16 @@
         <div class="stat-panel-title">보일러·온수기 상태 점검</div>
         <div class="stat-panel-sub">항목별 양호 / 불량 / 해당없음 / 미입력 건수</div>
         <div id="statCheck3"></div>
+      </div>
+      <div class="stat-panel">
+        <div class="stat-panel-title">현장별 불량 항목 현황</div>
+        <div class="stat-panel-sub">불량 항목이 발견된 현장을 행으로, 각 점검 항목을 열로 표시 · 행 클릭 시 상세 보기</div>
+        <div id="statFieldBad"></div>
+      </div>
+      <div class="stat-panel">
+        <div class="stat-panel-title">현장명 기준 불량 피벗</div>
+        <div class="stat-panel-sub">현장명으로 묶어 항목별 불량 건수를 한 표로 표시 — 동일 현장 복수 방문 시 합산 · 숫자=불량 건수 · ✓=불량 없음</div>
+        <div id="statSitePivot"></div>
       </div>
     </div>
   </div>
@@ -388,19 +406,19 @@ function switchTab(tab){
 window.switchTab=switchTab;
 
 const CHECK2_ITEMS=[
-  {no:'1',text:'현재 캐스케이드 시스템이 정상적으로 가동되고 있는가'},
-  {no:'2',text:'최근 1년 이내 고장 또는 에러 이력이 있는가 (비고에 일자·내용 기재)'}
+  {no:'1',text:'현재 캐스케이드 시스템이 정상적으로 가동되고 있는가',short:'가동현황'},
+  {no:'2',text:'최근 1년 이내 고장 또는 에러 이력이 있는가 (비고에 일자·내용 기재)',short:'에러이력'}
 ];
 const CHECK3_ITEMS=[
-  {no:'1',text:'본체 외관에 이상 흔적이 있는가'},
-  {no:'2',text:'본체 내부에 이상 흔적이 있는가'},
-  {no:'2-1',text:'연소실 상태 확인 (누수 등)',sub:true},
-  {no:'2-2',text:'PCB (기판 이상 등)',sub:true},
-  {no:'2-3',text:'FAN (이상소음 등)',sub:true},
-  {no:'2-4',text:'PUMP 상태 (누수 및 이상 소음 등)',sub:true},
-  {no:'2-5',text:'기타 부위 상태 확인 (부식 및 누수 등)',sub:true},
-  {no:'3',text:'가동 중 이상 소음 또는 진동이 있는가'},
-  {no:'4',text:'명판 확인'}
+  {no:'1',text:'본체 외관에 이상 흔적이 있는가',short:'외관이상'},
+  {no:'2',text:'본체 내부에 이상 흔적이 있는가',short:'내부이상'},
+  {no:'2-1',text:'연소실 상태 확인 (누수 등)',sub:true,short:'연소실'},
+  {no:'2-2',text:'PCB (기판 이상 등)',sub:true,short:'PCB'},
+  {no:'2-3',text:'FAN (이상소음 등)',sub:true,short:'FAN'},
+  {no:'2-4',text:'PUMP 상태 (누수 및 이상 소음 등)',sub:true,short:'PUMP'},
+  {no:'2-5',text:'기타 부위 상태 확인 (부식 및 누수 등)',sub:true,short:'기타부위'},
+  {no:'3',text:'가동 중 이상 소음 또는 진동이 있는가',short:'소음/진동'},
+  {no:'4',text:'명판 확인',short:'명판'}
 ];
 
 function computeItemStats(items,key){
@@ -466,8 +484,91 @@ function renderCheckStats(){
   const scored = allChecks.filter(c=>c.result==='양호'||c.result==='불량');
   const badCount = allChecks.filter(c=>c.result==='불량').length;
   document.getElementById('statBadRate').textContent = scored.length ? Math.round(badCount/scored.length*100)+'%' : '-';
+  renderFieldBadTable();
+  renderSitePivot();
 }
 window.renderCheckStats=renderCheckStats;
+
+function renderFieldBadTable(){
+  const el=document.getElementById('statFieldBad');
+  if(!el) return;
+  if(!allData.length){el.innerHTML='<div class="stat-empty-note">데이터가 없습니다.</div>';return;}
+
+  const records=[...allData].filter(r=>[...(r.check2||[]),...(r.check3||[])].some(c=>c.result==='불량'));
+  records.sort((a,b)=>{
+    const ba=[...(a.check2||[]),...(a.check3||[])].filter(c=>c.result==='불량').length;
+    const bb=[...(b.check2||[]),...(b.check3||[])].filter(c=>c.result==='불량').length;
+    return bb-ba;
+  });
+  if(!records.length){el.innerHTML='<div class="stat-empty-note">불량 항목이 발견된 현장이 없습니다.</div>';return;}
+
+  const TS='border:0.5px solid var(--border);padding:9px 8px;font-size:15px;text-align:center;vertical-align:middle';
+  const thS=`${TS};background:#f8f9fa;font-weight:600;color:var(--text-muted);white-space:nowrap`;
+
+  const c2h=CHECK2_ITEMS.map(i=>`<th title="사용현황점검 No.${i.no}: ${escStat(i.text)}" style="${thS};min-width:58px;background:#f1f8ec">No.${i.no}</th>`).join('');
+  const c3h=CHECK3_ITEMS.map(i=>`<th title="보일러·온수기 상태점검 No.${i.no}: ${escStat(i.text)}" style="${thS};min-width:58px;background:#eef4fc">No.${i.no}</th>`).join('');
+
+  const rows=records.map(r=>{
+    const gi=allData.indexOf(r);
+    const c2cells=CHECK2_ITEMS.map(item=>{
+      const rec=(r.check2||[]).find(c=>c.no===item.no);
+      if(rec&&rec.result==='불량'){
+        const tip=rec.note?` title="${escStat(rec.note)}"` :'';
+        return `<td${tip} style="${TS};background:#fcebeb;color:#C00000;font-weight:700;font-size:18px">✗</td>`;
+      }
+      return `<td style="${TS}"></td>`;
+    });
+    const c3cells=CHECK3_ITEMS.map(item=>{
+      const rec=(r.check3||[]).find(c=>c.no===item.no);
+      if(rec&&rec.result==='불량'){
+        const tip=rec.note?` title="${escStat(rec.note)}"` :'';
+        return `<td${tip} style="${TS};background:#fcebeb;color:#C00000;font-weight:700;font-size:18px">✗</td>`;
+      }
+      return `<td style="${TS}"></td>`;
+    });
+    const tot=[...(r.check2||[]),...(r.check3||[])].filter(c=>c.result==='불량').length;
+    return `<tr style="cursor:pointer" onclick="openDetail(${gi})" title="${escStat(r.fieldName||'')} 상세 보기"
+      onmouseover="this.querySelectorAll('td').forEach(td=>{if(!td.style.background||td.style.background==='')td.style.background='#f9fafb'})"
+      onmouseout="this.querySelectorAll('td').forEach(td=>{if(td.style.background==='rgb(249, 250, 251)')td.style.background=''})">
+      <td style="${TS};text-align:left;font-size:16px;font-weight:600;min-width:140px">${escStat(r.fieldName||'-')}<br><span style="font-size:13px;font-weight:400;color:var(--text-muted)">${escStat(r.contactName||'')}</span></td>
+      <td style="${TS};font-size:14px;white-space:nowrap">${escStat(r.visitDate||'-')}</td>
+      ${c2cells.join('')}${c3cells.join('')}
+      <td style="${TS};font-weight:700;color:#C00000;font-size:19px">${tot}</td>
+    </tr>`;
+  });
+
+  const c2tot=CHECK2_ITEMS.map(item=>{
+    const n=records.filter(r=>(r.check2||[]).some(c=>c.no===item.no&&c.result==='불량')).length;
+    return `<td style="${TS};background:#fdf7f7;font-weight:700;color:${n>0?'#C00000':'var(--text-muted)'}">${n}</td>`;
+  });
+  const c3tot=CHECK3_ITEMS.map(item=>{
+    const n=records.filter(r=>(r.check3||[]).some(c=>c.no===item.no&&c.result==='불량')).length;
+    return `<td style="${TS};background:#fdf7f7;font-weight:700;color:${n>0?'#C00000':'var(--text-muted)'}">${n}</td>`;
+  });
+  const grand=records.reduce((s,r)=>s+[...(r.check2||[]),...(r.check3||[])].filter(c=>c.result==='불량').length,0);
+
+  el.innerHTML=`<div style="overflow-x:auto"><table style="border-collapse:collapse;width:100%;min-width:700px">
+    <thead>
+      <tr>
+        <th rowspan="2" style="${thS};text-align:left;min-width:140px">현장명</th>
+        <th rowspan="2" style="${thS};min-width:90px">방문일자</th>
+        <th colspan="${CHECK2_ITEMS.length}" style="${thS};background:#eaf3de;color:#3B6D11;border-bottom:none">사용 현황 점검</th>
+        <th colspan="${CHECK3_ITEMS.length}" style="${thS};background:#e6f1fb;color:#1a56b0;border-bottom:none">보일러·온수기 상태 점검</th>
+        <th rowspan="2" style="${thS};min-width:64px;color:#C00000">불량<br>합계</th>
+      </tr>
+      <tr>${c2h}${c3h}</tr>
+    </thead>
+    <tbody>
+      ${rows.join('')}
+      <tr>
+        <td colspan="2" style="${TS};background:#f8f9fa;font-weight:700;font-size:15px;color:var(--text-muted)">항목별 불량 합계</td>
+        ${c2tot.join('')}${c3tot.join('')}
+        <td style="${TS};background:#fdf7f7;font-weight:700;color:#C00000;font-size:19px">${grand}</td>
+      </tr>
+    </tbody>
+  </table></div>`;
+}
+window.renderFieldBadTable=renderFieldBadTable;
 
 function openLoginModal(){
   document.getElementById('loginEmail').value='';
@@ -699,6 +800,55 @@ function showBadDetail(key, no){
   document.getElementById('badDetailModal').classList.add('open');
 }
 window.showBadDetail=showBadDetail;
+
+function showBadRecordsDetail(){
+  const badRecords=allData.map((r,idx)=>{
+    const badItems=[];
+    (r.check2||[]).forEach(c=>{
+      if(c.result!=='불량') return;
+      const item=CHECK2_ITEMS.find(i=>i.no===c.no);
+      badItems.push({section:'사용 현황 점검',no:c.no,text:item?item.text:(c.item||''),note:c.note||''});
+    });
+    (r.check3||[]).forEach(c=>{
+      if(c.result!=='불량') return;
+      const item=CHECK3_ITEMS.find(i=>i.no===c.no);
+      badItems.push({section:'보일러·온수기 상태 점검',no:c.no,text:item?item.text:(c.item||''),note:c.note||''});
+    });
+    return badItems.length?{r,idx,badItems}:null;
+  }).filter(Boolean);
+
+  document.getElementById('badDetailTitle').textContent=`불량 항목 발견 현장 상세 (${badRecords.length}건)`;
+
+  if(!badRecords.length){
+    document.getElementById('badDetailBody').innerHTML='<p style="text-align:center;color:var(--text-muted);padding:2rem;font-size:14px">불량 항목이 없습니다.</p>';
+  } else {
+    const TH=s=>`<th style="background:#f8f9fa;padding:8px 10px;text-align:left;font-size:11.5px;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--border);white-space:nowrap">${s}</th>`;
+    const rows=badRecords.map(({r,idx,badItems},i)=>{
+      const itemsHtml=badItems.map(it=>`<div style="padding:2px 0;line-height:1.6">
+        <span style="background:#f0f0f0;color:#555;border-radius:4px;padding:1px 6px;font-size:11px;white-space:nowrap;margin-right:4px">${escStat(it.section)} No.${it.no}</span>
+        <span style="color:#C00000">${escStat(it.text)}</span>
+        ${it.note?`<span style="color:var(--text-muted);margin-left:4px;font-size:12px">(${escStat(it.note)})</span>`:''}
+      </div>`).join('');
+      return `<tr style="cursor:pointer" onclick="closeModal('badDetailModal');setTimeout(()=>openDetail(${idx}),150)" title="클릭하여 현장조사 상세 보기">
+        <td style="padding:8px 10px;border-bottom:0.5px solid var(--border);color:var(--text-muted);text-align:center;vertical-align:top;font-size:12px">${i+1}</td>
+        <td style="padding:8px 10px;border-bottom:0.5px solid var(--border);white-space:nowrap;font-size:12px;vertical-align:top">${r.visitDate||'-'}</td>
+        <td style="padding:8px 10px;border-bottom:0.5px solid var(--border);vertical-align:top"><strong style="font-size:13px">${escStat(r.fieldName||'-')}</strong><br><span style="color:var(--text-muted);font-size:12px">${escStat(r.contactName||'-')}</span></td>
+        <td style="padding:8px 10px;border-bottom:0.5px solid var(--border);vertical-align:top;font-size:13px">${itemsHtml}</td>
+      </tr>`;
+    }).join('');
+    document.getElementById('badDetailBody').innerHTML=`
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:10px;line-height:1.5">불량 항목이 발견된 현장별 점검 항목 내역입니다.</p>
+      <div style="overflow:auto;max-height:58vh">
+        <table style="width:100%;border-collapse:collapse;font-size:13px;min-width:560px">
+          <thead><tr>${TH('NO')}${TH('방문일자')}${TH('현장명')}${TH('불량 항목 내역')}</tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+      <p style="font-size:12px;color:var(--text-muted);margin-top:10px;text-align:right">행을 클릭하면 해당 현장조사 상세를 볼 수 있습니다.</p>`;
+  }
+  document.getElementById('badDetailModal').classList.add('open');
+}
+window.showBadRecordsDetail=showBadRecordsDetail;
 
 function openViewerByUrl(url, kind) {
   document.getElementById('viewerContent').innerHTML = kind === 'video'
@@ -1257,6 +1407,93 @@ async function downloadStatsPPT(){
   }
 }
 window.downloadStatsPPT=downloadStatsPPT;
+
+function renderSitePivot(){
+  const el=document.getElementById('statSitePivot');
+  if(!el) return;
+  if(!allData.length){el.innerHTML='<div class="stat-empty-note">데이터가 없습니다.</div>';return;}
+
+  // 현장명 기준으로 집계
+  const siteMap={};
+  allData.forEach(r=>{
+    const key=r.fieldName||'(현장명 없음)';
+    if(!siteMap[key]){
+      siteMap[key]={name:key,visits:0,c2:{},c3:{}};
+      CHECK2_ITEMS.forEach(i=>{siteMap[key].c2[i.no]=0;});
+      CHECK3_ITEMS.forEach(i=>{siteMap[key].c3[i.no]=0;});
+    }
+    siteMap[key].visits++;
+    (r.check2||[]).forEach(c=>{if(c.result==='불량'&&Object.prototype.hasOwnProperty.call(siteMap[key].c2,c.no))siteMap[key].c2[c.no]++;});
+    (r.check3||[]).forEach(c=>{if(c.result==='불량'&&Object.prototype.hasOwnProperty.call(siteMap[key].c3,c.no))siteMap[key].c3[c.no]++;});
+  });
+
+  // 불량 합계 내림차순 정렬 (0건 현장도 포함)
+  const sites=Object.values(siteMap).sort((a,b)=>{
+    const sa=CHECK2_ITEMS.reduce((t,i)=>t+a.c2[i.no],0)+CHECK3_ITEMS.reduce((t,i)=>t+a.c3[i.no],0);
+    const sb=CHECK2_ITEMS.reduce((t,i)=>t+b.c2[i.no],0)+CHECK3_ITEMS.reduce((t,i)=>t+b.c3[i.no],0);
+    return sb-sa;
+  });
+
+  const TS='border:0.5px solid var(--border);padding:9px 8px;font-size:15px;text-align:center;vertical-align:middle';
+  const thS=`${TS};background:#f8f9fa;font-weight:600;color:var(--text-muted);white-space:nowrap`;
+
+  const c2h=CHECK2_ITEMS.map(i=>`<th title="${escStat(i.text)}" style="${thS};min-width:60px;background:#f1f8ec">${escStat(i.short||('No.'+i.no))}</th>`).join('');
+  const c3h=CHECK3_ITEMS.map(i=>`<th title="${escStat(i.text)}" style="${thS};min-width:60px;background:#eef4fc">${escStat(i.short||('No.'+i.no))}</th>`).join('');
+
+  const rows=sites.map((s,si)=>{
+    const rowBg=si%2===0?'':'background:#fafafa';
+    const c2cells=CHECK2_ITEMS.map(item=>{
+      const n=s.c2[item.no]||0;
+      return n>0
+        ?`<td style="${TS};background:#fcebeb;color:#C00000;font-weight:700;font-size:18px">${n}</td>`
+        :`<td style="${TS};color:#27AE60;font-size:16px">✓</td>`;
+    });
+    const c3cells=CHECK3_ITEMS.map(item=>{
+      const n=s.c3[item.no]||0;
+      return n>0
+        ?`<td style="${TS};background:#fcebeb;color:#C00000;font-weight:700;font-size:18px">${n}</td>`
+        :`<td style="${TS};color:#27AE60;font-size:16px">✓</td>`;
+    });
+    const tot=CHECK2_ITEMS.reduce((t,i)=>t+s.c2[i.no],0)+CHECK3_ITEMS.reduce((t,i)=>t+s.c3[i.no],0);
+    return `<tr style="${rowBg}">
+      <td style="${TS};text-align:left;font-size:15px;font-weight:600;min-width:140px">${escStat(s.name)}<br><span style="font-size:12px;font-weight:400;color:var(--text-muted)">${s.visits}회 방문</span></td>
+      ${c2cells.join('')}${c3cells.join('')}
+      <td style="${TS};font-weight:700;color:${tot>0?'#C00000':'var(--text-muted)'};font-size:19px">${tot}</td>
+    </tr>`;
+  });
+
+  // 항목별 합계 행
+  const c2tot=CHECK2_ITEMS.map(item=>{
+    const n=sites.reduce((t,s)=>t+(s.c2[item.no]||0),0);
+    return `<td style="${TS};background:#fdf7f7;font-weight:700;color:${n>0?'#C00000':'var(--text-muted)'}">${n}</td>`;
+  });
+  const c3tot=CHECK3_ITEMS.map(item=>{
+    const n=sites.reduce((t,s)=>t+(s.c3[item.no]||0),0);
+    return `<td style="${TS};background:#fdf7f7;font-weight:700;color:${n>0?'#C00000':'var(--text-muted)'}">${n}</td>`;
+  });
+  const grand=sites.reduce((t,s)=>t+CHECK2_ITEMS.reduce((a,i)=>a+s.c2[i.no],0)+CHECK3_ITEMS.reduce((a,i)=>a+s.c3[i.no],0),0);
+
+  el.innerHTML=`<div style="overflow-x:auto"><table style="border-collapse:collapse;width:100%;min-width:700px">
+    <thead>
+      <tr>
+        <th rowspan="2" style="${thS};text-align:left;min-width:150px">현장명</th>
+        <th colspan="${CHECK2_ITEMS.length}" style="${thS};background:#eaf3de;color:#3B6D11;border-bottom:none">사용 현황 점검</th>
+        <th colspan="${CHECK3_ITEMS.length}" style="${thS};background:#e6f1fb;color:#1a56b0;border-bottom:none">보일러·온수기 상태 점검</th>
+        <th rowspan="2" style="${thS};min-width:64px;color:#C00000">불량<br>합계</th>
+      </tr>
+      <tr>${c2h}${c3h}</tr>
+    </thead>
+    <tbody>
+      ${rows.join('')}
+      <tr style="border-top:2px solid #ddd">
+        <td style="${TS};background:#f8f9fa;font-weight:700;font-size:15px;color:var(--text-muted);text-align:left">항목별 불량 합계</td>
+        ${c2tot.join('')}${c3tot.join('')}
+        <td style="${TS};background:#fdf7f7;font-weight:700;color:#C00000;font-size:19px">${grand}</td>
+      </tr>
+    </tbody>
+  </table></div>`;
+}
+window.renderSitePivot=renderSitePivot;
 </script>
 <div id="printArea"></div>
 </body>
