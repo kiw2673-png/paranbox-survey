@@ -1354,18 +1354,19 @@ function renderSitePivot(){
   const c2h=CHECK2_ITEMS.map(i=>`<th title="${escStat(i.text)}" style="${thS};min-width:60px;background:#f1f8ec">${escStat(i.short||('No.'+i.no))}</th>`).join('');
   const c3h=CHECK3_ITEMS.map(i=>`<th title="${escStat(i.text)}" style="${thS};min-width:60px;background:#eef4fc">${escStat(i.short||('No.'+i.no))}</th>`).join('');
 
+  window._pivotSites=sites;
   const rows=sites.map((s,si)=>{
     const rowBg=si%2===0?'':'background:#fafafa';
     const c2cells=CHECK2_ITEMS.map(item=>{
       const n=s.c2[item.no]||0;
       return n>0
-        ?`<td style="${TS};background:#fcebeb;color:#C00000;font-weight:700;font-size:18px">${n}</td>`
+        ?`<td onclick="openPivotDetail(${si},'c2','${item.no}')" title="${escStat(item.text)} — 클릭하여 상세 보기" style="${TS};background:#fcebeb;color:#C00000;font-weight:700;font-size:18px;cursor:pointer">${n}</td>`
         :`<td style="${TS};color:#27AE60;font-size:16px">✓</td>`;
     });
     const c3cells=CHECK3_ITEMS.map(item=>{
       const n=s.c3[item.no]||0;
       return n>0
-        ?`<td style="${TS};background:#fcebeb;color:#C00000;font-weight:700;font-size:18px">${n}</td>`
+        ?`<td onclick="openPivotDetail(${si},'c3','${item.no}')" title="${escStat(item.text)} — 클릭하여 상세 보기" style="${TS};background:#fcebeb;color:#C00000;font-weight:700;font-size:18px;cursor:pointer">${n}</td>`
         :`<td style="${TS};color:#27AE60;font-size:16px">✓</td>`;
     });
     const tot=CHECK2_ITEMS.reduce((t,i)=>t+s.c2[i.no],0)+CHECK3_ITEMS.reduce((t,i)=>t+s.c3[i.no],0);
@@ -1408,6 +1409,51 @@ function renderSitePivot(){
   </table></div>`;
 }
 window.renderSitePivot=renderSitePivot;
+
+function openPivotDetail(siteIdx,checkType,itemNo){
+  const site=window._pivotSites&&window._pivotSites[siteIdx];
+  if(!site) return;
+  const siteName=site.name;
+  const items=checkType==='c2'?CHECK2_ITEMS:CHECK3_ITEMS;
+  const itemDef=items.find(i=>i.no===itemNo);
+  const itemText=itemDef?itemDef.text:itemNo;
+
+  const matched=allData.map((r,idx)=>({r,idx}))
+    .filter(({r})=>(r.fieldName||'(현장명 없음)')===siteName)
+    .filter(({r})=>{
+      const arr=checkType==='c2'?(r.check2||[]):(r.check3||[]);
+      return arr.some(c=>c.no===itemNo&&c.result==='불량');
+    });
+
+  document.getElementById('detailTitle').textContent=siteName+' — '+itemText;
+
+  const TS2='font-size:13.5px;color:var(--text-muted)';
+  const rows2=matched.map(({r,idx})=>{
+    const arr=checkType==='c2'?(r.check2||[]):(r.check3||[]);
+    const ck=arr.find(c=>c.no===itemNo);
+    const note=ck&&ck.note?escStat(ck.note):'<span style="color:#bbb">-</span>';
+    return `<div style="padding:12px 14px;border:1px solid var(--border);border-radius:8px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+        <span style="font-size:15px;font-weight:600">${escStat(r.fieldName||'-')}</span>
+        <span style="${TS2}">${escStat(r.visitDate||'-')}</span>
+      </div>
+      <div style="${TS2};margin-bottom:4px">담당자: ${escStat(r.contactName||'-')}${r.contactTitle?' ('+escStat(r.contactTitle)+')':''}</div>
+      <div style="font-size:13.5px;margin-bottom:8px"><strong>비고:</strong> ${note}</div>
+      <button onclick="document.getElementById('detailModal').classList.remove('open');openDetail(${idx})" style="font-size:12px;padding:4px 12px;border:1px solid var(--blue);background:#fff;color:var(--blue);border-radius:4px;cursor:pointer">전체 상세보기</button>
+    </div>`;
+  });
+
+  document.getElementById('detailBody').innerHTML=matched.length
+    ?`<div class="modal-section">
+        <div class="modal-section-title" style="color:#C00000">불량 발생 기록 (${matched.length}건)</div>
+        <div style="margin-top:4px;font-size:13px;color:var(--text-muted);margin-bottom:12px">항목: ${escStat(itemText)}</div>
+        ${rows2.join('')}
+      </div>`
+    :'<div class="stat-empty-note">해당 불량 기록이 없습니다.</div>';
+
+  document.getElementById('detailModal').classList.add('open');
+}
+window.openPivotDetail=openPivotDetail;
 </script>
 <div id="printArea"></div>
 </body>
