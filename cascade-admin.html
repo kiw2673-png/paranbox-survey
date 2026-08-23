@@ -1497,24 +1497,34 @@ function renderSitePivot(){
 
   // 항목별 합계 행
   const totalVisits=allData.length||1;
+  const totalItems=CHECK2_ITEMS.length+CHECK3_ITEMS.length;
   const pct=n=>totalVisits>0?(n/totalVisits*100).toFixed(1)+'%':'0%';
   const c2tot=CHECK2_ITEMS.map(item=>{
     const n=sites.reduce((t,s)=>t+(s.c2[item.no]||0),0);
-    return `<td style="${TS};background:#fdf7f7;font-weight:700;color:${n>0?'#C00000':'var(--text-muted)'}">${n}</td>`;
+    return n>0
+      ?`<td onclick="openItemTotDetail('c2','${item.no}')" title="${escStat(item.text)} — 클릭하여 불량 현장 보기" style="${TS};background:#fdf7f7;font-weight:700;color:#C00000;cursor:pointer">${n}</td>`
+      :`<td style="${TS};background:#fdf7f7;font-weight:700;color:var(--text-muted)">0</td>`;
   });
   const c3tot=CHECK3_ITEMS.map(item=>{
     const n=sites.reduce((t,s)=>t+(s.c3[item.no]||0),0);
-    return `<td style="${TS};background:#fdf7f7;font-weight:700;color:${n>0?'#C00000':'var(--text-muted)'}">${n}</td>`;
+    return n>0
+      ?`<td onclick="openItemTotDetail('c3','${item.no}')" title="${escStat(item.text)} — 클릭하여 불량 현장 보기" style="${TS};background:#fdf7f7;font-weight:700;color:#C00000;cursor:pointer">${n}</td>`
+      :`<td style="${TS};background:#fdf7f7;font-weight:700;color:var(--text-muted)">0</td>`;
   });
   const c2rate=CHECK2_ITEMS.map(item=>{
     const n=sites.reduce((t,s)=>t+(s.c2[item.no]||0),0);
-    return `<td style="${TS};background:#fef9f9;font-size:13px;color:${n>0?'#C00000':'var(--text-muted)'}">${pct(n)}</td>`;
+    return n>0
+      ?`<td onclick="openItemTotDetail('c2','${item.no}')" title="${escStat(item.text)} — 클릭하여 불량 현장 보기" style="${TS};background:#fef9f9;font-size:13px;color:#C00000;cursor:pointer">${pct(n)}</td>`
+      :`<td style="${TS};background:#fef9f9;font-size:13px;color:var(--text-muted)">0%</td>`;
   });
   const c3rate=CHECK3_ITEMS.map(item=>{
     const n=sites.reduce((t,s)=>t+(s.c3[item.no]||0),0);
-    return `<td style="${TS};background:#fef9f9;font-size:13px;color:${n>0?'#C00000':'var(--text-muted)'}">${pct(n)}</td>`;
+    return n>0
+      ?`<td onclick="openItemTotDetail('c3','${item.no}')" title="${escStat(item.text)} — 클릭하여 불량 현장 보기" style="${TS};background:#fef9f9;font-size:13px;color:#C00000;cursor:pointer">${pct(n)}</td>`
+      :`<td style="${TS};background:#fef9f9;font-size:13px;color:var(--text-muted)">0%</td>`;
   });
   const grand=sites.reduce((t,s)=>t+CHECK2_ITEMS.reduce((a,i)=>a+s.c2[i.no],0)+CHECK3_ITEMS.reduce((a,i)=>a+s.c3[i.no],0),0);
+  const avgPct=totalItems>0&&totalVisits>0?(grand/(totalItems*totalVisits)*100).toFixed(1)+'%':'0%';
 
   el.innerHTML=`<div style="overflow-x:auto"><table style="border-collapse:collapse;width:100%;min-width:700px">
     <thead>
@@ -1534,14 +1544,50 @@ function renderSitePivot(){
         <td style="${TS};background:#fdf7f7;font-weight:700;color:#C00000;font-size:19px">${grand}</td>
       </tr>
       <tr>
-        <td style="${TS};background:#fef9f9;font-weight:600;font-size:13px;color:var(--text-muted);text-align:left">불량률 <span style="font-size:11px;font-weight:400">(불량÷${totalVisits}건)</span></td>
+        <td style="${TS};background:#fef9f9;font-weight:600;font-size:13px;color:var(--text-muted);text-align:left">불량률 <span style="font-size:11px;font-weight:400">(불량÷${totalVisits}건)</span><br><span style="font-size:11px;font-weight:400;color:#aaa">※우측=항목 평균</span></td>
         ${c2rate.join('')}${c3rate.join('')}
-        <td style="${TS};background:#fef9f9;font-weight:700;color:${grand>0?'#C00000':'var(--text-muted)'};font-size:15px">${pct(grand)}</td>
+        <td style="${TS};background:#fef9f9;font-weight:700;color:${grand>0?'#C00000':'var(--text-muted)'};font-size:15px" title="전체 항목 평균 불량률 = 전체불량 ÷ (${totalItems}항목 × ${totalVisits}건)">${avgPct}</td>
       </tr>
     </tbody>
   </table></div>`;
 }
 window.renderSitePivot=renderSitePivot;
+
+function openItemTotDetail(checkType,itemNo){
+  const items=checkType==='c2'?CHECK2_ITEMS:CHECK3_ITEMS;
+  const itemDef=items.find(i=>i.no===itemNo);
+  const itemText=itemDef?itemDef.text:itemNo;
+  const matched=allData.map((r,idx)=>({r,idx})).filter(({r})=>{
+    const arr=checkType==='c2'?(r.check2||[]):(r.check3||[]);
+    return arr.some(c=>c.no===itemNo&&c.result==='불량');
+  });
+  document.getElementById('detailTitle').textContent='전체 현장 — '+itemText;
+  const TS2='font-size:13.5px;color:var(--text-muted)';
+  const rows2=matched.map(({r,idx})=>{
+    const arr=checkType==='c2'?(r.check2||[]):(r.check3||[]);
+    const ck=arr.find(c=>c.no===itemNo);
+    const note=ck&&ck.note?escStat(ck.note):'<span style="color:#bbb">-</span>';
+    return `<div style="padding:12px 14px;border:1px solid var(--border);border-radius:8px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+        <span style="font-size:15px;font-weight:600">${escStat(r.fieldName||'-')}</span>
+        <span style="${TS2}">${escStat(r.visitDate||'-')}</span>
+      </div>
+      <div style="${TS2};margin-bottom:4px">담당자: ${escStat(r.contactName||'-')}${r.contactTitle?' ('+escStat(r.contactTitle)+')':''}</div>
+      <div style="font-size:13.5px;margin-bottom:8px"><strong>비고:</strong> ${note}</div>
+      <button onclick="document.getElementById('detailModal').classList.remove('open');openDetail(${idx})" style="font-size:12px;padding:4px 12px;border:1px solid var(--blue);background:#fff;color:var(--blue);border-radius:4px;cursor:pointer">전체 상세보기</button>
+    </div>`;
+  });
+  document.getElementById('detailBody').innerHTML=matched.length
+    ?`<div class="modal-section">
+        <div class="modal-section-title" style="color:#C00000">불량 발생 현장 (${matched.length}건)</div>
+        <div style="margin-top:4px;font-size:13px;color:var(--text-muted);margin-bottom:12px">항목: ${escStat(itemText)}</div>
+        ${rows2.join('')}
+      </div>`
+    :'<div class="stat-empty-note">해당 불량 기록이 없습니다.</div>';
+  document.getElementById('detailEditBtnWrap').innerHTML='';
+  document.getElementById('detailModal').classList.add('open');
+}
+window.openItemTotDetail=openItemTotDetail;
 
 function openPivotDetail(siteIdx,checkType,itemNo){
   const site=window._pivotSites&&window._pivotSites[siteIdx];
