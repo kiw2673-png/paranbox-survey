@@ -764,23 +764,34 @@ function showBadRecordsDetail(){
 }
 window.showBadRecordsDetail=showBadRecordsDetail;
 
-function openViewerByUrl(url, kind) {
-  document.getElementById('viewerContent').innerHTML = kind === 'video'
-    ? `<video src="${url}" controls autoplay style="max-width:92vw;max-height:88vh;border-radius:6px;outline:none"></video>`
-    : `<img src="${url}" style="max-width:92vw;max-height:88vh;border-radius:6px;object-fit:contain">`;
-  document.getElementById('mediaViewer').classList.add('open');
-}
-window.openViewerByUrl = openViewerByUrl;
-
 function openViewerByUrl(url,kind){
-  document.getElementById('viewerContent').innerHTML=kind==='video'
-    ?`<video src="${url}" controls autoplay style="max-width:92vw;max-height:88vh;border-radius:6px;outline:none"></video>`
-    :`<img src="${url}" style="max-width:92vw;max-height:88vh;border-radius:6px;object-fit:contain">`;
+  // 썸네일 video 요소들을 먼저 정지·해제해 미디어 충돌 방지
+  document.querySelectorAll('.media-grid-item video').forEach(v=>{v.pause();v.removeAttribute('src');v.load();});
+  const vc=document.getElementById('viewerContent');
+  vc.innerHTML='';
+  if(kind==='video'){
+    const vid=document.createElement('video');
+    vid.src=url;
+    vid.controls=true;
+    vid.autoplay=true;
+    vid.style.cssText='max-width:92vw;max-height:88vh;border-radius:6px;outline:none;display:block';
+    vc.appendChild(vid);
+  } else {
+    const img=document.createElement('img');
+    img.src=url;
+    img.style.cssText='max-width:92vw;max-height:88vh;border-radius:6px;object-fit:contain;display:block';
+    vc.appendChild(img);
+  }
   document.getElementById('mediaViewer').classList.add('open');
 }
 window.openViewerByUrl=openViewerByUrl;
 
-function closeViewer(){document.getElementById('mediaViewer').classList.remove('open');document.getElementById('viewerContent').innerHTML='';}
+function closeViewer(){
+  const vc=document.getElementById('viewerContent');
+  vc.querySelectorAll('video').forEach(v=>{v.pause();v.removeAttribute('src');v.load();});
+  vc.innerHTML='';
+  document.getElementById('mediaViewer').classList.remove('open');
+}
 window.closeViewer=closeViewer;
 
 function printDetail(){
