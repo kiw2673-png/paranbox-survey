@@ -321,6 +321,11 @@
   <div class="modal sm">
     <div class="modal-header"><h2>현장조사 삭제</h2><button class="modal-close" onclick="closeModal('deleteModal')">✕</button></div>
     <p style="font-size:14px;color:var(--text-muted);line-height:1.7">이 항목을 삭제하면 복구할 수 없습니다.<br>정말 삭제하시겠습니까?</p>
+    <div style="margin:6px 0 4px">
+      <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">비밀번호 확인</label>
+      <input type="password" id="deletePw" placeholder="비밀번호 입력" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:4px;font-size:13px;box-sizing:border-box" onkeydown="if(event.key==='Enter'){event.preventDefault();confirmDelete();}">
+      <div id="deletePwErr" style="display:none;color:#C00000;font-size:12px;margin-top:5px">비밀번호가 일치하지 않습니다.</div>
+    </div>
     <div class="modal-footer">
       <button class="modal-footer btn-cancel" onclick="closeModal('deleteModal')">취소</button>
       <button class="modal-footer btn-danger" onclick="confirmDelete()"><i class="ti ti-trash"></i> 삭제</button>
@@ -688,10 +693,25 @@ const _INP='width:100%;padding:6px 8px;border:1px solid var(--border);border-rad
 const _ea=v=>(v||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;');
 const _et=v=>(v||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
+const EDIT_RESULT_OPTS=['양호','불량','해당없음',''];
+function editCheckRow(item,i,prefix){
+  const opts=EDIT_RESULT_OPTS.map(o=>`<option value="${o}" ${item.result===o?'selected':''}>${o||'미입력'}</option>`).join('');
+  const isSub=String(item.no||'').includes('-');
+  return `<div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:8px;padding:8px;background:#f8f9fa;border-radius:4px">
+    <div style="flex:1;min-width:0">
+      <div style="font-size:12.5px;font-weight:500;margin-bottom:4px">${isSub?'└ ':''}${_et(item.no)}. ${_et(item.item)}</div>
+      <input class="edit-${prefix}-note" data-i="${i}" placeholder="비고" value="${_ea(item.note)}" style="${_INP};font-size:12px">
+    </div>
+    <select class="edit-${prefix}-result" data-i="${i}" style="padding:6px 8px;border:1px solid var(--border);border-radius:4px;font-size:13px;font-family:inherit;box-sizing:border-box;width:92px;flex-shrink:0">${opts}</select>
+  </div>`;
+}
+
 function openEdit(idx){
   _editIdx=idx;
   const r=allData[idx];
   const fld=(id,label,val,full)=>`<div${full?' style="grid-column:1/-1"':''}><label style="font-size:12px;font-weight:600;display:block;margin-bottom:3px">${label}</label><input id="ef_${id}" value="${_ea(val)}" style="${_INP}"></div>`;
+  const c2Rows=(r.check2||[]).map((c,i)=>editCheckRow(c,i,'c2')).join('');
+  const c3Rows=(r.check3||[]).map((c,i)=>editCheckRow(c,i,'c3')).join('');
   const ivRows=(r.interviews||[]).map((iv,i)=>`
     <div style="margin-bottom:10px">
       <div style="font-size:12.5px;font-weight:600;margin-bottom:4px;color:var(--text-muted)">${i+1}. ${_et(iv.question)}</div>
@@ -711,11 +731,13 @@ function openEdit(idx){
       ${fld('inspectorName','조사자',r.inspectorName,false)}
       ${fld('confirmDate','확인일자',r.confirmDate,false)}
     </div>
-    <div style="margin-bottom:12px">
+    ${c2Rows?`<div style="border-top:1px solid var(--border);padding-top:12px;margin-bottom:12px"><div style="font-size:12px;font-weight:700;margin-bottom:10px;color:var(--blue)">사용 현황 점검</div>${c2Rows}</div>`:''}
+    ${c3Rows?`<div style="border-top:1px solid var(--border);padding-top:12px;margin-bottom:12px"><div style="font-size:12px;font-weight:700;margin-bottom:10px;color:var(--blue)">보일러·온수기 상태 점검</div>${c3Rows}</div>`:''}
+    ${ivRows?`<div style="border-top:1px solid var(--border);padding-top:12px;margin-bottom:12px"><div style="font-size:12px;font-weight:700;margin-bottom:10px;color:var(--blue)">현장 담당자 인터뷰 답변</div>${ivRows}</div>`:''}
+    <div style="border-top:1px solid var(--border);padding-top:12px">
       <label style="font-size:12px;font-weight:600;display:block;margin-bottom:3px">종합 의견</label>
       <textarea id="ef_overallOpinion" rows="4" style="${_INP};resize:vertical">${_et(r.overallOpinion)}</textarea>
     </div>
-    ${ivRows?`<div style="border-top:1px solid var(--border);padding-top:12px"><div style="font-size:12px;font-weight:700;margin-bottom:10px;color:var(--blue)">현장 담당자 인터뷰 답변</div>${ivRows}</div>`:''}
   `;
   closeModal('detailModal');
   document.getElementById('editModal').classList.add('open');
@@ -733,12 +755,19 @@ async function saveEdit(){
     const el=document.querySelector(`.edit-iv-answer[data-iv="${i}"]`);
     return {...iv,answer:el?el.value.trim():iv.answer};
   });
+  const updatedCheck=(items,prefix)=>(items||[]).map((c,i)=>{
+    const sel=document.querySelector(`.edit-${prefix}-result[data-i="${i}"]`);
+    const note=document.querySelector(`.edit-${prefix}-note[data-i="${i}"]`);
+    return {...c,result:sel?sel.value:c.result,note:note?note.value.trim():c.note};
+  });
   const upd={
     fieldName:gv('ef_fieldName'),visitDate:gv('ef_visitDate'),address:gv('ef_address'),
     contactName:gv('ef_contactName'),contactTitle:gv('ef_contactTitle'),phone:gv('ef_phone'),
     email:gv('ef_email'),modelQty:gv('ef_modelQty'),installDate:gv('ef_installDate'),
     inspectorName:gv('ef_inspectorName'),confirmDate:gv('ef_confirmDate'),
     overallOpinion:(document.getElementById('ef_overallOpinion')?.value||'').trim(),
+    check2:updatedCheck(r.check2,'c2'),
+    check3:updatedCheck(r.check3,'c3'),
     interviews:updatedIvs
   };
   try{
@@ -753,11 +782,25 @@ async function saveEdit(){
 }
 window.saveEdit=saveEdit;
 
-function openDelete(idx){deletingId=allData[idx].id;document.getElementById('deleteModal').classList.add('open');}
+const DELETE_PW='1234';
+
+function openDelete(idx){
+  deletingId=allData[idx].id;
+  const pwEl=document.getElementById('deletePw');
+  if(pwEl) pwEl.value='';
+  document.getElementById('deletePwErr').style.display='none';
+  document.getElementById('deleteModal').classList.add('open');
+  setTimeout(()=>pwEl&&pwEl.focus(),80);
+}
 window.openDelete=openDelete;
 
 async function confirmDelete(){
   if(!deletingId) return;
+  const pw=document.getElementById('deletePw')?.value||'';
+  if(pw!==DELETE_PW){
+    document.getElementById('deletePwErr').style.display='block';
+    return;
+  }
   const {db,doc,deleteDoc}=window._fb;
   try{await deleteDoc(doc(db,'cascade_surveys',deletingId));closeModal('deleteModal');await loadData();}
   catch(e){alert('삭제 실패: '+e.message);}
