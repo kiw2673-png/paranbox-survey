@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -1427,6 +1427,91 @@ async function downloadStatsPPT(){
     y=drawStatTable(s1,y,'사용 현황 점검',c2);
     y+=0.14;
     drawStatTable(s1,y,'보일러·온수기 상태 점검',c3);
+
+    // ── 현장명 기준 불량 피벗 (웹 화면의 세 번째 통계 패널, 별도 슬라이드) ──
+    const siteMap={};
+    allData.forEach(r=>{
+      const key=r.fieldName||'(현장명 없음)';
+      if(!siteMap[key]){
+        siteMap[key]={name:key,visits:0,c2:{},c3:{}};
+        CHECK2_ITEMS.forEach(i=>{siteMap[key].c2[i.no]=0;});
+        CHECK3_ITEMS.forEach(i=>{siteMap[key].c3[i.no]=0;});
+      }
+      siteMap[key].visits++;
+      (r.check2||[]).forEach(c=>{if(c.result==='불량'&&Object.prototype.hasOwnProperty.call(siteMap[key].c2,c.no))siteMap[key].c2[c.no]++;});
+      (r.check3||[]).forEach(c=>{if(c.result==='불량'&&Object.prototype.hasOwnProperty.call(siteMap[key].c3,c.no))siteMap[key].c3[c.no]++;});
+    });
+    const pivotSites=Object.values(siteMap).sort((a,b)=>{
+      const sa=CHECK2_ITEMS.reduce((t,i)=>t+a.c2[i.no],0)+CHECK3_ITEMS.reduce((t,i)=>t+a.c3[i.no],0);
+      const sb=CHECK2_ITEMS.reduce((t,i)=>t+b.c2[i.no],0)+CHECK3_ITEMS.reduce((t,i)=>t+b.c3[i.no],0);
+      return sb-sa;
+    });
+
+    const PIVOT_ITEMS=[...CHECK2_ITEMS.map(i=>({...i,ck:'c2'})),...CHECK3_ITEMS.map(i=>({...i,ck:'c3'}))];
+    const PNAME_W=2.0,PTOT_W=0.83;
+    const PITEM_W=(CW-PNAME_W-PTOT_W)/PIVOT_ITEMS.length;
+    const PROW_H=0.3,PHDR_H=0.42,PER_PAGE=18;
+
+    function drawPivotHeader(sl,ty){
+      let cx=MX;
+      cell(sl,cx,ty,PNAME_W,PHDR_H,'현장명',{fill:C.lbl,color:C.navy,bold:true,fontSize:8,align:'left'});
+      cx+=PNAME_W;
+      PIVOT_ITEMS.forEach(it=>{
+        cell(sl,cx,ty,PITEM_W,PHDR_H,(it.sub?'└':'')+(it.short||it.no),{fill:it.ck==='c2'?'EAF3DE':'E6F1FB',color:it.ck==='c2'?C.green:'1A56B0',bold:true,fontSize:6.5,align:'center'});
+        cx+=PITEM_W;
+      });
+      cell(sl,cx,ty,PTOT_W,PHDR_H,'불량합계',{fill:C.lbl,color:C.red,bold:true,fontSize:7,align:'center'});
+      return ty+PHDR_H;
+    }
+
+    const itemTotals=PIVOT_ITEMS.map(it=>pivotSites.reduce((t,s)=>t+((it.ck==='c2'?s.c2[it.no]:s.c3[it.no])||0),0));
+    const grandTotal=itemTotals.reduce((a,b)=>a+b,0);
+    const totalVisits=allData.length||1;
+    const avgPct=(grandTotal/(PIVOT_ITEMS.length*totalVisits)*100).toFixed(1)+'%';
+
+    for(let pi=0;pi<pivotSites.length;pi+=PER_PAGE){
+      const page=pivotSites.slice(pi,pi+PER_PAGE);
+      const isLast=pi+PER_PAGE>=pivotSites.length;
+      const ps=pptx.addSlide();
+      pageHdr(ps);
+      let py=0.62;
+      py=secBar(ps,py,'현장명 기준 불량 피벗'+(pivotSites.length>PER_PAGE?` (${pi+1}~${Math.min(pi+PER_PAGE,pivotSites.length)} / ${pivotSites.length}개 현장)`:` (${pivotSites.length}개 현장)`));
+      py+=0.05;
+      py=drawPivotHeader(ps,py);
+      page.forEach(s=>{
+        let cx=MX;
+        const tot=CHECK2_ITEMS.reduce((t,i)=>t+s.c2[i.no],0)+CHECK3_ITEMS.reduce((t,i)=>t+s.c3[i.no],0);
+        cell(ps,cx,py,PNAME_W,PROW_H,s.name+' ('+s.visits+'회)',{fontSize:7.5,bold:true,align:'left'});
+        cx+=PNAME_W;
+        PIVOT_ITEMS.forEach(it=>{
+          const n=(it.ck==='c2'?s.c2[it.no]:s.c3[it.no])||0;
+          cell(ps,cx,py,PITEM_W,PROW_H,n>0?String(n):'✓',{fontSize:8,bold:n>0,color:n>0?C.red:C.green,fill:n>0?'FCEBEB':C.white,align:'center'});
+          cx+=PITEM_W;
+        });
+        cell(ps,cx,py,PTOT_W,PROW_H,String(tot),{fontSize:8.5,bold:true,color:tot>0?C.red:C.muted,fill:'FDF7F7',align:'center'});
+        py+=PROW_H;
+      });
+      if(isLast){
+        let cx=MX;
+        cell(ps,cx,py,PNAME_W,PROW_H,'항목별 불량 합계',{fontSize:7.5,bold:true,color:C.muted,align:'left'});
+        cx+=PNAME_W;
+        itemTotals.forEach(n=>{
+          cell(ps,cx,py,PITEM_W,PROW_H,String(n),{fontSize:8,bold:true,color:n>0?C.red:C.muted,fill:'FDF7F7',align:'center'});
+          cx+=PITEM_W;
+        });
+        cell(ps,cx,py,PTOT_W,PROW_H,String(grandTotal),{fontSize:8.5,bold:true,color:C.red,fill:'FDF7F7',align:'center'});
+        py+=PROW_H;
+        cx=MX;
+        cell(ps,cx,py,PNAME_W,PROW_H,`불량률 (÷${totalVisits}건)`,{fontSize:7,color:C.muted,align:'left'});
+        cx+=PNAME_W;
+        itemTotals.forEach(n=>{
+          const pct=(n/totalVisits*100).toFixed(1)+'%';
+          cell(ps,cx,py,PITEM_W,PROW_H,pct,{fontSize:7.5,color:n>0?C.red:C.muted,align:'center'});
+          cx+=PITEM_W;
+        });
+        cell(ps,cx,py,PTOT_W,PROW_H,avgPct,{fontSize:8,bold:true,color:C.red,align:'center'});
+      }
+    }
 
     await pptx.writeFile({fileName:'캐스케이드_점검통계_'+new Date().toISOString().slice(0,10)+'.pptx'});
   }catch(e){
