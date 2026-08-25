@@ -139,6 +139,12 @@
   .media-grid-item .play-icon { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.3); }
   .media-grid-item .play-icon i { color: #fff; font-size: 28px; }
 
+  .media-del-btn { position: absolute; top: 3px; right: 3px; background: rgba(0,0,0,0.65); color: #fff; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 3; }
+  .media-del-btn:hover { background: var(--red-text); }
+  .media-new-badge { position: absolute; bottom: 3px; left: 3px; background: rgba(26,86,176,0.85); color: #fff; font-size: 9px; padding: 1px 5px; border-radius: 3px; z-index: 2; }
+  .media-grid-item.add-tile { cursor: pointer; border: 2px dashed var(--border); background: #fafafa; color: var(--text-muted); font-size: 26px; }
+  .media-grid-item.add-tile:hover { border-color: var(--blue); color: var(--blue); background: var(--blue-light); }
+
   /* 설치 현황 */
   .install-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px,1fr)); gap: 10px; margin-bottom: 1.25rem; }
   .install-summary .stat-card .value { color: var(--blue); }
@@ -377,6 +383,7 @@
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
   import { getFirestore, collection, getDocs, doc, updateDoc, deleteDoc, orderBy, query, addDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
   import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+  import { getStorage, ref as sRef, uploadBytesResumable, getDownloadURL, deleteObject } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js';
 
   const firebaseConfig = {
     apiKey:            "AIzaSyAcxGPyL-Tg-yB8pAwqqp8tCLOspTJzKIc",
@@ -387,11 +394,12 @@
     appId:             "1:764690233349:web:fc22418ed9c2f101a6c46c"
   };
 
-  const app  = initializeApp(firebaseConfig);
-  const db   = getFirestore(app);
-  const auth = getAuth(app);
+  const app     = initializeApp(firebaseConfig);
+  const db      = getFirestore(app);
+  const auth    = getAuth(app);
+  const storage = getStorage(app);
 
-  window._fb = { db, auth, collection, getDocs, doc, updateDoc, deleteDoc, orderBy, query, addDoc, serverTimestamp, signInWithEmailAndPassword, signOut, onAuthStateChanged };
+  window._fb = { db, auth, storage, sRef, uploadBytesResumable, getDownloadURL, deleteObject, collection, getDocs, doc, updateDoc, deleteDoc, orderBy, query, addDoc, serverTimestamp, signInWithEmailAndPassword, signOut, onAuthStateChanged };
 
   let _dataLoaded = false;
   onAuthStateChanged(auth, user => {
@@ -430,6 +438,9 @@
   let editingId = null;
   let deletingId = null;
   let currentTab = 'responses';
+  let editMedia = [];       // 수정 모달에서 편집 중인 기존(저장된) 미디어 작업용 복사본
+  let editNewMedia = [];    // 이번 세션에서 새로 추가했지만 아직 업로드되지 않은 파일 { file, kind, name, previewUrl }
+  let editRemovedUrls = []; // 이번 세션에서 삭제 표시된 기존 미디어의 URL (저장 시 Storage에서 삭제 시도)
 
   // ─── 탭 전환 ───────────────────────────────────────────────────
   function switchTab(tab) {
@@ -605,6 +616,7 @@
       const thumbs = media.slice(0, 4).map((m, mi) => {
         const idx = allData.indexOf(r);
         if (m.kind === 'video') return `<div class="video-thumb" onclick="event.stopPropagation();openViewer(${idx},${allData.indexOf(r) !== -1 ? media.indexOf(m) : mi})" title="${m.name}"><i class="ti ti-player-play"></i></div>`;
+        if (m.kind === 'audio') return `<div class="video-thumb" onclick="event.stopPropagation();openViewer(${idx},${allData.indexOf(r) !== -1 ? media.indexOf(m) : mi})" title="${m.name}"><i class="ti ti-microphone"></i></div>`;
         return `<img class="thumb" src="${m.url || m.data}" onclick="event.stopPropagation();openViewer(${idx},${media.indexOf(m)})" title="${m.name}">`;
       }).join('');
       const idx = allData.indexOf(r);
@@ -635,10 +647,9 @@
     editingId = r.id;
     document.getElementById('detailTitle').textContent = r.agency + ' · ' + r.name;
     const media = r.media || (r.photos ? r.photos.map(p => ({kind:'photo',name:p.name,data:p.data})) : []);
-    const mediaHtml = media.map((m, mi) => {
-      if (m.kind === 'video') return `<div class="media-grid-item" onclick="openViewer(${idx},${mi})"><video src="${m.url || m.data}"></video><div class="play-icon"><i class="ti ti-player-play"></i></div></div>`;
-      return `<div class="media-grid-item" onclick="openViewer(${idx},${mi})"><img src="${m.url || m.data}" alt="${m.name}"></div>`;
-    }).join('');
+    editMedia = media.map(m => ({ ...m }));
+    editNewMedia = [];
+    editRemovedUrls = [];
 
     const selOpt = (v, cur) => ['좋음','보통','나쁨'].map(o => `<option value="${o}" ${o===cur?'selected':''}>${o}</option>`).join('');
     const ynOpt  = (v, cur) => ['예','아니오'].map(o => `<option value="${o}" ${o===cur?'selected':''}>${o}</option>`).join('');
@@ -656,32 +667,163 @@
       <div class="modal-row"><span class="lbl">팬 소음</span><select id="e-fan">${selOpt('',r.fanNoise)}</select></div>
       <div class="modal-row"><span class="lbl">연소 소음</span><select id="e-comb">${selOpt('',r.combustionNoise)}</select></div>
       <div class="modal-row"><span class="lbl">전반적 의견</span><textarea id="e-comment">${r.overallComment||''}</textarea></div>
-      ${mediaHtml ? `<div class="modal-divider"></div><div style="font-size:13px;font-weight:500;margin-bottom:8px">첨부 미디어 (${media.length}개)</div><div class="media-grid">${mediaHtml}</div>` : ''}
+      <div class="modal-divider"></div>
+      <div style="font-size:13px;font-weight:500;margin-bottom:8px">첨부 미디어 <span style="font-weight:400;color:var(--text-muted);font-size:12px">(사진 · 동영상 · 음성 추가/삭제 가능)</span></div>
+      <div class="media-grid" id="editMediaGrid"></div>
+      <div id="mediaUploadProgress" style="display:none;font-size:12px;color:var(--text-muted);margin-top:8px"></div>
     `;
+    renderEditMediaGrid();
     document.getElementById('detailModal').classList.add('open');
   }
   window.openDetail = openDetail;
 
+  // ─── 수정 모달 내 미디어 추가/삭제 ────────────────────────────
+  function editMediaThumbHtml(kind, src, name) {
+    if (kind === 'photo') return `<img src="${src}" alt="${name||''}">`;
+    const icon = kind === 'audio' ? 'ti-microphone' : 'ti-player-play';
+    return `<div class="play-icon"><i class="ti ${icon}"></i></div>`;
+  }
+
+  function renderEditMediaGrid() {
+    const wrap = document.getElementById('editMediaGrid');
+    if (!wrap) return;
+    const existingHtml = editMedia.map((m, i) => {
+      const src = m.url || m.data;
+      return `<div class="media-grid-item">
+        <div onclick="previewEditMedia(${i})" style="width:100%;height:100%">${editMediaThumbHtml(m.kind, src, m.name)}</div>
+        <button type="button" class="media-del-btn auth-only" onclick="event.stopPropagation();removeExistingMedia(${i})" title="삭제"><i class="ti ti-x"></i></button>
+      </div>`;
+    }).join('');
+    const newHtml = editNewMedia.map((m, i) => {
+      return `<div class="media-grid-item">
+        <div onclick="previewNewMedia(${i})" style="width:100%;height:100%">${editMediaThumbHtml(m.kind, m.previewUrl, m.name)}</div>
+        <span class="media-new-badge">새 파일</span>
+        <button type="button" class="media-del-btn auth-only" onclick="event.stopPropagation();removePendingMedia(${i})" title="취소"><i class="ti ti-x"></i></button>
+      </div>`;
+    }).join('');
+    const addTile = `<label class="media-grid-item add-tile auth-only" title="사진 · 동영상 · 음성 추가">
+      <i class="ti ti-plus"></i>
+      <input type="file" accept="image/*,video/*,audio/*" multiple style="display:none" onchange="handleAddMediaFiles(this.files);this.value=''">
+    </label>`;
+    wrap.innerHTML = existingHtml + newHtml + addTile;
+  }
+  window.renderEditMediaGrid = renderEditMediaGrid;
+
+  function previewEditMedia(i) { showMediaInViewer(editMedia[i]); }
+  window.previewEditMedia = previewEditMedia;
+
+  function previewNewMedia(i) {
+    const m = editNewMedia[i];
+    if (!m) return;
+    showMediaInViewer({ kind: m.kind, name: m.name, url: m.previewUrl });
+  }
+  window.previewNewMedia = previewNewMedia;
+
+  function removeExistingMedia(i) {
+    const m = editMedia[i];
+    if (!m) return;
+    const src = m.url || m.data;
+    if (src) editRemovedUrls.push(src);
+    editMedia.splice(i, 1);
+    renderEditMediaGrid();
+  }
+  window.removeExistingMedia = removeExistingMedia;
+
+  function removePendingMedia(i) {
+    const m = editNewMedia[i];
+    if (m && m.previewUrl) URL.revokeObjectURL(m.previewUrl);
+    editNewMedia.splice(i, 1);
+    renderEditMediaGrid();
+  }
+  window.removePendingMedia = removePendingMedia;
+
+  function handleAddMediaFiles(files) {
+    let photoCount = editMedia.filter(m => m.kind === 'photo').length + editNewMedia.filter(m => m.kind === 'photo').length;
+    let videoCount = editMedia.filter(m => m.kind === 'video').length + editNewMedia.filter(m => m.kind === 'video').length;
+    let audioCount = editMedia.filter(m => m.kind === 'audio').length + editNewMedia.filter(m => m.kind === 'audio').length;
+    Array.from(files).forEach(f => {
+      if (f.type.startsWith('image/')) {
+        if (photoCount >= 10) { alert('사진은 최대 10장까지 첨부 가능합니다.'); return; }
+        if (f.size > 20 * 1024 * 1024) { alert(f.name + ' 사진이 20MB를 초과합니다.'); return; }
+        photoCount++;
+        editNewMedia.push({ file: f, kind: 'photo', name: f.name, previewUrl: URL.createObjectURL(f) });
+      } else if (f.type.startsWith('video/')) {
+        if (videoCount >= 5) { alert('동영상은 최대 5개까지 첨부 가능합니다.'); return; }
+        if (f.size > 200 * 1024 * 1024) { alert(f.name + ' 동영상이 200MB를 초과합니다.'); return; }
+        videoCount++;
+        editNewMedia.push({ file: f, kind: 'video', name: f.name, previewUrl: URL.createObjectURL(f) });
+      } else if (f.type.startsWith('audio/')) {
+        if (audioCount >= 5) { alert('음성 파일은 최대 5개까지 첨부 가능합니다.'); return; }
+        if (f.size > 50 * 1024 * 1024) { alert(f.name + ' 음성 파일이 50MB를 초과합니다.'); return; }
+        audioCount++;
+        editNewMedia.push({ file: f, kind: 'audio', name: f.name, previewUrl: URL.createObjectURL(f) });
+      } else {
+        alert(f.name + '은(는) 지원하지 않는 파일 형식입니다.');
+      }
+    });
+    renderEditMediaGrid();
+  }
+  window.handleAddMediaFiles = handleAddMediaFiles;
+
   async function saveEdit() {
     if (!editingId) return;
-    const { db, doc, updateDoc } = window._fb;
-    const updates = {
-      agency:          document.getElementById('e-agency').value.trim(),
-      name:            document.getElementById('e-name').value.trim(),
-      model:           document.getElementById('e-model').value.trim(),
-      installDate:     document.getElementById('e-date').value,
-      location:        document.getElementById('e-location').value.trim(),
-      preRun:          document.getElementById('e-prerun').value,
-      pumpNoise:       document.getElementById('e-pump').value,
-      fanNoise:        document.getElementById('e-fan').value,
-      combustionNoise: document.getElementById('e-comb').value,
-      overallComment:  document.getElementById('e-comment').value.trim(),
-    };
+    const { db, doc, updateDoc, storage, sRef, uploadBytesResumable, getDownloadURL, deleteObject } = window._fb;
+    const saveBtn = document.querySelector('#detailModal .btn-primary');
+    const progressEl = document.getElementById('mediaUploadProgress');
+    const origBtnHtml = saveBtn ? saveBtn.innerHTML : '';
+    if (saveBtn) saveBtn.disabled = true;
+
     try {
+      // 1. 새로 추가된 미디어를 Storage에 업로드
+      const uploadedNew = [];
+      for (let i = 0; i < editNewMedia.length; i++) {
+        const m = editNewMedia[i];
+        if (progressEl) { progressEl.style.display = 'block'; progressEl.textContent = `미디어 업로드 중... (${i + 1}/${editNewMedia.length}) ${m.name}`; }
+        const ext = m.name.includes('.') ? m.name.split('.').pop() : 'dat';
+        const path = `surveys/${editingId}/${m.kind}_${Date.now()}_${i}.${ext}`;
+        const storageRef = sRef(storage, path);
+        const url = await new Promise((resolve, reject) => {
+          const task = uploadBytesResumable(storageRef, m.file);
+          task.on('state_changed', () => {}, reject, async () => {
+            try { resolve(await getDownloadURL(task.snapshot.ref)); } catch (err) { reject(err); }
+          });
+        });
+        uploadedNew.push({ kind: m.kind, name: m.name, url });
+      }
+      if (progressEl) progressEl.style.display = 'none';
+
+      // 2. 삭제 표시된 기존 미디어를 Storage에서 제거 (실패해도 저장은 계속 진행)
+      for (const url of editRemovedUrls) {
+        try {
+          const match = url.match(/\/o\/([^?#]+)/);
+          if (match) await deleteObject(sRef(storage, decodeURIComponent(match[1])));
+        } catch (e) { /* 이미 삭제됐거나 권한 문제 등은 무시 */ }
+      }
+
+      const updates = {
+        agency:          document.getElementById('e-agency').value.trim(),
+        name:            document.getElementById('e-name').value.trim(),
+        model:           document.getElementById('e-model').value.trim(),
+        installDate:     document.getElementById('e-date').value,
+        location:        document.getElementById('e-location').value.trim(),
+        preRun:          document.getElementById('e-prerun').value,
+        pumpNoise:       document.getElementById('e-pump').value,
+        fanNoise:        document.getElementById('e-fan').value,
+        combustionNoise: document.getElementById('e-comb').value,
+        overallComment:  document.getElementById('e-comment').value.trim(),
+        media:           [...editMedia, ...uploadedNew],
+      };
       await updateDoc(doc(db, 'surveys', editingId), updates);
+      editNewMedia.forEach(m => { if (m.previewUrl) URL.revokeObjectURL(m.previewUrl); });
+      editNewMedia = [];
+      editRemovedUrls = [];
       closeModal('detailModal');
       await loadData();
-    } catch (e) { alert('저장 실패: ' + e.message); }
+    } catch (e) {
+      alert('저장 실패: ' + e.message);
+    } finally {
+      if (saveBtn) { saveBtn.disabled = false; saveBtn.innerHTML = origBtnHtml; }
+    }
   }
   window.saveEdit = saveEdit;
 
@@ -714,11 +856,7 @@
   window.closeModal = closeModal;
 
   // ─── 미디어 뷰어 ─────────────────────────────────────────────
-  function openViewer(rowIdx, mediaIdx) {
-    const r = allData[rowIdx];
-    if (!r) return;
-    const media = r.media || (r.photos ? r.photos.map(p => ({kind:'photo',name:p.name,data:p.data})) : []);
-    const m = media[mediaIdx];
+  function showMediaInViewer(m) {
     if (!m) return;
     const vc = document.getElementById('viewerContent');
     vc.innerHTML = '';
@@ -740,6 +878,22 @@
         const video = vc.querySelector('video');
         if (video) video.play().catch(() => {});
       }
+    } else if (m.kind === 'audio') {
+      const src = m.url || m.data;
+      if (!src) {
+        vc.innerHTML = '<div style="color:#fff;padding:30px;text-align:center;font-size:15px">음성 파일 URL이 없습니다.</div>';
+      } else {
+        vc.innerHTML = `
+          <div style="text-align:center;background:#1a1a1a;padding:40px 34px;border-radius:10px">
+            <i class="ti ti-microphone" style="font-size:44px;color:#93c5fd;display:block;margin-bottom:14px"></i>
+            <audio controls style="width:min(420px,80vw)">
+              <source src="${src}"${m.mime ? ` type="${m.mime}"` : ''}>
+              음성을 재생할 수 없습니다.
+            </audio>
+            <a href="${src}" target="_blank" rel="noopener" style="color:#93c5fd;font-size:13px;margin-top:12px;display:inline-block;text-decoration:none">새 탭에서 열기 ↗</a>
+            <div style="color:#aaa;font-size:12px;margin-top:6px">${m.name || ''}</div>
+          </div>`;
+      }
     } else {
       const data = m.url || m.data;
       if (!data) {
@@ -754,6 +908,14 @@
       }
     }
     document.getElementById('mediaViewer').classList.add('open');
+  }
+  window.showMediaInViewer = showMediaInViewer;
+
+  function openViewer(rowIdx, mediaIdx) {
+    const r = allData[rowIdx];
+    if (!r) return;
+    const media = r.media || (r.photos ? r.photos.map(p => ({kind:'photo',name:p.name,data:p.data})) : []);
+    showMediaInViewer(media[mediaIdx]);
   }
   window.openViewer = openViewer;
 
