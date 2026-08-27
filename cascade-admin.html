@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -138,9 +138,12 @@
   .ck-na  { background: #f1f1f1; color: #555; }
   .ck-empty { background: #f8f8f8; color: #bbb; }
 
-  .check-mini-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
-  .check-mini-table td { padding: 5px 8px; border-bottom: 0.5px solid var(--border); }
+  .check-mini-table { width: 100%; border-collapse: collapse; font-size: 12.5px; table-layout: fixed; }
+  .check-mini-table td { padding: 5px 8px; border-bottom: 0.5px solid var(--border); vertical-align: top; }
   .check-mini-table tr:last-child td { border-bottom: none; }
+  .check-mini-table td:nth-child(2) { width: 46%; }
+  .check-mini-table td:nth-child(3) { width: 64px; text-align: center; }
+  .check-mini-table td:nth-child(4) { white-space: normal; word-break: break-word; }
 
   /* 미디어 그리드 */
   .media-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 8px; margin-top: 8px; }
