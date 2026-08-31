@@ -485,6 +485,9 @@
 
     const agencyBody = document.getElementById('agencyTableBody');
     const sortedAgencies = [...AGENCY_LIST].sort((a, b) => {
+      const pendingA = agencyTotal(a) === 0;
+      const pendingB = agencyTotal(b) === 0;
+      if (pendingA !== pendingB) return pendingA ? -1 : 1; // 출고 보류 대리점을 최상단으로
       const unsetA = agencyTotal(a) - (agencyCount[a] || 0);
       const unsetB = agencyTotal(b) - (agencyCount[b] || 0);
       return unsetB - unsetA;
