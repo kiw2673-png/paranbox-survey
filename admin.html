@@ -284,7 +284,7 @@
         <div class="stat-card">
           <div class="label">전체 출고 대수</div>
           <div class="value" id="instTotal">-</div>
-          <div style="font-size:11px;color:var(--text-muted);margin-top:4px">대리점 25 × 12대</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:4px" id="instTotalNote">대리점 25 × 12대</div>
         </div>
         <div class="stat-card">
           <div class="label">총 설치 완료</div>
@@ -427,6 +427,11 @@
     '여수남부','전주동부','북전주'
   ];
   const TOTAL_PER_AGENCY = 12;
+  // 대리점별 출고 예외 — 아직 출고를 받지 않은 대리점은 0대로 처리 (기본 12대에서 차감)
+  const AGENCY_TOTAL_OVERRIDES = { '성북': 0 };
+  function agencyTotal(agency) {
+    return AGENCY_TOTAL_OVERRIDES.hasOwnProperty(agency) ? AGENCY_TOTAL_OVERRIDES[agency] : TOTAL_PER_AGENCY;
+  }
 
   // 전체 모델 목록
   const MODEL_LIST = [
@@ -455,15 +460,19 @@
 
   // ─── 설치 현황 렌더링 ────────────────────────────────────────
   function renderInstall() {
-    const TOTAL = AGENCY_LIST.length * TOTAL_PER_AGENCY;
+    const TOTAL = AGENCY_LIST.reduce((s, a) => s + agencyTotal(a), 0);
     const done  = allData.length;
     const remain = Math.max(0, TOTAL - done);
     const rate   = TOTAL > 0 ? Math.round(done / TOTAL * 100) : 0;
+    const excluded = AGENCY_LIST.filter(a => agencyTotal(a) === 0);
 
     document.getElementById('instTotal').textContent  = TOTAL.toLocaleString() + '대';
     document.getElementById('instDone').textContent   = done + '대';
     document.getElementById('instRemain').textContent = remain + '대';
     document.getElementById('instRate').textContent   = rate + '%';
+    document.getElementById('instTotalNote').textContent =
+      excluded.length ? `대리점 ${AGENCY_LIST.length} × ${TOTAL_PER_AGENCY}대 (${excluded.join(', ')} 출고 보류 제외)`
+                       : `대리점 ${AGENCY_LIST.length} × ${TOTAL_PER_AGENCY}대`;
 
     // 대리점별 집계
     const agencyCount = {};
@@ -476,16 +485,18 @@
 
     const agencyBody = document.getElementById('agencyTableBody');
     const sortedAgencies = [...AGENCY_LIST].sort((a, b) => {
-      const unsetA = TOTAL_PER_AGENCY - (agencyCount[a] || 0);
-      const unsetB = TOTAL_PER_AGENCY - (agencyCount[b] || 0);
+      const unsetA = agencyTotal(a) - (agencyCount[a] || 0);
+      const unsetB = agencyTotal(b) - (agencyCount[b] || 0);
       return unsetB - unsetA;
     });
     agencyBody.innerHTML = sortedAgencies.map(agency => {
+      const total   = agencyTotal(agency);
       const cnt     = agencyCount[agency] || 0;
-      const unset   = TOTAL_PER_AGENCY - cnt;
-      const pct     = Math.round(cnt / TOTAL_PER_AGENCY * 100);
+      const unset   = total - cnt;
+      const pct     = total > 0 ? Math.round(cnt / total * 100) : 0;
       const barCls  = pct === 100 ? 'full' : pct < 30 ? 'low' : '';
-      const complete = pct === 100 ? '<span class="complete-badge">완료</span>' : '';
+      const complete = total > 0 && pct === 100 ? '<span class="complete-badge">완료</span>'
+                     : total === 0 ? '<span class="complete-badge" style="background:var(--text-muted);color:#fff">출고 보류</span>' : '';
       return `<tr>
         <td><strong>${agency}</strong> ${complete}</td>
         <td class="num blue">${cnt}</td>
