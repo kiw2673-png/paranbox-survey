@@ -420,7 +420,7 @@
 <script>
   // 전체 대리점 목록 (출고 기준 — 총 12대씩)
   const AGENCY_LIST = [
-    '서울도봉','남양주제일','성북','강남','구로','영등포',
+    '서울도봉','남양주제일','서대문구','강남','구로','영등포',
     '부천북부','인천서구남부','시흥북부','안산','수원서부',
     '원주중부','춘천','동대구','포항북구','사하남부','남구중앙',
     '진주제일','동울산','대전서구','천안동부','순천제일',
@@ -428,7 +428,7 @@
   ];
   const TOTAL_PER_AGENCY = 12;
   // 대리점별 출고 예외 — 아직 출고를 받지 않은 대리점은 0대로 처리 (기본 12대에서 차감)
-  const AGENCY_TOTAL_OVERRIDES = { '성북': 0 };
+  const AGENCY_TOTAL_OVERRIDES = {};
   function agencyTotal(agency) {
     return AGENCY_TOTAL_OVERRIDES.hasOwnProperty(agency) ? AGENCY_TOTAL_OVERRIDES[agency] : TOTAL_PER_AGENCY;
   }
