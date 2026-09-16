@@ -267,6 +267,7 @@
           <thead>
             <tr>
               <th style="width:36px;text-align:center"><input type="checkbox" id="selAll" onchange="toggleSelAll(this)" style="cursor:pointer"></th>
+              <th style="width:64px;text-align:center">등록번호</th>
               <th>제출일시</th><th>현장명</th><th>주소</th><th>담당자</th>
               <th>방문일자</th><th>모델/수량</th><th>조사자</th><th>녹취</th><th>미디어</th><th>관리</th>
             </tr>
@@ -638,6 +639,18 @@ function recDateStr(r,basis){
   return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate());
 }
 
+function regNoMap(){
+  const t=r=>{
+    if(!r.submittedAt) return 0;
+    const d=r.submittedAt.toDate?r.submittedAt.toDate():new Date(r.submittedAt);
+    const n=d.getTime();
+    return isNaN(n)?0:n;
+  };
+  const m={};
+  [...allData].sort((a,b)=>t(a)-t(b)||String(a.id).localeCompare(String(b.id))).forEach((r,i)=>m[r.id]=i+1);
+  return m;
+}
+
 function clearDateFilter(){
   document.getElementById('dateFrom').value='';
   document.getElementById('dateTo').value='';
@@ -674,6 +687,7 @@ function renderTable(){
   if(!filtered.length){body.innerHTML='';empty.style.display='block';empty.textContent=allData.length?'검색 결과가 없습니다.':'아직 제출된 데이터가 없습니다.';return;}
   empty.style.display='none';
 
+  const regs=regNoMap();
   body.innerHTML=filtered.map(r=>{
     const media=r.media||{};
     const idx=allData.indexOf(r);
@@ -686,6 +700,7 @@ function renderTable(){
 
     return `<tr>
       <td style="text-align:center"><input type="checkbox" class="row-sel" data-id="${r.id}" ${selectedIds.has(r.id)?'checked':''} onchange="selectedIds[this.checked?'add':'delete'](this.dataset.id);updateSelBadge()" style="cursor:pointer"></td>
+      <td style="text-align:center;font-size:12.5px;font-weight:600;color:var(--text-muted)">${regs[r.id]||'-'}</td>
       <td style="white-space:nowrap;font-size:12px">${fmtDate(r.submittedAt)}</td>
       <td><strong>${r.fieldName||'-'}</strong></td>
       <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.address||''}">${r.address||'-'}</td>
@@ -751,6 +766,7 @@ function openDetail(idx){
   document.getElementById('detailBody').innerHTML=`
     <div class="modal-section">
       <div class="modal-section-title">기본 정보</div>
+      <div class="modal-row"><span class="lbl">등록번호</span><span>${regNoMap()[r.id]||'-'}</span></div>
       <div class="modal-row"><span class="lbl">제출일시</span><span>${fmtDate(r.submittedAt)}</span></div>
       <div class="modal-row"><span class="lbl">현장명</span><span>${r.fieldName||'-'}</span></div>
       <div class="modal-row"><span class="lbl">방문일자</span><span>${r.visitDate||'-'}</span></div>
