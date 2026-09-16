@@ -55,6 +55,12 @@
   .icon-btn:hover { border-color: var(--blue); color: var(--blue); }
   .icon-btn.green { background: var(--green); color: #fff; border-color: var(--green); }
   .icon-btn.green:hover { background: #27500A; }
+  .date-filter { display: flex; align-items: center; gap: 6px; }
+  .date-filter select { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 8px; font-size: 13px; font-family: inherit; background: var(--card); cursor: pointer; outline: none; }
+  .date-filter select:focus { border-color: var(--blue); }
+  .toolbar .date-filter input[type="date"] { flex: 0 0 auto; min-width: 0; width: 140px; padding: 7px 8px; font-size: 13px; }
+  .date-filter .df-clear { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 15px; padding: 4px; line-height: 1; display: none; }
+  .date-filter .df-clear:hover { color: #C00000; }
 
   /* 탭 */
   .tab-bar { display: flex; gap: 4px; margin-bottom: 1.25rem; border-bottom: 1px solid var(--border); }
@@ -241,6 +247,16 @@
 
       <div class="toolbar">
         <input type="text" id="searchInput" placeholder="현장명, 담당자, 조사자 이름으로 검색..." oninput="renderTable()">
+        <div class="date-filter">
+          <select id="dateBasis" onchange="renderTable()" title="날짜 검색 기준 선택">
+            <option value="submit">제출일시 기준</option>
+            <option value="visit">방문일자 기준</option>
+          </select>
+          <input type="date" id="dateFrom" onchange="renderTable()" title="시작일">
+          <span style="color:var(--text-muted);font-size:13px">~</span>
+          <input type="date" id="dateTo" onchange="renderTable()" title="종료일">
+          <button class="df-clear" id="dateClearBtn" onclick="clearDateFilter()" title="날짜 필터 초기화"><i class="ti ti-x"></i></button>
+        </div>
         <button class="icon-btn" onclick="loadData()"><i class="ti ti-refresh" id="refreshIcon"></i> 새로고침</button>
         <button class="icon-btn green" id="pptBtn" onclick="downloadPPT()"><i class="ti ti-presentation"></i> PPT 다운로드 <span id="selBadge" style="display:none;background:rgba(255,255,255,0.35);border-radius:10px;padding:1px 7px;font-size:11px;margin-left:2px"></span></button>
         <button class="icon-btn" style="background:#2e74b5;color:#fff;border-color:#2e74b5" id="wordBtn" onclick="downloadWord()"><i class="ti ti-file-word"></i> Word 다운로드 <span id="wordBadge" style="display:none;background:rgba(255,255,255,0.35);border-radius:10px;padding:1px 7px;font-size:11px;margin-left:2px"></span></button>
@@ -613,9 +629,47 @@ function fmtDate(ts){
   return d.toLocaleDateString('ko-KR')+' '+d.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
 }
 
+function recDateStr(r,basis){
+  if(basis==='visit') return r.visitDate||'';
+  if(!r.submittedAt) return '';
+  const d=r.submittedAt.toDate?r.submittedAt.toDate():new Date(r.submittedAt);
+  if(isNaN(d)) return '';
+  const p=n=>String(n).padStart(2,'0');
+  return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate());
+}
+
+function clearDateFilter(){
+  document.getElementById('dateFrom').value='';
+  document.getElementById('dateTo').value='';
+  renderTable();
+}
+window.clearDateFilter=clearDateFilter;
+
 function renderTable(){
   const q=document.getElementById('searchInput').value.toLowerCase();
-  const filtered=allData.filter(r=>!q||[r.fieldName,r.contactName,r.inspectorName,r.address].some(v=>v&&v.toLowerCase().includes(q)));
+  const basis=document.getElementById('dateBasis').value;
+  const from=document.getElementById('dateFrom').value;
+  const to=document.getElementById('dateTo').value;
+  document.getElementById('dateClearBtn').style.display=(from||to)?'block':'none';
+  const filtered=allData.filter(r=>{
+    if(q&&![r.fieldName,r.contactName,r.inspectorName,r.address].some(v=>v&&v.toLowerCase().includes(q))) return false;
+    if(from||to){
+      const ds=recDateStr(r,basis);
+      if(!ds) return false;
+      if(from&&ds<from) return false;
+      if(to&&ds>to) return false;
+    }
+    return true;
+  });
+  if(basis==='visit'){
+    filtered.sort((a,b)=>{
+      const da=a.visitDate||'', db=b.visitDate||'';
+      if(!da&&!db) return 0;
+      if(!da) return 1;
+      if(!db) return -1;
+      return db.localeCompare(da);
+    });
+  }
   const body=document.getElementById('tableBody'), empty=document.getElementById('emptyMsg');
   if(!filtered.length){body.innerHTML='';empty.style.display='block';empty.textContent=allData.length?'검색 결과가 없습니다.':'아직 제출된 데이터가 없습니다.';return;}
   empty.style.display='none';
