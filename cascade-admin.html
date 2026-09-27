@@ -168,11 +168,16 @@
   /* 뷰어 */
   .media-viewer { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.93); z-index: 2000; align-items: center; justify-content: center; }
   .media-viewer.open { display: flex; }
-  .viewer-close { position: absolute; top: 16px; right: 20px; background: rgba(255,255,255,0.15); border: none; color: #fff; font-size: 20px; cursor: pointer; border-radius: 50%; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; }
+  .viewer-close { position: absolute; top: 16px; right: 20px; background: rgba(255,255,255,0.15); border: none; color: #fff; font-size: 20px; cursor: pointer; border-radius: 50%; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; z-index: 2; }
   #viewerContent img { max-width: 92vw; max-height: 88vh; object-fit: contain; border-radius: 6px; display: block; }
   #viewerContent video { max-width: 92vw; max-height: 80vh; min-width: 320px; min-height: 180px; border-radius: 6px; outline: none; display: block; background: #000; }
   .viewer-codec-err { display:none; color:#fff; font-size:13px; background:rgba(255,100,100,0.25); padding:8px 16px; border-radius:6px; text-align:center; margin-top:8px; }
   .viewer-codec-err a { color:#a8d0ff; text-decoration:underline; cursor:pointer; }
+  .viewer-nav { display: none; position: absolute; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.15); border: none; color: #fff; font-size: 24px; cursor: pointer; border-radius: 50%; width: 44px; height: 44px; align-items: center; justify-content: center; transition: background 0.15s; }
+  .viewer-nav:hover { background: rgba(255,255,255,0.32); }
+  .viewer-prev { left: 14px; }
+  .viewer-next { right: 14px; }
+  .viewer-counter { display: none; position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,0.85); font-size: 12.5px; background: rgba(255,255,255,0.15); padding: 4px 13px; border-radius: 20px; }
 
   @keyframes spin { to { transform: rotate(360deg); } }
   .spinning { animation: spin 1s linear infinite; display: inline-block; }
@@ -376,7 +381,10 @@
 <!-- 미디어 뷰어 -->
 <div class="media-viewer" id="mediaViewer" onclick="if(event.target===this)closeViewer()">
   <button class="viewer-close" onclick="closeViewer()">✕</button>
+  <button class="viewer-nav viewer-prev" id="viewerPrevBtn" onclick="viewerGoPrev()"><i class="ti ti-chevron-left"></i></button>
   <div id="viewerContent"></div>
+  <button class="viewer-nav viewer-next" id="viewerNextBtn" onclick="viewerGoNext()"><i class="ti ti-chevron-right"></i></button>
+  <div class="viewer-counter" id="viewerCounter"></div>
 </div>
 
 <script type="module">
@@ -691,11 +699,12 @@ function renderTable(){
   body.innerHTML=filtered.map(r=>{
     const media=r.media||{};
     const idx=allData.indexOf(r);
-    const allItems=Object.values(media).flat();
+    const allItems=Object.values(media).flat().map(m=>({url:m.url,name:m.name,kind:(m.url&&m.url.match(/\.(mp4|mov|avi|webm)/i))?'video':'photo'}));
+    const listId=registerViewerList(allItems);
     const thumbs=allItems.slice(0,4).map((m,mi)=>
-      (m.url&&m.url.match(/\.(mp4|mov|avi|webm)/i))
-        ?`<div class="video-thumb" onclick="openViewerByUrl('${m.url}','video')" title="${m.name}"><i class="ti ti-player-play"></i></div>`
-        :`<img class="thumb" src="${m.url}" onclick="openViewerByUrl('${m.url}','photo')" title="${m.name}">`
+      m.kind==='video'
+        ?`<div class="video-thumb" onclick="openViewerAt(${listId},${mi})" title="${m.name}"><i class="ti ti-player-play"></i></div>`
+        :`<img class="thumb" src="${m.url}" onclick="openViewerAt(${listId},${mi})" title="${m.name}">`
     ).join('')+(allItems.length>4?`<span style="font-size:11px;color:var(--text-muted)">+${allItems.length-4}</span>`:'');
 
     return `<tr>
@@ -747,14 +756,15 @@ function openDetail(idx){
   const sectionLabels={전경:'5-1 설치 전경',명판:'5-2 제품 명판',내부:'5-3 제품 내부',이상부위:'5-4 이상 부위',설치환경:'5-5 설치 환경',동영상:'5-6 가동 중 동영상'};
   let allMedia=[];
   Object.keys(sectionLabels).forEach(key=>{ (mediaSections[key]||[]).forEach(m=>allMedia.push({...m,section:key})); });
+  const detailListId=registerViewerList(allMedia);
   const mediaHtml=Object.keys(sectionLabels).map(key=>{
     const items=mediaSections[key]||[];
     if(!items.length) return '';
     const grid=items.map((m,mi)=>{
       const globalIdx=allMedia.findIndex(a=>a.url===m.url);
       return m.kind==='video'
-        ?`<div class="media-grid-item" onclick="openViewerByUrl('${m.url}','video')"><video src="${m.url}"></video><div class="play-icon"><i class="ti ti-player-play"></i></div></div>`
-        :`<div class="media-grid-item" onclick="openViewerByUrl('${m.url}','photo')"><img src="${m.url}" alt="${m.name}"></div>`;
+        ?`<div class="media-grid-item" onclick="openViewerAt(${detailListId},${globalIdx})"><video src="${m.url}"></video><div class="play-icon"><i class="ti ti-player-play"></i></div></div>`
+        :`<div class="media-grid-item" onclick="openViewerAt(${detailListId},${globalIdx})"><img src="${m.url}" alt="${m.name}"></div>`;
     }).join('');
     return `<div style="margin-bottom:12px"><div style="font-size:12px;font-weight:600;color:var(--blue);margin-bottom:6px">${sectionLabels[key]} (${items.length})</div><div class="media-grid">${grid}</div></div>`;
   }).join('');
@@ -1187,6 +1197,44 @@ function showBadRecordsDetail(){
 }
 window.showBadRecordsDetail=showBadRecordsDetail;
 
+let _viewerLists=[], viewerList=[], viewerIdx=0;
+function registerViewerList(items){
+  _viewerLists.push(items);
+  return _viewerLists.length-1;
+}
+
+function openViewerAt(listId,idx){
+  const list=_viewerLists[listId];
+  if(!list||!list.length) return;
+  viewerList=list;
+  viewerIdx=((idx%list.length)+list.length)%list.length;
+  renderViewerCurrent();
+}
+window.openViewerAt=openViewerAt;
+
+function renderViewerCurrent(){
+  const m=viewerList[viewerIdx];
+  if(!m) return;
+  openViewerByUrl(m.url,m.kind);
+  const multi=viewerList.length>1;
+  document.getElementById('viewerPrevBtn').style.display=multi?'flex':'none';
+  document.getElementById('viewerNextBtn').style.display=multi?'flex':'none';
+  document.getElementById('viewerCounter').style.display=multi?'block':'none';
+  document.getElementById('viewerCounter').textContent=multi?(viewerIdx+1)+' / '+viewerList.length:'';
+}
+
+function viewerGoPrev(){ if(!viewerList.length) return; viewerIdx=(viewerIdx-1+viewerList.length)%viewerList.length; renderViewerCurrent(); }
+function viewerGoNext(){ if(!viewerList.length) return; viewerIdx=(viewerIdx+1)%viewerList.length; renderViewerCurrent(); }
+window.viewerGoPrev=viewerGoPrev;
+window.viewerGoNext=viewerGoNext;
+
+document.addEventListener('keydown',e=>{
+  if(!document.getElementById('mediaViewer').classList.contains('open')) return;
+  if(e.key==='ArrowLeft') viewerGoPrev();
+  else if(e.key==='ArrowRight') viewerGoNext();
+  else if(e.key==='Escape') closeViewer();
+});
+
 function openViewerByUrl(url,kind){
   // 썸네일 video 요소들을 먼저 정지·해제해 미디어 충돌 방지
   document.querySelectorAll('.media-grid-item video').forEach(v=>{v.pause();v.removeAttribute('src');v.load();});
@@ -1229,6 +1277,7 @@ function closeViewer(){
   vc.querySelectorAll('video').forEach(v=>{v.pause();v.removeAttribute('src');v.load();});
   vc.innerHTML='';
   document.getElementById('mediaViewer').classList.remove('open');
+  viewerList=[]; viewerIdx=0;
 }
 window.closeViewer=closeViewer;
 
