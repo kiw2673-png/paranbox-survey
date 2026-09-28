@@ -1331,10 +1331,11 @@ function sanitizePPTName(s){
   return String(s||'').replace(/[\\/:*?"<>|]/g,'_').replace(/\s+/g,' ').trim();
 }
 function pptFileNameFor(rec){
+  const regNo=regNoMap()[rec.id];
   const site=sanitizePPTName(rec.fieldName)||'현장명미상';
   let date=sanitizePPTName(rec.visitDate);
   if(!date&&rec.submittedAt&&rec.submittedAt.toDate){ try{date=rec.submittedAt.toDate().toISOString().slice(0,10);}catch(e){} }
-  return `${site}_${date||'날짜미상'}.pptx`;
+  return `${regNo||'0'}_${site}_${date||'날짜미상'}.pptx`;
 }
 
 async function runPPTDownload(mode){
