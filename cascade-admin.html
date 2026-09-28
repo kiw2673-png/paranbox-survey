@@ -364,6 +364,21 @@
   </div>
 </div>
 
+<!-- PPT 다운로드 방식 선택 -->
+<div class="modal-bg" id="pptModeModal" onclick="if(event.target===this)closeModal('pptModeModal')">
+  <div class="modal sm">
+    <div class="modal-header"><h2>PPT 다운로드</h2><button class="modal-close" onclick="closeModal('pptModeModal')">✕</button></div>
+    <p style="font-size:13.5px;color:var(--text-muted);line-height:1.7">선택하신 <b id="pptModeCount">0</b>건을 어떤 방식으로 받으시겠습니까?</p>
+    <div style="display:flex;flex-direction:column;gap:8px;margin:12px 0 4px">
+      <button class="icon-btn" style="width:100%;justify-content:center;padding:11px;border-color:var(--blue);color:var(--blue)" onclick="runPPTDownload('combined')"><i class="ti ti-files"></i> 통합 파일로 받기 (1개 파일)</button>
+      <button class="icon-btn green" style="width:100%;justify-content:center;padding:11px" onclick="runPPTDownload('separate')"><i class="ti ti-copy"></i> 개별 파일로 받기 (현장명·방문일자별)</button>
+    </div>
+    <div class="modal-footer">
+      <button class="modal-footer btn-cancel" onclick="closeModal('pptModeModal')">취소</button>
+    </div>
+  </div>
+</div>
+
 <!-- 불량건 상세 목록 모달 -->
 <div class="modal-bg" id="badDetailModal" onclick="if(event.target===this)closeModal('badDetailModal')">
   <div class="modal" style="max-width:800px">
@@ -1302,8 +1317,28 @@ function printDetail(){
 }
 window.printDetail=printDetail;
 
-async function downloadPPT(){
+function downloadPPT(){
   // 선택된 건만 처리
+  const checkedEls=[...document.querySelectorAll('.row-sel:checked')];
+  if(!checkedEls.length){alert('PPT로 내보낼 항목을 먼저 선택해 주세요.');return;}
+  if(checkedEls.length===1){ runPPTDownload('separate'); return; }
+  document.getElementById('pptModeCount').textContent=checkedEls.length;
+  document.getElementById('pptModeModal').classList.add('open');
+}
+window.downloadPPT=downloadPPT;
+
+function sanitizePPTName(s){
+  return String(s||'').replace(/[\\/:*?"<>|]/g,'_').replace(/\s+/g,' ').trim();
+}
+function pptFileNameFor(rec){
+  const site=sanitizePPTName(rec.fieldName)||'현장명미상';
+  let date=sanitizePPTName(rec.visitDate);
+  if(!date&&rec.submittedAt&&rec.submittedAt.toDate){ try{date=rec.submittedAt.toDate().toISOString().slice(0,10);}catch(e){} }
+  return `${site}_${date||'날짜미상'}.pptx`;
+}
+
+async function runPPTDownload(mode){
+  closeModal('pptModeModal');
   const checkedEls=[...document.querySelectorAll('.row-sel:checked')];
   if(!checkedEls.length){alert('PPT로 내보낼 항목을 먼저 선택해 주세요.');return;}
   const checkedIds=new Set(checkedEls.map(c=>c.dataset.id));
@@ -1315,12 +1350,11 @@ async function downloadPPT(){
   btn.innerHTML='<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> 생성 중...';
 
   try{
-    const pptx=new PptxGenJS();
-    pptx.layout='LAYOUT_WIDE';
     const C={navy:'1F3864',lbl:'DCE6F1',white:'FFFFFF',gray:'F2F2F2',
              dark:'222222',green:'3B6D11',red:'C00000',muted:'888888',
              gBg:'EAF3DE',rBg:'FCEBEB',naBg:'F1F1F1',bdr:'C8D4E8'};
     const MX=0.3,CW=12.73;
+    const RECT=(new PptxGenJS()).ShapeType.rect;
 
     function cell(sl,x,y,w,h,text,opts){
       const o=opts||{};
@@ -1330,7 +1364,7 @@ async function downloadPPT(){
     }
     function slideHdr(sl,rec){
       sl.background={color:C.white};
-      sl.addShape(pptx.ShapeType.rect,{x:0,y:0,w:'100%',h:0.5,fill:{color:C.navy}});
+      sl.addShape(RECT,{x:0,y:0,w:'100%',h:0.5,fill:{color:C.navy}});
       sl.addText('캐스케이드 설치 현장 조사 체크리스트',{x:MX,y:0,w:9,h:0.5,color:C.white,fontSize:14,bold:true,valign:'middle'});
       sl.addText(String(rec.fieldName||'-'),{x:9.3,y:0,w:3.73,h:0.5,color:C.white,fontSize:10,align:'right',valign:'middle'});
       sl.addText(String(rec.fieldName||'-'),{x:MX,y:0.54,w:CW,h:0.28,color:C.navy,fontSize:12,bold:true,valign:'middle'});
@@ -1431,7 +1465,7 @@ async function downloadPPT(){
 
     btn.innerHTML='<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> 슬라이드 생성 중...';
 
-    for(const rec of targets){
+    function addRecordSlides(pptx,rec){
       // ── 슬라이드 1: 기본정보 + 점검표 ──
       const s1=pptx.addSlide();
       slideHdr(s1,rec);
@@ -1499,7 +1533,7 @@ async function downloadPPT(){
             const ph=page[i];
             const col=i%GCOLS,row=Math.floor(i/GCOLS);
             const px=MX+col*(CELL_W+GAP),py=GRID_Y+row*(CELL_H+ROW_GAP);
-            ms.addShape(pptx.ShapeType.rect,{x:px,y:py,w:CELL_W,h:IMG_H,fill:{color:'EEEEEE'},line:{color:C.bdr,width:0.5}});
+            ms.addShape(RECT,{x:px,y:py,w:CELL_W,h:IMG_H,fill:{color:'EEEEEE'},line:{color:C.bdr,width:0.5}});
             const b64=pMap.get(ph.url);
             if(b64){ms.addImage({data:b64,x:px,y:py,w:CELL_W,h:IMG_H,sizing:{type:'contain',w:CELL_W,h:IMG_H}});}
             else{ms.addText('이미지 로드 실패',{x:px,y:py,w:CELL_W,h:IMG_H,color:C.muted,fontSize:8,align:'center',valign:'middle'});}
@@ -1528,7 +1562,7 @@ async function downloadPPT(){
             if(vb64){
               vs.addMedia({type:'video',data:vb64,extn:ext,x:px,y:py,w:CELL_W,h:VID_H});
             }else{
-              vs.addShape(pptx.ShapeType.rect,{x:px,y:py,w:CELL_W,h:VID_H,fill:{color:'111111'},line:{color:'333333',width:0.5},...(v.url?{hyperlink:{url:v.url,tooltip:fname}}:{})});
+              vs.addShape(RECT,{x:px,y:py,w:CELL_W,h:VID_H,fill:{color:'111111'},line:{color:'333333',width:0.5},...(v.url?{hyperlink:{url:v.url,tooltip:fname}}:{})});
               vs.addText('▶',{x:px,y:py,w:CELL_W,h:VID_H,color:'ffffff',fontSize:28,align:'center',valign:'middle',...(v.url?{hyperlink:{url:v.url,tooltip:fname}}:{})});
             }
             vs.addText(fname+(!vb64&&v.url?'  (클릭하여 재생)':''),{
@@ -1562,7 +1596,7 @@ async function downloadPPT(){
               as.addMedia({type:'audio',data:ab64,extn:ext,x:ax,y:ay,w:AW,h:AH});
               as.addText((a.name||'음성파일'),{x:ax,y:ay+AH-0.22,w:AW,h:0.2,color:C.muted,fontSize:7.5,align:'center',valign:'middle'});
             }else{
-              as.addShape(pptx.ShapeType.rect,{x:ax,y:ay,w:AW,h:AH,fill:{color:'F0F4FF'},line:{color:C.bdr,width:0.5}});
+              as.addShape(RECT,{x:ax,y:ay,w:AW,h:AH,fill:{color:'F0F4FF'},line:{color:C.bdr,width:0.5}});
               as.addText('🎙',{x:ax,y:ay,w:AW,h:AH*0.6,fontSize:20,align:'center',valign:'bottom'});
               as.addText((a.name||'음성파일')+(a.url?'\n(클릭하여 재생)':''),{
                 x:ax,y:ay+AH*0.55,w:AW,h:AH*0.45,color:C.navy,fontSize:8,
@@ -1576,7 +1610,22 @@ async function downloadPPT(){
       }
     }
 
-    await pptx.writeFile({fileName:'캐스케이드_현장조사_'+new Date().toISOString().slice(0,10)+'.pptx'});
+    if(mode==='combined'){
+      const pptx=new PptxGenJS();
+      pptx.layout='LAYOUT_WIDE';
+      targets.forEach(rec=>addRecordSlides(pptx,rec));
+      await pptx.writeFile({fileName:'캐스케이드_현장조사_'+new Date().toISOString().slice(0,10)+'.pptx'});
+    }else{
+      for(let i=0;i<targets.length;i++){
+        const rec=targets[i];
+        btn.innerHTML=`<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> 개별 PPT 다운로드 중... (${i+1}/${targets.length})`;
+        const pptx=new PptxGenJS();
+        pptx.layout='LAYOUT_WIDE';
+        addRecordSlides(pptx,rec);
+        await pptx.writeFile({fileName:pptFileNameFor(rec)});
+        if(i<targets.length-1) await new Promise(r=>setTimeout(r,350));
+      }
+    }
   }catch(e){
     console.error(e);
     alert('PPT 생성 중 오류가 발생했습니다: '+e.message);
@@ -1585,7 +1634,7 @@ async function downloadPPT(){
     btn.innerHTML=savedHtml;
   }
 }
-window.downloadPPT=downloadPPT;
+window.runPPTDownload=runPPTDownload;
 
 async function downloadWord(){
   const checkedEls=[...document.querySelectorAll('.row-sel:checked')];
