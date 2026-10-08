@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IoT 각방 온도조절기 설치 현황표</title>
+<style>
+:root{
+  --blue:#1a56b0; --blue-dark:#154698; --blue-light:#e6f1fb;
+  --green:#3B6D11; --green-bg:#eaf3de;
+  --amber-bg:#faeeda; --amber-text:#8a5a00;
+  --red-bg:#fcebeb; --red-text:#A32D2D;
+  --border:#e2e2e2; --text:#1a1a1a; --text-muted:#666;
+  --bg:#f5f6f8; --card:#fff; --radius:10px; --radius-sm:6px;
+}
+*{box-sizing:border-box;}
+body{margin:0;font-family:-apple-system,"Malgun Gothic",sans-serif;background:var(--bg);color:var(--text);}
+header{background:linear-gradient(135deg,var(--blue),var(--blue-dark));color:#fff;padding:18px 20px;}
+header h1{font-size:1.1rem;margin:0;}
+header .sub{font-size:.78rem;opacity:.85;margin-top:2px;}
+.wrap{max-width:720px;margin:0 auto;padding:16px;}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:14px;}
+.card h2{font-size:1rem;margin:0 0 12px;color:var(--blue-dark);border-bottom:2px solid var(--blue-light);padding-bottom:8px;}
+.field{margin-bottom:12px;}
+.field label{display:block;font-size:.83rem;color:var(--text-muted);margin-bottom:5px;}
+.field input,.field select,.field textarea{width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:.92rem;font-family:inherit;}
+.field textarea{min-height:70px;resize:vertical;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 12px;}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0 10px;}
+.btn{padding:10px 18px;border-radius:var(--radius-sm);border:1px solid var(--border);background:#fff;cursor:pointer;font-size:.9rem;}
+.btn-blue{background:var(--blue);color:#fff;border-color:var(--blue);width:100%;font-size:1rem;padding:13px;}
+.radio-row{display:flex;gap:14px;flex-wrap:wrap;margin-top:4px;}
+.radio-row label{display:flex;align-items:center;gap:5px;font-size:.88rem;font-weight:normal;color:var(--text);}
+.check-item{border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;margin-bottom:10px;background:#fafbfc;}
+.check-item .num{font-weight:700;margin-bottom:4px;}
+.check-item .sub{font-size:.8rem;color:var(--text-muted);margin:2px 0;}
+.gate-box{max-width:420px;margin:60px auto;}
+.hidden{display:none !important;}
+.msg-err{background:var(--red-bg);color:var(--red-text);padding:12px;border-radius:var(--radius-sm);font-size:.88rem;margin-top:10px;}
+.msg-ok{background:var(--green-bg);color:var(--green);padding:10px;border-radius:var(--radius-sm);font-size:.85rem;margin-bottom:12px;}
+.success-box{text-align:center;padding:40px 20px;}
+.success-box h2{color:var(--green);}
+.save-indicator{font-size:.75rem;color:var(--text-muted);text-align:right;margin-top:-6px;margin-bottom:10px;}
+</style>
+</head>
+<body>
+
+<header><h1>IoT 각방 온도조절기 설치 현황표</h1><div class="sub">컨설턴트(설치자) 필드테스트 체크리스트</div></header>
+
+<div class="wrap">
+  <div id="gateCard" class="card gate-box">
+    <h2>고객 확인</h2>
+    <p style="font-size:.85rem;color:var(--text-muted);">설치대상 명단에 등록된 <b>교체여부 OK</b> 고객만 작성할 수 있습니다. 고객 연락처(또는 설치기사 연락처)를 입력하세요.</p>
+    <div class="field"><label>연락처</label><input type="text" id="gatePhone" placeholder="010-0000-0000"></div>
+    <button class="btn btn-blue" onclick="checkGate()">확인</button>
+    <div id="gateMsg"></div>
+  </div>
+
+  <div id="formArea" class="hidden">
+    <div class="save-indicator" id="saveIndicator"></div>
+
+    <div class="card">
+      <h2>사용자</h2>
+      <div class="field"><label>1) 성명</label><input type="text" id="f_name"></div>
+      <div class="grid2">
+        <div class="field"><label>2) 전화번호</label><input type="text" id="f_phone"></div>
+        <div class="field"><label>14) 설치일자</label><input type="date" id="f_installDate"></div>
+      </div>
+      <div class="field"><label>3) 주소</label><input type="text" id="f_address"></div>
+    </div>
+
+    <div class="card">
+      <h2>건축물</h2>
+      <div class="field"><label>4) 분류</label>
+        <select id="f_buildingType" onchange="document.getElementById('f_buildingTypeEtcWrap').classList.toggle('hidden', this.value!=='기타')">
+          <option value="단독주택">단독주택</option>
+          <option value="아파트">공동주택 - 아파트</option>
+          <option value="연립">공동주택 - 연립</option>
+          <option value="다세대">공동주택 - 다세대</option>
+          <option value="기타">기타</option>
+        </select>
+      </div>
+      <div class="field hidden" id="f_buildingTypeEtcWrap"><label>기타 (직접입력)</label><input type="text" id="f_buildingTypeEtc"></div>
+      <div class="field"><label>5) 규모</label></div>
+      <div class="grid2">
+        <div class="field"><label>건축면적(㎡)</label><input type="text" id="f_area_construction"></div>
+        <div class="field"><label>난방면적(㎡)</label><input type="text" id="f_area_heating"></div>
+      </div>
+      <div class="grid3">
+        <div class="field"><label>평형</label><input type="text" id="f_area_pyeong"></div>
+        <div class="field"><label>세대수</label><input type="text" id="f_area_households"></div>
+        <div class="field"><label>층수</label><input type="text" id="f_area_floors"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>각방 설치내역</h2>
+      <div class="grid2">
+        <div class="field"><label>6) 온도조절기 모델명</label><input type="text" id="f_thermoModel"></div>
+        <div class="field"><label>7) 제조번호(S/N)</label><input type="text" id="f_serialNo"></div>
+      </div>
+      <div class="grid2">
+        <div class="field"><label>8) 밸브제어기 모델명</label><input type="text" id="f_valveCtrlModel"></div>
+        <div class="field"><label>9) 방 Zone 개수 (온도조절기 기준, 대)</label><input type="number" id="f_zoneCount"></div>
+      </div>
+      <div class="grid2">
+        <div class="field"><label>10) 연동 보일러 모델명</label><input type="text" id="f_boilerModel"></div>
+        <div class="field"><label>10) 밸브 구동기 개수</label><input type="number" id="f_actuatorCount"></div>
+      </div>
+      <div class="field"><label>11) 보일러 연동 타입</label>
+        <div class="radio-row">
+          <label><input type="radio" name="f_boilerLinkType" value="통신"> 통신</label>
+          <label><input type="radio" name="f_boilerLinkType" value="접점"> 접점</label>
+        </div>
+      </div>
+      <div class="field"><label>12) 거실 R/C 설치장소</label><input type="text" id="f_rcLocation"></div>
+      <div class="grid2">
+        <div class="field"><label>13) 공유기 설치장소</label><input type="text" id="f_sharedDeviceLocation"></div>
+        <div class="field"><label>IoT온도조절기로부터 거리(M)</label><input type="number" id="f_distanceFromThermo"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>확인사항</h2>
+      <div class="check-item">
+        <div class="num">15) R/C 및 보일러 간 통신연동여부</div>
+        <div class="sub">1) 밸브제어기 전면에 R/C 파란색 LED 점등 확인</div>
+        <div class="sub">2) 밸브제어기 전면에 보일러 파란색 LED 점등 확인</div>
+        <div class="radio-row"><label><input type="radio" name="c15" value="정상">정상</label><label><input type="radio" name="c15" value="이상">이상</label></div>
+      </div>
+      <div class="check-item">
+        <div class="num">16) 온도조절기 간 통신연동여부</div>
+        <div class="sub">1) 각 방별 설정된 방 번호 확인</div>
+        <div class="sub">2) 거실에서 각실 방 번호 확인</div>
+        <div class="radio-row"><label><input type="radio" name="c16" value="정상">정상</label><label><input type="radio" name="c16" value="이상">이상</label></div>
+      </div>
+      <div class="check-item">
+        <div class="num">17) 온도조절기 기능 정상확인여부</div>
+        <div class="sub">1) 온도조절기 LCD 화면 표시 상태 확인</div>
+        <div class="sub">2) 온도조절기 버튼 입력 및 조작 상태 확인</div>
+        <div class="sub">3) 온도조절기 현재/설정 온도 및 운전 모드 변경 동작 확인</div>
+        <div class="radio-row"><label><input type="radio" name="c17" value="정상">정상</label><label><input type="radio" name="c17" value="이상">이상</label></div>
+      </div>
+      <div class="check-item">
+        <div class="num">18) 각방시스템 및 보일러 간 동작여부</div>
+        <div class="sub">1) 각 방별 난방 가동 유/무에 따른 구동기 동작 확인</div>
+        <div class="sub">2) 난방 가동 유/무에 따른 보일러 동작 확인</div>
+        <div class="sub">3) 거실 온도조절기에서 각실 제어 및 확인</div>
+        <div class="radio-row"><label><input type="radio" name="c18" value="정상">정상</label><label><input type="radio" name="c18" value="이상">이상</label></div>
+      </div>
+      <div class="check-item">
+        <div class="num">19) IoT 등록 및 App 연동확인</div>
+        <div class="sub">1) 거실 온도조절기에서 Wi-Fi 등록 여부 확인</div>
+        <div class="sub">2) App에서 각 방별 등록 및 기기 연결 상태 확인</div>
+        <div class="sub">3) APP에서 각 방별 제어 및 동작 확인</div>
+        <div class="radio-row"><label><input type="radio" name="c19" value="정상">정상</label><label><input type="radio" name="c19" value="이상">이상</label></div>
+      </div>
+      <div class="check-item">
+        <div class="num">20) 사용 교육의 실시 여부</div>
+        <div class="radio-row"><label><input type="radio" name="c20" value="실시">실시</label><label><input type="radio" name="c20" value="미실시">미실시</label></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>21) 기타 특기사항</h2>
+      <div class="field"><textarea id="f_etc" placeholder="설치, 확인 특이사항 및 설치 직후 소비자 반응"></textarea></div>
+      <div class="field"><label>작성자(컨설턴트명)</label><input type="text" id="f_consultantName"></div>
+    </div>
+
+    <button class="btn btn-blue" id="submitBtn" onclick="submitForm()">제출하기</button>
+  </div>
+
+  <div id="successArea" class="hidden success-box card">
+    <h2>제출이 완료되었습니다</h2>
+    <p>소중한 설치 확인 정보에 감사드립니다.</p>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, collection, addDoc, getDocs, query, where, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAcxGPyL-Tg-yB8pAwqqp8tCLOspTJzKIc",
+  authDomain: "bluebox-9471f.firebaseapp.com",
+  projectId: "bluebox-9471f",
+  storageBucket: "bluebox-9471f.firebasestorage.app",
+  messagingSenderId: "764690233349",
+  appId: "1:764690233349:web:fc22418ed9c2f101a6c46c"
+};
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+window._fb = { db, collection, addDoc, getDocs, query, where, serverTimestamp };
+window._fbReady = true;
+document.dispatchEvent(new Event('fb-ready'));
+</script>
+
+<script>
+const DRAFT_KEY = 'dcr34wf_check_draft';
+let matchedTarget = null;
+
+function normPhone(p){ return (p||'').replace(/[^0-9]/g,''); }
+
+function waitFb(){ return new Promise(res=>{ if(window._fbReady) return res(); document.addEventListener('fb-ready', ()=>res(), {once:true}); }); }
+
+async function findTargetByPhone(phone){
+  const fb = window._fb;
+  const norm = normPhone(phone);
+  const snap = await fb.getDocs(fb.query(fb.collection(fb.db,'dcr34wf_targets')));
+  const all = snap.docs.map(d=>({id:d.id, ...d.data()}));
+  return all.find(t => normPhone(t.customerPhone)===norm || normPhone(t.phone)===norm) || null;
+}
+
+window.checkGate = async function(){
+  const phone = document.getElementById('gatePhone').value.trim();
+  const msgEl = document.getElementById('gateMsg');
+  msgEl.innerHTML = '';
+  if(!phone){ msgEl.innerHTML = '<div class="msg-err">연락처를 입력해주세요.</div>'; return; }
+  await waitFb();
+  try{
+    const t = await findTargetByPhone(phone);
+    if(!t){
+      msgEl.innerHTML = '<div class="msg-err">등록된 설치대상을 찾을 수 없습니다. 담당자에게 문의해주세요.</div>';
+      return;
+    }
+    if(t.replace !== 'OK'){
+      msgEl.innerHTML = `<div class="msg-err">이 설치대상은 교체여부가 "${t.replace||'미확인'}"입니다. 교체여부 OK로 확인된 대상만 체크리스트를 작성할 수 있습니다.</div>`;
+      return;
+    }
+    matchedTarget = t;
+    document.getElementById('gateCard').classList.add('hidden');
+    document.getElementById('formArea').classList.remove('hidden');
+    document.getElementById('f_phone').value = t.customerPhone || t.phone || phone;
+    document.getElementById('f_address').value = t.address || '';
+    restoreDraft();
+  }catch(e){
+    console.error(e);
+    msgEl.innerHTML = '<div class="msg-err">조회 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.</div>';
+  }
+};
+
+// autosave
+let saveTimer=null;
+function scheduleSave(){
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(()=>{
+    const data = collectForm();
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(data));
+    document.getElementById('saveIndicator').textContent = '저장됨 ' + new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
+  }, 500);
+}
+document.addEventListener('input', (e)=>{ if(document.getElementById('formArea') && !document.getElementById('formArea').classList.contains('hidden')) scheduleSave(); });
+
+function collectForm(){
+  const radio = (name)=>{ const el = document.querySelector(`input[name="${name}"]:checked`); return el ? el.value : ''; };
+  return {
+    name: document.getElementById('f_name').value,
+    phone: document.getElementById('f_phone').value,
+    address: document.getElementById('f_address').value,
+    buildingType: document.getElementById('f_buildingType').value,
+    buildingTypeEtc: document.getElementById('f_buildingTypeEtc').value,
+    area_construction: document.getElementById('f_area_construction').value,
+    area_heating: document.getElementById('f_area_heating').value,
+    area_pyeong: document.getElementById('f_area_pyeong').value,
+    area_households: document.getElementById('f_area_households').value,
+    area_floors: document.getElementById('f_area_floors').value,
+    thermoModel: document.getElementById('f_thermoModel').value,
+    serialNo: document.getElementById('f_serialNo').value,
+    valveCtrlModel: document.getElementById('f_valveCtrlModel').value,
+    zoneCount: document.getElementById('f_zoneCount').value,
+    boilerModel: document.getElementById('f_boilerModel').value,
+    actuatorCount: document.getElementById('f_actuatorCount').value,
+    boilerLinkType: radio('f_boilerLinkType'),
+    rcLocation: document.getElementById('f_rcLocation').value,
+    sharedDeviceLocation: document.getElementById('f_sharedDeviceLocation').value,
+    distanceFromThermo: document.getElementById('f_distanceFromThermo').value,
+    installDate: document.getElementById('f_installDate').value,
+    c15: radio('c15'), c16: radio('c16'), c17: radio('c17'), c18: radio('c18'), c19: radio('c19'), c20: radio('c20'),
+    etc: document.getElementById('f_etc').value,
+    consultantName: document.getElementById('f_consultantName').value
+  };
+}
+
+function restoreDraft(){
+  const raw = localStorage.getItem(DRAFT_KEY);
+  if(!raw) return;
+  try{
+    const d = JSON.parse(raw);
+    const setVal = (id,v)=>{ const el=document.getElementById(id); if(el && v!=null) el.value=v; };
+    setVal('f_name', d.name);
+    if(d.address) setVal('f_address', d.address);
+    setVal('f_buildingType', d.buildingType);
+    setVal('f_buildingTypeEtc', d.buildingTypeEtc);
+    if(d.buildingType==='기타') document.getElementById('f_buildingTypeEtcWrap').classList.remove('hidden');
+    setVal('f_area_construction', d.area_construction); setVal('f_area_heating', d.area_heating);
+    setVal('f_area_pyeong', d.area_pyeong); setVal('f_area_households', d.area_households); setVal('f_area_floors', d.area_floors);
+    setVal('f_thermoModel', d.thermoModel); setVal('f_serialNo', d.serialNo);
+    setVal('f_valveCtrlModel', d.valveCtrlModel); setVal('f_zoneCount', d.zoneCount);
+    setVal('f_boilerModel', d.boilerModel); setVal('f_actuatorCount', d.actuatorCount);
+    setVal('f_rcLocation', d.rcLocation); setVal('f_sharedDeviceLocation', d.sharedDeviceLocation);
+    setVal('f_distanceFromThermo', d.distanceFromThermo); setVal('f_installDate', d.installDate);
+    setVal('f_etc', d.etc); setVal('f_consultantName', d.consultantName);
+    ['f_boilerLinkType'].forEach(name=>{ if(d.boilerLinkType){ const el=document.querySelector(`input[name="${name}"][value="${d.boilerLinkType}"]`); if(el) el.checked=true; } });
+    ['c15','c16','c17','c18','c19','c20'].forEach(k=>{ if(d[k]){ const el=document.querySelector(`input[name="${k}"][value="${d[k]}"]`); if(el) el.checked=true; } });
+  }catch(e){}
+}
+
+window.submitForm = async function(){
+  if(!matchedTarget){ alert('고객 확인이 필요합니다.'); return; }
+  const data = collectForm();
+  if(!data.name){ alert('성명을 입력해주세요.'); return; }
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true; btn.textContent = '제출 중...';
+  await waitFb();
+  const fb = window._fb;
+  try{
+    await fb.addDoc(fb.collection(fb.db,'dcr34wf_checks'), {
+      targetId: matchedTarget.id,
+      customerName: data.name, customerPhone: data.phone, address: data.address,
+      buildingType: data.buildingType, buildingTypeEtc: data.buildingTypeEtc,
+      area: { construction:data.area_construction, heating:data.area_heating, pyeong:data.area_pyeong, households:data.area_households, floors:data.area_floors },
+      thermoModel: data.thermoModel, serialNo: data.serialNo, valveCtrlModel: data.valveCtrlModel, zoneCount: data.zoneCount,
+      boilerModel: data.boilerModel, actuatorCount: data.actuatorCount, boilerLinkType: data.boilerLinkType,
+      rcLocation: data.rcLocation, sharedDeviceLocation: data.sharedDeviceLocation, distanceFromThermo: data.distanceFromThermo,
+      installDate: data.installDate,
+      checks: { c15:data.c15, c16:data.c16, c17:data.c17, c18:data.c18, c19:data.c19, c20:data.c20 },
+      etc: data.etc, consultantName: data.consultantName,
+      submittedAt: fb.serverTimestamp()
+    });
+    localStorage.removeItem(DRAFT_KEY);
+    document.getElementById('formArea').classList.add('hidden');
+    document.getElementById('successArea').classList.remove('hidden');
+  }catch(e){
+    console.error(e);
+    alert('제출 중 오류가 발생했습니다: '+e.message);
+    btn.disabled=false; btn.textContent='제출하기';
+  }
+};
+
+// prefill phone from ?phone= query param
+(function(){
+  const p = new URLSearchParams(location.search).get('phone');
+  if(p) document.addEventListener('DOMContentLoaded', ()=>{ document.getElementById('gatePhone').value = decodeURIComponent(p); });
+})();
+</script>
+</body>
+</html>
