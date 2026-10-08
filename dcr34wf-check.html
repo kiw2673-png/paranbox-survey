@@ -45,7 +45,13 @@ header .sub{font-size:.78rem;opacity:.85;margin-top:2px;}
 </head>
 <body>
 
-<header><h1>IoT 각방 온도조절기(DCR-34/WF) 설치 현황표</h1><div class="sub">컨설턴트(설치자) 필드테스트 체크리스트</div></header>
+<header style="display:flex;align-items:center;gap:14px;">
+  <img src="Daesung_Celtic_Enersys_CI.jpg" alt="대성쎌틱에너시스" style="height:44px;width:auto;">
+  <div>
+    <h1>IoT 각방 온도조절기(DCR-34/WF) 설치 현황표</h1>
+    <div class="sub">컨설턴트(설치자) 필드테스트 체크리스트</div>
+  </div>
+</header>
 
 <div class="wrap">
   <div id="gateCard" class="card gate-box">
@@ -69,7 +75,7 @@ header .sub{font-size:.78rem;opacity:.85;margin-top:2px;}
     <div class="card">
       <h2>건축물</h2>
       <div class="field"><label>4) 분류</label>
-        <select id="f_buildingType" onchange="document.getElementById('f_buildingTypeEtcWrap').classList.toggle('hidden', this.value!=='기타')">
+        <select id="f_buildingType" onchange="document.getElementById('f_buildingTypeEtcWrap').classList.toggle('hidden', this.value!=='기타'); document.getElementById('f_buildingTypeEtc').required = (this.value==='기타');">
           <option value="단독주택">단독주택</option>
           <option value="아파트">공동주택 - 아파트</option>
           <option value="연립">공동주택 - 연립</option>
@@ -197,6 +203,20 @@ document.dispatchEvent(new Event('fb-ready'));
 const DRAFT_KEY = 'dcr34wf_check_draft';
 let matchedTarget = null;
 
+// make every field required (조건부 입력인 '분류 기타'는 선택 시에만 필수)
+document.querySelectorAll('#formArea input, #formArea select, #formArea textarea').forEach(el=>{
+  if(el.id!=='f_buildingTypeEtc') el.required = true;
+});
+// validate all visible required controls; show native message on first invalid one
+function validateRequired(scope){
+  const els = document.querySelectorAll(scope+' input, '+scope+' select, '+scope+' textarea');
+  for(const el of els){
+    if(!el.willValidate) continue;
+    if(!el.checkValidity()){ el.reportValidity(); return false; }
+  }
+  return true;
+}
+
 function normPhone(p){ return (p||'').replace(/[^0-9]/g,''); }
 
 function waitFb(){ return new Promise(res=>{ if(window._fbReady) return res(); document.addEventListener('fb-ready', ()=>res(), {once:true}); }); }
@@ -305,6 +325,7 @@ function restoreDraft(){
 
 window.submitForm = async function(){
   if(!matchedTarget){ alert('고객 확인이 필요합니다.'); return; }
+  if(!validateRequired('#formArea')){ return; }
   const data = collectForm();
   if(!data.name){ alert('성명을 입력해주세요.'); return; }
   const btn = document.getElementById('submitBtn');

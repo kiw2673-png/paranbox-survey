@@ -84,9 +84,12 @@ th{background:#f8f9fb;color:var(--text-muted);font-weight:600;position:sticky;to
 
 <div id="app" class="hidden">
 <header>
-  <div>
-    <h1>각방IoT 온도조절기(DCR-34WF) 필드테스트 관리자</h1>
-    <div class="sub" id="loginWho"></div>
+  <div style="display:flex;align-items:center;gap:14px;">
+    <img src="Daesung_Celtic_Enersys_CI.jpg" alt="대성쎌틱에너시스" style="height:44px;width:auto;">
+    <div>
+      <h1>각방IoT 온도조절기(DCR-34WF) 필드테스트 관리자</h1>
+      <div class="sub" id="loginWho"></div>
+    </div>
   </div>
   <div class="header-links">
     <a href="dcr34wf-check.html" target="_blank" rel="noopener">체크리스트 열기</a>
@@ -152,7 +155,7 @@ th{background:#f8f9fb;color:var(--text-muted);font-weight:600;position:sticky;to
     <div class="section-title">응답 목록</div>
     <div class="tbl-wrap">
       <table>
-        <thead><tr><th>제출일시</th><th>차수</th><th>고객명</th><th>연락처</th><th>종합만족도(4-1)</th><th>상세</th></tr></thead>
+        <thead><tr><th>제출일시</th><th>차수</th><th>고객명</th><th>연락처</th><th>종합만족도(4-1)</th><th>관리</th></tr></thead>
         <tbody id="satTbody"></tbody>
       </table>
     </div>
@@ -315,6 +318,19 @@ th{background:#f8f9fb;color:var(--text-muted);font-weight:600;position:sticky;to
     <div class="modal-actions">
       <button class="btn" onclick="closeCheckEdit()">취소</button>
       <button class="btn btn-blue" onclick="saveCheckEdit()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- satisfaction edit modal -->
+<div class="modal-bg hidden" id="satEditModalBg">
+  <div class="modal lg">
+    <h3>고객만족도 수정</h3>
+    <input type="hidden" id="se_id">
+    <div id="se_body"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeSatEdit()">취소</button>
+      <button class="btn btn-blue" onclick="saveSatEdit()">저장</button>
     </div>
   </div>
 </div>
@@ -520,6 +536,8 @@ window.confirmDelete = async function(){
       await fb.deleteDoc(fb.doc(fb.db,'dcr34wf_targets',deleteCtx.id));
     }else if(deleteCtx.type==='check'){
       await fb.deleteDoc(fb.doc(fb.db,'dcr34wf_checks',deleteCtx.id));
+    }else if(deleteCtx.type==='sat'){
+      await fb.deleteDoc(fb.doc(fb.db,'dcr34wf_satisfaction',deleteCtx.id));
     }
     closeDeleteModal();
     await loadAll();
@@ -685,6 +703,41 @@ const SAT_SCALE_QUESTIONS = [
   ['q3_1','3-1 원격제어 원활함'], ['q3_2','3-2 본체/앱 표시 일치도'],
   ['q4_1','4-1 종합 만족도']
 ];
+// option sets (mirror of dcr34wf-satisfaction.html) for editing responses
+const SAT_OPTS = {
+  SCALE5: ['매우 그렇다','대체로 그렇다','보통','그렇지 않다','전혀 그렇지 않다'],
+  SCALE5_SAT: ['매우 만족','대체로 만족','보통','다소 불편','매우 불편'],
+  SCALE5_MATCH: ['항상 일치','대체로 일치','보통','가끔 불일치','자주 불일치'],
+  FREQ5: ['① 전혀 없음','② 간혹 있었음','③ 보통','④ 자주 있었음','⑤ 항상 있음'],
+  FREQ3: ['전혀 없음','간혹 발생 (월 1~2회)','자주 발생 (주 1회 이상)'],
+  ERR_STEPS: [
+    '앱에서 거실 온도조절기 기기 연결 실패(Bluetooth 연결).',
+    '앱에서 무선공유기(Wi-Fi) 선택 창에 연결할 공유기가 표시되지 않음.',
+    '공유기 비밀번호 입력 후 공유기와 조절기 간 무선 연결 실패.',
+    '등록 완료 직후 앱 메인화면에서 기기가 오프라인(연결 끊김)으로 전환됨.'
+  ],
+  USE_3_3: ['① 사용해 본 적 있다.','② 사용해 본 적 없다.'],
+  MEMBERS_3_4: ['① 2명 이상','② 1명 (본인 단독 사용)'],
+  ACT_3_4_2: ['항상 정상 작동','일부 지연 발생','작동 안됨']
+};
+const SAT_EDIT_FIELDS = [
+  {k:'q1_1', label:'1-1 기기연결/Wi-Fi등록 편의성', opts:'SCALE5'},
+  {k:'q1_2', label:'1-2 매뉴얼 이해도', opts:'SCALE5'},
+  {k:'q1_3', label:'1-3 연결 실패/오류 발생 빈도', opts:'FREQ5'},
+  {k:'q1_3_1', label:'1-3-1 오류 발생 단계 (복수선택)', opts:'ERR_STEPS', multi:true},
+  {k:'q2_1', label:'2-1 거실 조절기 화면 편의성', opts:'SCALE5'},
+  {k:'q2_2', label:'2-2 앱 화면구성 편의성', opts:'SCALE5'},
+  {k:'q2_3', label:'2-3 방 명칭 설정 편의성', opts:'SCALE5'},
+  {k:'q2_4', label:'2-4 연결 실패/에러 발생 빈도', opts:'FREQ3'},
+  {k:'q3_1', label:'3-1 원격제어 원활함', opts:'SCALE5'},
+  {k:'q3_2', label:'3-2 본체/앱 표시 일치도', opts:'SCALE5_MATCH'},
+  {k:'q3_3', label:'3-3 외출/귀가 모드 사용 경험', opts:'USE_3_3'},
+  {k:'q3_3_1', label:'3-3-1 외출/귀가 모드 만족도', opts:'SCALE5'},
+  {k:'q3_4', label:'3-4 함께 사용하는 세대원 수', opts:'MEMBERS_3_4'},
+  {k:'q3_4_1', label:'3-4-1 세대원 초대/기기공유 편의성', opts:'SCALE5'},
+  {k:'q3_4_2', label:'3-4-2 세대원 동시 사용 작동여부', opts:'ACT_3_4_2'},
+  {k:'q4_1', label:'4-1 종합 만족도', opts:'SCALE5_SAT'}
+];
 function renderSat(){
   const q=(document.getElementById('satSearch').value||'').toLowerCase();
   const rf = document.getElementById('satFilterRound').value;
@@ -703,7 +756,11 @@ function renderSat(){
         <td>${dt}</td><td>${s.round==='1week'?'1주차':s.round==='1month'?'1달차':'-'}</td>
         <td>${esc(s.customerName)}</td><td>${esc(s.customerPhone)}</td>
         <td>${esc(s.answers?.q4_1||'-')}</td>
-        <td><button class="btn btn-sm" onclick="openSatDetail('${s.id}')">보기</button></td>
+        <td>
+          <button class="btn btn-sm" onclick="openSatDetail('${s.id}')">보기</button>
+          <button class="btn btn-sm" onclick="openSatEdit('${s.id}')">수정</button>
+          <button class="btn btn-sm btn-danger" onclick="openDeleteModal('${s.id}','sat')">삭제</button>
+        </td>
       </tr>`;
     }).join('');
   }
@@ -741,6 +798,67 @@ window.openSatDetail = function(id){
   html += `<div class="section-title">4-2 건의사항</div><div style="white-space:pre-wrap;font-size:.85rem;">${esc(a.q4_2||'-')}</div>`;
   document.getElementById('detailBody').innerHTML = html;
   document.getElementById('detailModalBg').classList.remove('hidden');
+};
+
+window.openSatEdit = function(id){
+  const s = sats.find(x=>x.id===id); if(!s) return;
+  const a = s.answers||{};
+  document.getElementById('se_id').value = s.id;
+  let html = `<div class="grid2">
+    <div class="field"><label>차수</label><select id="se_round">
+      <option value="1week"${s.round==='1week'?' selected':''}>1주차</option>
+      <option value="1month"${s.round==='1month'?' selected':''}>1달차</option>
+    </select></div>
+    <div class="field"><label>고객 성명</label><input type="text" id="se_customerName" value="${esc(a.customerName||s.customerName||'')}"></div>
+  </div>
+  <div class="field"><label>전화번호</label><input type="text" id="se_customerPhone" value="${esc(a.customerPhone||s.customerPhone||'')}"></div>`;
+  SAT_EDIT_FIELDS.forEach(f=>{
+    const opts = SAT_OPTS[f.opts]||[];
+    if(f.multi){
+      const vals = Array.isArray(a[f.k])?a[f.k]:[];
+      const etcVal = (vals.find(v=>String(v).startsWith('기타:'))||'').replace(/^기타:\s*/,'');
+      html += `<div class="field"><label>${esc(f.label)}</label><div>`+
+        opts.map(o=>`<label style="display:block;font-size:.85rem;font-weight:normal;color:var(--text);margin:2px 0;"><input type="checkbox" class="se_${f.k}" value="${esc(o)}"${vals.includes(o)?' checked':''}> ${esc(o)}</label>`).join('')+
+        `</div><input type="text" id="se_${f.k}_etc" placeholder="기타 원인 (직접 작성)" value="${esc(etcVal)}" style="margin-top:4px;"></div>`;
+    }else{
+      html += `<div class="field"><label>${esc(f.label)}</label><select id="se_${f.k}"><option value="">-</option>`+
+        opts.map(o=>`<option value="${esc(o)}"${o===a[f.k]?' selected':''}>${esc(o)}</option>`).join('')+`</select></div>`;
+    }
+  });
+  html += `<div class="field"><label>4-2 건의사항</label><textarea id="se_q4_2">${esc(a.q4_2||'')}</textarea></div>`;
+  document.getElementById('se_body').innerHTML = html;
+  document.getElementById('satEditModalBg').classList.remove('hidden');
+};
+window.closeSatEdit = function(){ document.getElementById('satEditModalBg').classList.add('hidden'); };
+window.saveSatEdit = async function(){
+  const fb = window._fb;
+  const id = document.getElementById('se_id').value;
+  const g=(k)=>{ const el=document.getElementById(k); return el ? el.value.trim() : ''; };
+  const customerName = g('se_customerName'), customerPhone = g('se_customerPhone');
+  const answers = { customerName, customerPhone };
+  SAT_EDIT_FIELDS.forEach(f=>{
+    if(f.multi){
+      const vals = Array.from(document.querySelectorAll('.se_'+f.k)).filter(e=>e.checked).map(e=>e.value);
+      const etc = g('se_'+f.k+'_etc');
+      if(etc) vals.push('기타: '+etc);
+      answers[f.k] = vals;
+    }else{
+      answers[f.k] = g('se_'+f.k);
+    }
+  });
+  const q4_2El = document.getElementById('se_q4_2');
+  answers.q4_2 = q4_2El ? q4_2El.value : '';
+  const payload = {
+    round: document.getElementById('se_round').value,
+    customerName, customerPhone,
+    answers,
+    updatedAt: fb.serverTimestamp()
+  };
+  try{
+    await fb.updateDoc(fb.doc(fb.db,'dcr34wf_satisfaction',id), payload);
+    closeSatEdit();
+    await loadAll();
+  }catch(e){ console.error(e); alert('저장 실패: '+e.message); }
 };
 
 window.closeDetailModal = function(){ document.getElementById('detailModalBg').classList.add('hidden'); };
