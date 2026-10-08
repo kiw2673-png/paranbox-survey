@@ -1,0 +1,610 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DCR-34WF 필드테스트 관리자</title>
+<style>
+:root{
+  --blue:#1a56b0; --blue-dark:#154698; --blue-light:#e6f1fb;
+  --green:#3B6D11; --green-bg:#eaf3de; --green-border:#639922;
+  --amber-bg:#faeeda; --amber-text:#8a5a00;
+  --red-bg:#fcebeb; --red-text:#A32D2D;
+  --gray-bg:#eef0f2; --gray-text:#555;
+  --border:#e2e2e2; --text:#1a1a1a; --text-muted:#666;
+  --bg:#f5f6f8; --card:#fff; --radius:10px; --radius-sm:6px;
+}
+*{box-sizing:border-box;}
+body{margin:0;font-family:-apple-system,"Malgun Gothic",sans-serif;background:var(--bg);color:var(--text);}
+header{background:linear-gradient(135deg,var(--blue),var(--blue-dark));color:#fff;padding:18px 20px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;}
+header h1{font-size:1.2rem;margin:0;}
+header .sub{font-size:.78rem;opacity:.85;margin-top:2px;}
+#logoutBtn{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.4);color:#fff;padding:6px 14px;border-radius:var(--radius-sm);cursor:pointer;font-size:.85rem;}
+.wrap{max-width:1280px;margin:0 auto;padding:16px;}
+.tab-bar{display:flex;border-bottom:2px solid var(--border);background:var(--card);border-radius:var(--radius) var(--radius) 0 0;overflow:hidden;}
+.tab-btn{flex:none;padding:12px 20px;border:none;background:none;cursor:pointer;font-size:.92rem;color:var(--text-muted);border-bottom:3px solid transparent;}
+.tab-btn.active{color:var(--blue);border-bottom-color:var(--blue);font-weight:600;}
+.panel{background:var(--card);border:1px solid var(--border);border-top:none;border-radius:0 0 var(--radius) var(--radius);padding:16px;}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center;}
+.toolbar input[type=text],.toolbar select{padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:.88rem;}
+.toolbar input[type=text]{flex:1;min-width:160px;}
+.btn{padding:8px 14px;border-radius:var(--radius-sm);border:1px solid var(--border);background:#fff;cursor:pointer;font-size:.85rem;}
+.btn-blue{background:var(--blue);color:#fff;border-color:var(--blue);}
+.btn-green{background:var(--green);color:#fff;border-color:var(--green);}
+.btn-sm{padding:4px 10px;font-size:.78rem;}
+.btn-danger{background:var(--red-bg);color:var(--red-text);border-color:#f0c0c0;}
+table{width:100%;border-collapse:collapse;font-size:.82rem;}
+th,td{padding:7px 8px;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap;}
+th{background:#f8f9fb;color:var(--text-muted);font-weight:600;position:sticky;top:0;}
+.tbl-wrap{overflow-x:auto;max-height:65vh;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius-sm);}
+.badge{display:inline-block;padding:2px 9px;border-radius:999px;font-size:.74rem;font-weight:600;}
+.badge-ok{background:var(--green-bg);color:var(--green);}
+.badge-no{background:var(--gray-bg);color:var(--gray-text);}
+.badge-absent{background:var(--amber-bg);color:var(--amber-text);}
+.badge-blue{background:var(--blue-light);color:var(--blue);}
+.badge-none{background:var(--gray-bg);color:#999;}
+.empty{text-align:center;padding:3rem;color:var(--text-muted);}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:50;padding:16px;}
+.modal{background:#fff;border-radius:var(--radius);padding:20px;width:100%;max-width:560px;max-height:88vh;overflow-y:auto;}
+.modal.lg{max-width:800px;}
+.modal.sm{max-width:380px;}
+.modal h3{margin-top:0;}
+.field{margin-bottom:10px;}
+.field label{display:block;font-size:.8rem;color:var(--text-muted);margin-bottom:4px;}
+.field input,.field select,.field textarea{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:.88rem;font-family:inherit;}
+.field textarea{resize:vertical;min-height:60px;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 12px;}
+.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;}
+.hidden{display:none !important;}
+.copy-link{color:var(--blue);cursor:pointer;text-decoration:underline;font-size:.78rem;}
+.detail-grid{display:grid;grid-template-columns:140px 1fr;gap:6px 10px;font-size:.85rem;}
+.detail-grid .k{color:var(--text-muted);}
+.section-title{font-weight:700;margin:14px 0 6px;color:var(--blue-dark);border-bottom:1px solid var(--border);padding-bottom:4px;}
+.stat-table td,.stat-table th{text-align:center;}
+.stat-table td:first-child,.stat-table th:first-child{text-align:left;}
+#loginGate{max-width:360px;margin:80px auto;background:#fff;padding:28px;border-radius:var(--radius);border:1px solid var(--border);}
+#loginGate h2{margin-top:0;font-size:1.1rem;}
+#loginErr{color:var(--red-text);font-size:.82rem;margin-top:6px;min-height:1.2em;}
+.err-text{color:var(--red-text);font-size:.8rem;margin-top:4px;}
+</style>
+</head>
+<body>
+
+<div id="loginGate">
+  <h2>DCR-34WF 필드테스트 관리자 로그인</h2>
+  <div class="field"><label>이메일</label><input type="email" id="loginEmail"></div>
+  <div class="field"><label>비밀번호</label><input type="password" id="loginPw"></div>
+  <button class="btn btn-blue" style="width:100%" onclick="doLogin()">로그인</button>
+  <div id="loginErr"></div>
+</div>
+
+<div id="app" class="hidden">
+<header>
+  <div>
+    <h1>각방IoT 온도조절기(DCR-34WF) 필드테스트 관리자</h1>
+    <div class="sub" id="loginWho"></div>
+  </div>
+  <button id="logoutBtn" onclick="doLogout()">로그아웃</button>
+</header>
+<div class="wrap">
+  <div class="tab-bar">
+    <button class="tab-btn active" id="tabBtnList" onclick="switchTab('list')">설치대상 명단</button>
+    <button class="tab-btn" id="tabBtnCheck" onclick="switchTab('check')">컨설턴트 체크리스트</button>
+    <button class="tab-btn" id="tabBtnSat" onclick="switchTab('sat')">고객만족도</button>
+  </div>
+
+  <div class="panel" id="listPanel">
+    <div class="toolbar">
+      <input type="text" id="listSearch" placeholder="대리점/주소/연락처 검색" oninput="renderTargets()">
+      <select id="listFilterReplace" onchange="renderTargets()">
+        <option value="">전체 교체여부</option>
+        <option value="OK">OK</option>
+        <option value="NO">NO</option>
+        <option value="부재">부재</option>
+        <option value="">(빈값)</option>
+      </select>
+      <button class="btn" onclick="openImportModal()">일괄 가져오기</button>
+      <button class="btn btn-blue" onclick="openTargetModal()">+ 추가</button>
+    </div>
+    <div id="listSummary" class="sub" style="margin-bottom:8px;color:var(--text-muted);font-size:.8rem;"></div>
+    <div class="tbl-wrap">
+      <table id="listTable">
+        <thead><tr>
+          <th>순번</th><th>대리점명</th><th>주소</th><th>연락처</th><th>교체여부</th>
+          <th>고객연락처</th><th>희망일자</th><th>담당자</th><th>설치일</th>
+          <th>체크리스트</th><th>1주만족</th><th>1달만족</th><th>링크</th><th>관리</th>
+        </tr></thead>
+        <tbody id="listTbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="panel hidden" id="checkPanel">
+    <div class="toolbar">
+      <input type="text" id="checkSearch" placeholder="고객명/연락처/주소 검색" oninput="renderChecks()">
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>제출일시</th><th>고객명</th><th>연락처</th><th>주소</th><th>조절기모델명</th><th>이상여부</th><th>교육실시</th><th>상세</th></tr></thead>
+        <tbody id="checkTbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="panel hidden" id="satPanel">
+    <div class="toolbar">
+      <input type="text" id="satSearch" placeholder="고객명/연락처 검색" oninput="renderSat()">
+      <select id="satFilterRound" onchange="renderSat()">
+        <option value="">전체 차수</option>
+        <option value="1week">1주차</option>
+        <option value="1month">1달차</option>
+      </select>
+    </div>
+    <div class="section-title">응답 목록</div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>제출일시</th><th>차수</th><th>고객명</th><th>연락처</th><th>종합만족도(4-1)</th><th>상세</th></tr></thead>
+        <tbody id="satTbody"></tbody>
+      </table>
+    </div>
+    <div class="section-title">문항별 평균 요약 (5점 척도, 1=부정~5=긍정 환산)</div>
+    <div class="tbl-wrap">
+      <table class="stat-table">
+        <thead><tr><th>문항</th><th>1주차 평균</th><th>1주차 응답수</th><th>1달차 평균</th><th>1달차 응답수</th></tr></thead>
+        <tbody id="satStatTbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- target add/edit modal -->
+<div class="modal-bg hidden" id="targetModalBg">
+  <div class="modal">
+    <h3 id="targetModalTitle">설치대상 추가</h3>
+    <input type="hidden" id="targetId">
+    <div class="grid2">
+      <div class="field"><label>순번</label><input type="text" id="f_no"></div>
+      <div class="field"><label>대리점명</label><input type="text" id="f_agency"></div>
+    </div>
+    <div class="field"><label>주소(주소+세대)</label><input type="text" id="f_address"></div>
+    <div class="grid2">
+      <div class="field"><label>연락처</label><input type="text" id="f_phone"></div>
+      <div class="field"><label>고객연락처</label><input type="text" id="f_customerPhone"></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label>교체여부</label>
+        <select id="f_replace"><option value="">선택안함</option><option value="OK">OK</option><option value="NO">NO</option><option value="부재">부재</option></select>
+      </div>
+      <div class="field"><label>희망일자</label><input type="text" id="f_preferDate"></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label>담당자</label><input type="text" id="f_manager"></div>
+      <div class="field"><label>설치일</label><input type="text" id="f_installDate" placeholder="YYYY-MM-DD"></div>
+    </div>
+    <div class="field"><label>컨설턴트 주소</label><input type="text" id="f_consultantAddr"></div>
+    <div class="field"><label>작업내용</label><textarea id="f_workDesc"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeTargetModal()">취소</button>
+      <button class="btn btn-blue" onclick="saveTarget()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- bulk import modal -->
+<div class="modal-bg hidden" id="importModalBg">
+  <div class="modal lg">
+    <h3>일괄 가져오기</h3>
+    <p style="font-size:.82rem;color:var(--text-muted);">구글시트에서 <b>순번, 대리점명, 주소, 연락처, 교체여부, 고객연락처, 희망일자, 담당자, 컨설턴트 주소, 작업내용, 설치일</b> 순서의 범위를 복사해(헤더행 제외) 아래에 붙여넣으세요. 탭(Tab)으로 구분된 형식이면 됩니다.</p>
+    <textarea id="importText" style="width:100%;min-height:200px;font-family:monospace;font-size:.8rem;"></textarea>
+    <div id="importPreview" style="margin-top:10px;font-size:.8rem;color:var(--text-muted);"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeImportModal()">취소</button>
+      <button class="btn" onclick="previewImport()">미리보기</button>
+      <button class="btn btn-green" id="importConfirmBtn" onclick="confirmImport()" disabled>가져오기 실행</button>
+    </div>
+  </div>
+</div>
+
+<!-- delete confirm modal -->
+<div class="modal-bg hidden" id="deleteModalBg">
+  <div class="modal sm">
+    <h3>삭제 확인</h3>
+    <p style="font-size:.85rem;">삭제 시 복구할 수 없습니다. 비밀번호를 입력하세요.</p>
+    <input type="password" id="deletePw" placeholder="비밀번호">
+    <div class="err-text" id="deletePwErr"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeDeleteModal()">취소</button>
+      <button class="btn btn-danger" onclick="confirmDelete()">삭제</button>
+    </div>
+  </div>
+</div>
+
+<!-- generic detail modal -->
+<div class="modal-bg hidden" id="detailModalBg">
+  <div class="modal lg">
+    <h3 id="detailTitle"></h3>
+    <div id="detailBody"></div>
+    <div class="modal-actions"><button class="btn" onclick="closeDetailModal()">닫기</button></div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import {
+  getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, getDocs, getDoc,
+  query, orderBy, serverTimestamp, writeBatch
+} from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAcxGPyL-Tg-yB8pAwqqp8tCLOspTJzKIc",
+  authDomain: "bluebox-9471f.firebaseapp.com",
+  projectId: "bluebox-9471f",
+  storageBucket: "bluebox-9471f.firebasestorage.app",
+  messagingSenderId: "764690233349",
+  appId: "1:764690233349:web:fc22418ed9c2f101a6c46c"
+};
+const app = initializeApp(firebaseConfig);
+const db = getAuth ? getFirestore(app) : null;
+const auth = getAuth(app);
+
+window._fb = {
+  db, collection, doc, addDoc, updateDoc, deleteDoc, getDocs, getDoc, query, orderBy, serverTimestamp, writeBatch
+};
+
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    document.getElementById('loginGate').classList.add('hidden');
+    document.getElementById('app').classList.remove('hidden');
+    document.getElementById('loginWho').textContent = user.email;
+    loadAll();
+  } else {
+    document.getElementById('loginGate').classList.remove('hidden');
+    document.getElementById('app').classList.add('hidden');
+  }
+});
+
+window.doLogin = async function(){
+  const email = document.getElementById('loginEmail').value.trim();
+  const pw = document.getElementById('loginPw').value;
+  const errEl = document.getElementById('loginErr');
+  errEl.textContent = '';
+  try{
+    await signInWithEmailAndPassword(auth, email, pw);
+  }catch(e){
+    errEl.textContent = '이메일 또는 비밀번호가 올바르지 않습니다.';
+  }
+};
+window.doLogout = function(){ signOut(auth); };
+</script>
+
+<script>
+const DELETE_PW = '1234';
+let targets = [], checks = [], sats = [];
+let deleteCtx = null;
+
+function normPhone(p){ return (p||'').replace(/[^0-9]/g,''); }
+function esc(s){ return (s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+async function loadAll(){
+  const fb = window._fb;
+  const [tSnap, cSnap, sSnap] = await Promise.all([
+    fb.getDocs(fb.query(fb.collection(fb.db,'dcr34wf_targets'))),
+    fb.getDocs(fb.query(fb.collection(fb.db,'dcr34wf_checks'))),
+    fb.getDocs(fb.query(fb.collection(fb.db,'dcr34wf_satisfaction')))
+  ]).catch(e=>{ console.error(e); alert('데이터 로드 중 오류가 발생했습니다. Firestore 보안 규칙에 dcr34wf_targets/dcr34wf_checks/dcr34wf_satisfaction 컬렉션 접근 허용이 추가되었는지 확인해주세요.'); throw e; });
+  targets = tSnap.docs.map(d=>({id:d.id, ...d.data()}));
+  checks = cSnap.docs.map(d=>({id:d.id, ...d.data()}));
+  sats = sSnap.docs.map(d=>({id:d.id, ...d.data()}));
+  renderTargets(); renderChecks(); renderSat();
+}
+window.loadAll = loadAll;
+
+function switchTab(t){
+  ['list','check','sat'].forEach(k=>{
+    document.getElementById(k+'Panel').classList.toggle('hidden', k!==t);
+    document.getElementById('tabBtn'+k.charAt(0).toUpperCase()+k.slice(1)).classList.toggle('active', k===t);
+  });
+}
+window.switchTab = switchTab;
+
+function replaceBadge(v){
+  if(v==='OK') return '<span class="badge badge-ok">OK</span>';
+  if(v==='NO') return '<span class="badge badge-no">NO</span>';
+  if(v==='부재') return '<span class="badge badge-absent">부재</span>';
+  return '<span class="badge badge-none">-</span>';
+}
+
+function renderTargets(){
+  const q = (document.getElementById('listSearch').value||'').toLowerCase();
+  const rf = document.getElementById('listFilterReplace').value;
+  let list = targets.filter(t=>{
+    if(rf && (t.replace||'')!==rf) return false;
+    if(q){
+      const hay = [t.agency,t.address,t.phone,t.customerPhone,t.manager].join(' ').toLowerCase();
+      if(!hay.includes(q)) return false;
+    }
+    return true;
+  });
+  list.sort((a,b)=> (Number(a.no)||0) - (Number(b.no)||0));
+  document.getElementById('listSummary').textContent = `전체 ${targets.length}건 중 ${list.length}건 표시 / 교체여부 OK: ${targets.filter(t=>t.replace==='OK').length}건`;
+  const tb = document.getElementById('listTbody');
+  if(!list.length){ tb.innerHTML = '<tr><td colspan="13" class="empty">데이터가 없습니다.</td></tr>'; return; }
+  tb.innerHTML = list.map(t=>{
+    const hasCheck = checks.some(c=>c.targetId===t.id);
+    const has1w = sats.some(s=>s.targetId===t.id && s.round==='1week');
+    const has1m = sats.some(s=>s.targetId===t.id && s.round==='1month');
+    const phoneForLink = encodeURIComponent(t.customerPhone||t.phone||'');
+    return `<tr>
+      <td>${esc(t.no)}</td><td>${esc(t.agency)}</td><td style="white-space:normal;max-width:220px;">${esc(t.address)}</td>
+      <td>${esc(t.phone)}</td><td>${replaceBadge(t.replace)}</td><td>${esc(t.customerPhone)}</td>
+      <td>${esc(t.preferDate)}</td><td>${esc(t.manager)}</td><td>${esc(t.installDate)}</td>
+      <td>${hasCheck?'<span class="badge badge-blue">완료</span>':'<span class="badge badge-none">미작성</span>'}</td>
+      <td>${has1w?'<span class="badge badge-ok">완료</span>':'<span class="badge badge-none">미작성</span>'}</td>
+      <td>${has1m?'<span class="badge badge-ok">완료</span>':'<span class="badge badge-none">미작성</span>'}</td>
+      <td>
+        <span class="copy-link" onclick="copyLink('check','${phoneForLink}')">체크리스트</span><br>
+        <span class="copy-link" onclick="copyLink('1week','${phoneForLink}')">1주만족도</span><br>
+        <span class="copy-link" onclick="copyLink('1month','${phoneForLink}')">1달만족도</span>
+      </td>
+      <td>
+        <button class="btn btn-sm" onclick="openTargetModal('${t.id}')">수정</button>
+        <button class="btn btn-sm btn-danger" onclick="openDeleteModal('${t.id}')">삭제</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+window.renderTargets = renderTargets;
+
+window.copyLink = function(kind, phone){
+  const base = location.href.replace(/dcr34wf-admin\.html.*$/,'');
+  let url;
+  if(kind==='check') url = base+'dcr34wf-check.html?phone='+phone;
+  else url = base+'dcr34wf-satisfaction.html?round='+kind+'&phone='+phone;
+  navigator.clipboard?.writeText(url).then(()=>alert('링크가 복사되었습니다:\n'+url)).catch(()=>prompt('링크를 복사하세요', url));
+};
+
+window.openTargetModal = function(id){
+  document.getElementById('targetId').value = id||'';
+  document.getElementById('targetModalTitle').textContent = id ? '설치대상 수정' : '설치대상 추가';
+  const t = id ? targets.find(x=>x.id===id) : {};
+  document.getElementById('f_no').value = t.no||'';
+  document.getElementById('f_agency').value = t.agency||'';
+  document.getElementById('f_address').value = t.address||'';
+  document.getElementById('f_phone').value = t.phone||'';
+  document.getElementById('f_customerPhone').value = t.customerPhone||'';
+  document.getElementById('f_replace').value = t.replace||'';
+  document.getElementById('f_preferDate').value = t.preferDate||'';
+  document.getElementById('f_manager').value = t.manager||'';
+  document.getElementById('f_installDate').value = t.installDate||'';
+  document.getElementById('f_consultantAddr').value = t.consultantAddr||'';
+  document.getElementById('f_workDesc').value = t.workDesc||'';
+  document.getElementById('targetModalBg').classList.remove('hidden');
+};
+window.closeTargetModal = function(){ document.getElementById('targetModalBg').classList.add('hidden'); };
+
+window.saveTarget = async function(){
+  const fb = window._fb;
+  const id = document.getElementById('targetId').value;
+  const payload = {
+    no: document.getElementById('f_no').value.trim(),
+    agency: document.getElementById('f_agency').value.trim(),
+    address: document.getElementById('f_address').value.trim(),
+    phone: document.getElementById('f_phone').value.trim(),
+    customerPhone: document.getElementById('f_customerPhone').value.trim(),
+    replace: document.getElementById('f_replace').value,
+    preferDate: document.getElementById('f_preferDate').value.trim(),
+    manager: document.getElementById('f_manager').value.trim(),
+    installDate: document.getElementById('f_installDate').value.trim(),
+    consultantAddr: document.getElementById('f_consultantAddr').value.trim(),
+    workDesc: document.getElementById('f_workDesc').value.trim(),
+    updatedAt: fb.serverTimestamp()
+  };
+  try{
+    if(id){
+      await fb.updateDoc(fb.doc(fb.db,'dcr34wf_targets',id), payload);
+    }else{
+      payload.createdAt = fb.serverTimestamp();
+      await fb.addDoc(fb.collection(fb.db,'dcr34wf_targets'), payload);
+    }
+    closeTargetModal();
+    await loadAll();
+  }catch(e){ console.error(e); alert('저장 실패: '+e.message); }
+};
+
+window.openDeleteModal = function(id){
+  deleteCtx = {type:'target', id};
+  document.getElementById('deletePw').value = '';
+  document.getElementById('deletePwErr').textContent = '';
+  document.getElementById('deleteModalBg').classList.remove('hidden');
+  setTimeout(()=>document.getElementById('deletePw').focus(),50);
+};
+window.closeDeleteModal = function(){ document.getElementById('deleteModalBg').classList.add('hidden'); deleteCtx=null; };
+window.confirmDelete = async function(){
+  const pw = document.getElementById('deletePw').value;
+  if(pw !== DELETE_PW){ document.getElementById('deletePwErr').textContent = '비밀번호가 올바르지 않습니다.'; return; }
+  const fb = window._fb;
+  try{
+    if(deleteCtx.type==='target'){
+      await fb.deleteDoc(fb.doc(fb.db,'dcr34wf_targets',deleteCtx.id));
+    }
+    closeDeleteModal();
+    await loadAll();
+  }catch(e){ console.error(e); alert('삭제 실패: '+e.message); }
+};
+
+// ---- bulk import ----
+let importRows = [];
+window.openImportModal = function(){
+  document.getElementById('importText').value = '';
+  document.getElementById('importPreview').innerHTML = '';
+  document.getElementById('importConfirmBtn').disabled = true;
+  importRows = [];
+  document.getElementById('importModalBg').classList.remove('hidden');
+};
+window.closeImportModal = function(){ document.getElementById('importModalBg').classList.add('hidden'); };
+window.previewImport = function(){
+  const raw = document.getElementById('importText').value.trim();
+  if(!raw){ document.getElementById('importPreview').textContent='붙여넣은 내용이 없습니다.'; document.getElementById('importConfirmBtn').disabled=true; return; }
+  const lines = raw.split(/\r?\n/).filter(l=>l.trim().length);
+  importRows = lines.map(line=>{
+    const c = line.split('\t');
+    return {
+      no:(c[0]||'').trim(), agency:(c[1]||'').trim(), address:(c[2]||'').trim(), phone:(c[3]||'').trim(),
+      replace:(c[4]||'').trim(), customerPhone:(c[5]||'').trim(), preferDate:(c[6]||'').trim(),
+      manager:(c[7]||'').trim().replace(/^\[merged\]\s*/,''), consultantAddr:(c[8]||'').trim().replace(/^\[merged\]\s*/,''),
+      workDesc:(c[9]||'').trim(), installDate:(c[10]||'').trim()
+    };
+  }).filter(r=>r.agency || r.address || r.phone);
+  document.getElementById('importPreview').innerHTML = `${importRows.length}건이 인식되었습니다. (예: ${esc(importRows[0]?.agency)} / ${esc(importRows[0]?.address)})`;
+  document.getElementById('importConfirmBtn').disabled = importRows.length===0;
+};
+window.confirmImport = async function(){
+  if(!importRows.length) return;
+  const fb = window._fb;
+  const batch = fb.writeBatch(fb.db);
+  importRows.forEach(r=>{
+    const ref = fb.doc(fb.collection(fb.db,'dcr34wf_targets'));
+    batch.set(ref, {...r, createdAt: fb.serverTimestamp(), updatedAt: fb.serverTimestamp()});
+  });
+  try{
+    await batch.commit();
+    alert(importRows.length+'건이 추가되었습니다.');
+    closeImportModal();
+    await loadAll();
+  }catch(e){ console.error(e); alert('가져오기 실패: '+e.message); }
+};
+
+// ---- checks tab ----
+const CHECK_ITEMS = [
+  {k:'c15', label:'15) R/C 및 보일러 간 통신연동여부'},
+  {k:'c16', label:'16) 온도조절기 간 통신연동여부'},
+  {k:'c17', label:'17) 온도조절기 기능 정상확인여부'},
+  {k:'c18', label:'18) 각방시스템 및 보일러 간 동작여부'},
+  {k:'c19', label:'19) IoT 등록 및 App 연동확인'}
+];
+function renderChecks(){
+  const q=(document.getElementById('checkSearch').value||'').toLowerCase();
+  let list = checks.filter(c=>{
+    if(!q) return true;
+    return [c.customerName,c.customerPhone,c.address].join(' ').toLowerCase().includes(q);
+  });
+  list.sort((a,b)=> (b.submittedAt?.seconds||0) - (a.submittedAt?.seconds||0));
+  const tb = document.getElementById('checkTbody');
+  if(!list.length){ tb.innerHTML = '<tr><td colspan="8" class="empty">데이터가 없습니다.</td></tr>'; return; }
+  tb.innerHTML = list.map(c=>{
+    const abnormal = CHECK_ITEMS.some(it=> c.checks?.[it.k]==='이상');
+    const dt = c.submittedAt?.seconds ? new Date(c.submittedAt.seconds*1000).toLocaleString('ko-KR') : '-';
+    return `<tr>
+      <td>${dt}</td><td>${esc(c.customerName)}</td><td>${esc(c.customerPhone)}</td>
+      <td style="white-space:normal;max-width:200px;">${esc(c.address)}</td>
+      <td>${esc(c.thermoModel)}</td>
+      <td>${abnormal?'<span class="badge badge-absent">이상있음</span>':'<span class="badge badge-ok">정상</span>'}</td>
+      <td>${esc(c.checks?.c20||'-')}</td>
+      <td><button class="btn btn-sm" onclick="openCheckDetail('${c.id}')">보기</button></td>
+    </tr>`;
+  }).join('');
+}
+window.renderChecks = renderChecks;
+
+window.openCheckDetail = function(id){
+  const c = checks.find(x=>x.id===id); if(!c) return;
+  document.getElementById('detailTitle').textContent = '컨설턴트 체크리스트 상세';
+  const a = c.area||{};
+  const rows = [
+    ['고객 성명', c.customerName], ['전화번호', c.customerPhone], ['주소', c.address],
+    ['분류', c.buildingType + (c.buildingTypeEtc? ' ('+c.buildingTypeEtc+')':'')],
+    ['규모', `건축면적 ${a.construction||'-'} / 난방면적 ${a.heating||'-'} / ${a.pyeong||'-'}평형 / ${a.households||'-'}세대 / ${a.floors||'-'}층`],
+    ['온도조절기 모델명', c.thermoModel], ['제조번호(S/N)', c.serialNo],
+    ['밸브제어기 모델명', c.valveCtrlModel], ['방 Zone 개수', c.zoneCount],
+    ['연동 보일러 모델명', c.boilerModel], ['밸브 구동기 개수', c.actuatorCount],
+    ['보일러 연동 타입', c.boilerLinkType], ['거실 R/C 설치장소', c.rcLocation],
+    ['공유기 설치장소', c.sharedDeviceLocation], ['IoT온도조절기로부터 거리(M)', c.distanceFromThermo],
+    ['설치일자', c.installDate]
+  ];
+  let html = '<div class="detail-grid">'+rows.map(r=>`<div class="k">${esc(r[0])}</div><div>${esc(r[1]??'-')}</div>`).join('')+'</div>';
+  html += '<div class="section-title">확인사항</div><div class="detail-grid">';
+  CHECK_ITEMS.forEach(it=>{
+    const v = c.checks?.[it.k];
+    html += `<div class="k">${esc(it.label)}</div><div>${v==='이상' ? '<span class="badge badge-absent">이상</span>' : v==='정상' ? '<span class="badge badge-ok">정상</span>' : '-'}</div>`;
+  });
+  html += `<div class="k">20) 사용교육 실시여부</div><div>${esc(c.checks?.c20||'-')}</div>`;
+  html += '</div>';
+  html += `<div class="section-title">기타 특기사항</div><div style="white-space:pre-wrap;font-size:.85rem;">${esc(c.etc||'-')}</div>`;
+  document.getElementById('detailBody').innerHTML = html;
+  document.getElementById('detailModalBg').classList.remove('hidden');
+};
+
+// ---- satisfaction tab ----
+const SCALE5_POS = {'매우 그렇다':5,'대체로 그렇다':4,'보통':3,'그렇지 않다':2,'전혀 그렇지 않다':1,
+  '매우 만족':5,'대체로 만족':4,'다소 불편':2,'매우 불편':1,
+  '항상 일치':5,'대체로 일치':4,'가끔 불일치':2,'자주 불일치':1};
+const SAT_SCALE_QUESTIONS = [
+  ['q1_1','1-1 기기연결/Wi-Fi등록 편의성'], ['q1_2','1-2 매뉴얼 이해도'],
+  ['q2_1','2-1 거실 조절기 화면 편의성'], ['q2_2','2-2 앱 화면구성 편의성'], ['q2_3','2-3 방 명칭 설정 편의성'],
+  ['q3_1','3-1 원격제어 원활함'], ['q3_2','3-2 본체/앱 표시 일치도'],
+  ['q4_1','4-1 종합 만족도']
+];
+function renderSat(){
+  const q=(document.getElementById('satSearch').value||'').toLowerCase();
+  const rf = document.getElementById('satFilterRound').value;
+  let list = sats.filter(s=>{
+    if(rf && s.round!==rf) return false;
+    if(!q) return true;
+    return [s.customerName,s.customerPhone].join(' ').toLowerCase().includes(q);
+  });
+  list.sort((a,b)=> (b.submittedAt?.seconds||0) - (a.submittedAt?.seconds||0));
+  const tb = document.getElementById('satTbody');
+  if(!list.length){ tb.innerHTML = '<tr><td colspan="6" class="empty">데이터가 없습니다.</td></tr>'; }
+  else{
+    tb.innerHTML = list.map(s=>{
+      const dt = s.submittedAt?.seconds ? new Date(s.submittedAt.seconds*1000).toLocaleString('ko-KR') : '-';
+      return `<tr>
+        <td>${dt}</td><td>${s.round==='1week'?'1주차':s.round==='1month'?'1달차':'-'}</td>
+        <td>${esc(s.customerName)}</td><td>${esc(s.customerPhone)}</td>
+        <td>${esc(s.answers?.q4_1||'-')}</td>
+        <td><button class="btn btn-sm" onclick="openSatDetail('${s.id}')">보기</button></td>
+      </tr>`;
+    }).join('');
+  }
+  renderSatStats();
+}
+window.renderSat = renderSat;
+
+function avgFor(round, key){
+  const vals = sats.filter(s=>s.round===round).map(s=>SCALE5_POS[s.answers?.[key]]).filter(v=>v!=null);
+  if(!vals.length) return {avg:null,n:0};
+  return {avg:(vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(2), n:vals.length};
+}
+function renderSatStats(){
+  const tb = document.getElementById('satStatTbody');
+  tb.innerHTML = SAT_SCALE_QUESTIONS.map(([key,label])=>{
+    const w = avgFor('1week',key), m = avgFor('1month',key);
+    return `<tr><td>${esc(label)}</td><td>${w.avg??'-'}</td><td>${w.n}</td><td>${m.avg??'-'}</td><td>${m.n}</td></tr>`;
+  }).join('');
+}
+
+window.openSatDetail = function(id){
+  const s = sats.find(x=>x.id===id); if(!s) return;
+  document.getElementById('detailTitle').textContent = `고객만족도 상세 (${s.round==='1week'?'1주차':'1달차'})`;
+  const a = s.answers||{};
+  const rows = [
+    ['고객 성명', a.customerName||s.customerName], ['전화번호', a.customerPhone||s.customerPhone],
+    ['1-1', a.q1_1],['1-2', a.q1_2],['1-3', a.q1_3],
+    ['1-3-1 (오류 단계)', Array.isArray(a.q1_3_1)? a.q1_3_1.join(', ') : a.q1_3_1],
+    ['2-1', a.q2_1],['2-2', a.q2_2],['2-3', a.q2_3],['2-4', a.q2_4],
+    ['3-1', a.q3_1],['3-2', a.q3_2],['3-3', a.q3_3],['3-3-1', a.q3_3_1],
+    ['3-4', a.q3_4],['3-4-1', a.q3_4_1],['3-4-2', a.q3_4_2],
+    ['4-1 종합만족도', a.q4_1],
+  ];
+  let html = '<div class="detail-grid">'+rows.map(r=>`<div class="k">${esc(r[0])}</div><div>${esc(r[1]??'-')}</div>`).join('')+'</div>';
+  html += `<div class="section-title">4-2 건의사항</div><div style="white-space:pre-wrap;font-size:.85rem;">${esc(a.q4_2||'-')}</div>`;
+  document.getElementById('detailBody').innerHTML = html;
+  document.getElementById('detailModalBg').classList.remove('hidden');
+};
+
+window.closeDetailModal = function(){ document.getElementById('detailModalBg').classList.add('hidden'); };
+</script>
+</body>
+</html>
