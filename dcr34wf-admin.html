@@ -23,7 +23,7 @@ header .sub{font-size:.78rem;opacity:.85;margin-top:2px;}
 .header-links{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
 .header-links a{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.4);color:#fff;padding:6px 14px;border-radius:var(--radius-sm);font-size:.85rem;text-decoration:none;white-space:nowrap;}
 .header-links a:hover{background:rgba(255,255,255,.28);}
-.wrap{max-width:1280px;margin:0 auto;padding:16px;}
+.wrap{max-width:none;margin:0 auto;padding:16px 20px;}
 .tab-bar{display:flex;border-bottom:2px solid var(--border);background:var(--card);border-radius:var(--radius) var(--radius) 0 0;overflow:hidden;}
 .tab-btn{flex:none;padding:12px 20px;border:none;background:none;cursor:pointer;font-size:.92rem;color:var(--text-muted);border-bottom:3px solid transparent;}
 .tab-btn.active{color:var(--blue);border-bottom-color:var(--blue);font-weight:600;}
@@ -345,7 +345,7 @@ function renderTargets(){
     const has1m = sats.some(s=>s.targetId===t.id && s.round==='1month');
     const phoneForLink = encodeURIComponent(t.customerPhone||t.phone||'');
     return `<tr>
-      <td>${esc(t.no)}</td><td>${esc(t.agency)}</td><td style="white-space:normal;max-width:220px;">${esc(t.address)}</td>
+      <td>${esc(t.no)}</td><td>${esc(t.agency)}</td><td style="white-space:normal;min-width:400px;max-width:660px;">${esc(t.address)}</td>
       <td>${esc(t.phone)}</td><td>${replaceBadge(t.replace)}</td><td>${esc(t.customerPhone)}</td>
       <td>${esc(t.preferDate)}</td><td>${esc(t.manager)}</td><td>${esc(t.installDate)}</td>
       <td>${hasCheck?'<span class="badge badge-blue">완료</span>':'<span class="badge badge-none">미작성</span>'}</td>
