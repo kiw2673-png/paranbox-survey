@@ -20,6 +20,9 @@ header{background:linear-gradient(135deg,var(--blue),var(--blue-dark));color:#ff
 header h1{font-size:1.2rem;margin:0;}
 header .sub{font-size:.78rem;opacity:.85;margin-top:2px;}
 #logoutBtn{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.4);color:#fff;padding:6px 14px;border-radius:var(--radius-sm);cursor:pointer;font-size:.85rem;}
+.header-links{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+.header-links a{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.4);color:#fff;padding:6px 14px;border-radius:var(--radius-sm);font-size:.85rem;text-decoration:none;white-space:nowrap;}
+.header-links a:hover{background:rgba(255,255,255,.28);}
 .wrap{max-width:1280px;margin:0 auto;padding:16px;}
 .tab-bar{display:flex;border-bottom:2px solid var(--border);background:var(--card);border-radius:var(--radius) var(--radius) 0 0;overflow:hidden;}
 .tab-btn{flex:none;padding:12px 20px;border:none;background:none;cursor:pointer;font-size:.92rem;color:var(--text-muted);border-bottom:3px solid transparent;}
@@ -84,7 +87,12 @@ th{background:#f8f9fb;color:var(--text-muted);font-weight:600;position:sticky;to
     <h1>각방IoT 온도조절기(DCR-34WF) 필드테스트 관리자</h1>
     <div class="sub" id="loginWho"></div>
   </div>
-  <button id="logoutBtn" onclick="doLogout()">로그아웃</button>
+  <div class="header-links">
+    <a href="dcr34wf-check.html" target="_blank" rel="noopener">체크리스트 열기</a>
+    <a href="dcr34wf-satisfaction.html?round=1week" target="_blank" rel="noopener">고객만족도(1주차)</a>
+    <a href="dcr34wf-satisfaction.html?round=1month" target="_blank" rel="noopener">고객만족도(1달차)</a>
+    <button id="logoutBtn" onclick="doLogout()">로그아웃</button>
+  </div>
 </header>
 <div class="wrap">
   <div class="tab-bar">
