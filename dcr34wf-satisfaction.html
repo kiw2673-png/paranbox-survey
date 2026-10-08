@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IoT 각방 온도조절기 고객 만족도 설문서</title>
+<style>
+:root{
+  --blue:#1a56b0; --blue-dark:#154698; --blue-light:#e6f1fb;
+  --green:#3B6D11; --green-bg:#eaf3de;
+  --red-bg:#fcebeb; --red-text:#A32D2D;
+  --border:#e2e2e2; --text:#1a1a1a; --text-muted:#666;
+  --bg:#f5f6f8; --card:#fff; --radius:10px; --radius-sm:6px;
+}
+*{box-sizing:border-box;}
+body{margin:0;font-family:-apple-system,"Malgun Gothic",sans-serif;background:var(--bg);color:var(--text);}
+header{background:linear-gradient(135deg,var(--blue),var(--blue-dark));color:#fff;padding:18px 20px;}
+header h1{font-size:1.1rem;margin:0;}
+header .sub{font-size:.78rem;opacity:.85;margin-top:4px;line-height:1.5;}
+.wrap{max-width:640px;margin:0 auto;padding:16px;}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:14px;}
+.card h2{font-size:1rem;margin:0 0 12px;color:var(--blue-dark);border-bottom:2px solid var(--blue-light);padding-bottom:8px;}
+.field{margin-bottom:12px;}
+.field label{display:block;font-size:.83rem;color:var(--text-muted);margin-bottom:5px;}
+.field input,.field textarea{width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:.92rem;font-family:inherit;}
+.field textarea{min-height:70px;resize:vertical;}
+.q{margin-bottom:16px;}
+.q .qtext{font-size:.9rem;font-weight:600;margin-bottom:3px;}
+.q .qhint{font-size:.78rem;color:var(--text-muted);margin-bottom:6px;}
+.opts{display:flex;flex-direction:column;gap:6px;margin-top:6px;}
+.opts label{display:flex;align-items:center;gap:8px;font-size:.88rem;font-weight:normal;border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 10px;cursor:pointer;}
+.opts label:has(input:checked){background:var(--blue-light);border-color:var(--blue);}
+.opts.row{flex-direction:row;flex-wrap:wrap;}
+.opts.row label{flex:1;min-width:90px;justify-content:center;text-align:center;}
+.check-opts label{display:flex;align-items:center;gap:8px;font-size:.86rem;font-weight:normal;padding:4px 0;}
+.btn{padding:10px 18px;border-radius:var(--radius-sm);border:1px solid var(--border);background:#fff;cursor:pointer;font-size:.9rem;}
+.btn-blue{background:var(--blue);color:#fff;border-color:var(--blue);width:100%;font-size:1rem;padding:13px;}
+.gate-box{max-width:420px;margin:60px auto;}
+.hidden{display:none !important;}
+.msg-err{background:var(--red-bg);color:var(--red-text);padding:12px;border-radius:var(--radius-sm);font-size:.88rem;margin-top:10px;}
+.success-box{text-align:center;padding:40px 20px;}
+.success-box h2{color:var(--green);}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>IoT 각방 온도조절기 고객 만족도 설문서</h1>
+  <div class="sub" id="headerSub">본 설문은 IoT 각방 온도조절기 필드 테스트 제품의 사용 편의성과 안정성을 검증하기 위한 설문입니다. 고객님의 소중한 의견은 정식 출시 제품의 품질 향상에 적극 반영됩니다.</div>
+</header>
+
+<div class="wrap">
+  <div id="gateCard" class="card gate-box">
+    <h2>고객 확인</h2>
+    <p style="font-size:.85rem;color:var(--text-muted);" id="gateDesc">연락처를 입력해주세요.</p>
+    <div class="field"><label>연락처</label><input type="text" id="gatePhone" placeholder="010-0000-0000"></div>
+    <button class="btn btn-blue" onclick="checkGate()">확인</button>
+    <div id="gateMsg"></div>
+  </div>
+
+  <div id="formArea" class="hidden">
+    <div class="card">
+      <div class="field"><label>고객 성명</label><input type="text" id="f_customerName"></div>
+      <div class="field"><label>전화번호</label><input type="text" id="f_customerPhone"></div>
+    </div>
+
+    <div class="card">
+      <h2>1. Wi-Fi 및 APP 등록</h2>
+      <div class="q" id="q_1_1">
+        <div class="qtext">1-1. 온도조절기와 앱의 기기 연결 및 Wi-Fi 등록 과정은 편리하고 이해하기 쉬웠습니까?</div>
+        <div class="opts row"></div>
+      </div>
+      <div class="q" id="q_1_2">
+        <div class="qtext">1-2. 제공된 앱 등록 매뉴얼(가이드)의 설명이 직관적이고 따라 하기 쉽게 작성되었습니까?</div>
+        <div class="opts row"></div>
+      </div>
+      <div class="q" id="q_1_3">
+        <div class="qtext">1-3. 기기 연결 및 Wi-Fi 앱 등록 과정에서 연결 실패나 오류가 발생한 적이 있습니까?</div>
+        <div class="opts"></div>
+      </div>
+      <div class="q hidden" id="q_1_3_1">
+        <div class="qtext">1-3-1. 어느 단계에서 오류가 발생했습니까? (해당 항목 모두 선택)</div>
+        <div class="check-opts" id="opts_1_3_1"></div>
+        <input type="text" id="f_1_3_1_etc" placeholder="기타 원인 (직접 작성)" style="margin-top:6px;padding:8px;border:1px solid var(--border);border-radius:6px;width:100%;">
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>2. 각방 상태 확인</h2>
+      <div class="q" id="q_2_1">
+        <div class="qtext">2-1. 거실 조절기의 화면이 선명하고, 현재 상태를 확인하기 편리합니까?</div>
+        <div class="qhint">(실내/설정 온도, 난방/외출/예약 모드, 연결 상태 등)</div>
+        <div class="opts row"></div>
+      </div>
+      <div class="q" id="q_2_2">
+        <div class="qtext">2-2. 앱에서의 화면 구성이 각 방의 현재 상태를 한눈에 확인하기에 편리합니까?</div>
+        <div class="opts row"></div>
+      </div>
+      <div class="q" id="q_2_3">
+        <div class="qtext">2-3. 앱에서 각 방의 명칭을 설정·변경하고, 앱에 표시되는 각 방과 실제 방을 대응시켜 확인하기에 편리합니까?</div>
+        <div class="opts row"></div>
+      </div>
+      <div class="q" id="q_2_4">
+        <div class="qtext">2-4. 앱 사용 중 기기 연결 실패(오프라인)나 에러 알림이 발생한 적이 있습니까?</div>
+        <div class="opts"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>3. IoT 기능 및 제어</h2>
+      <div class="q" id="q_3_1">
+        <div class="qtext">3-1. 앱에서 각 방의 원격 제어가 원활합니까? (온도 조절, 모드 변경, 전원 On/Off 등)</div>
+        <div class="opts row"></div>
+      </div>
+      <div class="q" id="q_3_2">
+        <div class="qtext">3-2. 조절기 본체 또는 앱에서 온도, 모드를 변경했을 때, 변경된 온도·모드가 조절기 본체와 앱 화면에 동일하게 표시됩니까?</div>
+        <div class="opts row"></div>
+      </div>
+      <div class="q" id="q_3_3">
+        <div class="qtext">3-3. 전체 자동화(외출/귀가) 모드를 사용해 본 적이 있습니까?</div>
+        <div class="opts"></div>
+      </div>
+      <div class="q hidden" id="q_3_3_1">
+        <div class="qtext">3-3-1. 외출/귀가 모드 기능에 얼마나 만족하십니까?</div>
+        <div class="opts row"></div>
+      </div>
+      <div class="q" id="q_3_4">
+        <div class="qtext">3-4. 앱에 함께 등록하여 조절기를 제어하는 가족(세대원)은 본인 포함 몇 명입니까?</div>
+        <div class="opts"></div>
+      </div>
+      <div class="q hidden" id="q_3_4_1">
+        <div class="qtext">3-4-1. 가족 구성원 초대(세대원 추가) 및 기기공유 등록 과정은 편리했습니까?</div>
+        <div class="opts row"></div>
+      </div>
+      <div class="q hidden" id="q_3_4_2">
+        <div class="qtext">3-4-2. 기기에 등록된 그룹 세대원이 같이 앱을 사용해도 정상 작동했습니까?</div>
+        <div class="opts"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>4. 종합 만족도 및 건의사항</h2>
+      <div class="q" id="q_4_1">
+        <div class="qtext">4-1. 본 IoT 각방 온도조절기 제품에 대한 전반적인 만족도를 체크해주시기 바랍니다.</div>
+        <div class="qhint">(체험 기간 동안의 품질, 디자인, 기능, 모바일 앱 사용 편의성에 대한 종합 만족도)</div>
+        <div class="opts row"></div>
+      </div>
+      <div class="field">
+        <label>4-2. 제품을 사용하시면서 겪으신 불편사항, 오류 현상, 또는 향후 정식 출시에 추가되었으면 하는 기능을 자유롭게 작성해 주십시오.</label>
+        <textarea id="f_4_2"></textarea>
+      </div>
+    </div>
+
+    <button class="btn btn-blue" id="submitBtn" onclick="submitForm()">설문 제출하기</button>
+  </div>
+
+  <div id="successArea" class="hidden success-box card">
+    <h2>설문이 제출되었습니다</h2>
+    <p>소중한 의견 감사합니다. 정식 출시 제품의 품질 향상에 반영하겠습니다.</p>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, collection, addDoc, getDocs, query, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAcxGPyL-Tg-yB8pAwqqp8tCLOspTJzKIc",
+  authDomain: "bluebox-9471f.firebaseapp.com",
+  projectId: "bluebox-9471f",
+  storageBucket: "bluebox-9471f.firebasestorage.app",
+  messagingSenderId: "764690233349",
+  appId: "1:764690233349:web:fc22418ed9c2f101a6c46c"
+};
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+window._fb = { db, collection, addDoc, getDocs, query, serverTimestamp };
+window._fbReady = true;
+document.dispatchEvent(new Event('fb-ready'));
+</script>
+
+<script>
+const SCALE5 = ['매우 그렇다','대체로 그렇다','보통','그렇지 않다','전혀 그렇지 않다'];
+const SCALE5_SAT = ['매우 만족','대체로 만족','보통','다소 불편','매우 불편'];
+const SCALE5_MATCH = ['항상 일치','대체로 일치','보통','가끔 불일치','자주 불일치'];
+const FREQ5 = ['① 전혀 없음','② 간혹 있었음','③ 보통','④ 자주 있었음','⑤ 항상 있음'];
+const FREQ3 = ['전혀 없음','간혹 발생 (월 1~2회)','자주 발생 (주 1회 이상)'];
+const ERR_STEPS = [
+  '앱에서 거실 온도조절기 기기 연결 실패(Bluetooth 연결).',
+  '앱에서 무선공유기(Wi-Fi) 선택 창에 연결할 공유기가 표시되지 않음.',
+  '공유기 비밀번호 입력 후 공유기와 조절기 간 무선 연결 실패.',
+  '등록 완료 직후 앱 메인화면에서 기기가 오프라인(연결 끊김)으로 전환됨.'
+];
+const USE_3_3 = ['① 사용해 본 적 있다.','② 사용해 본 적 없다.'];
+const MEMBERS_3_4 = ['① 2명 이상','② 1명 (본인 단독 사용)'];
+const ACT_3_4_2 = ['항상 정상 작동','일부 지연 발생','작동 안됨'];
+
+function buildRadioRow(containerSel, name, options){
+  const el = document.querySelector(containerSel);
+  el.innerHTML = options.map(o=>`<label><input type="radio" name="${name}" value="${o.replace(/"/g,'&quot;')}">${o}</label>`).join('');
+}
+function buildCheckboxes(containerSel, name, options){
+  const el = document.querySelector(containerSel);
+  el.innerHTML = options.map((o,i)=>`<label><input type="checkbox" name="${name}" value="${o.replace(/"/g,'&quot;')}">${o}</label>`).join('');
+}
+
+buildRadioRow('#q_1_1 .opts', 'q1_1', SCALE5);
+buildRadioRow('#q_1_2 .opts', 'q1_2', SCALE5);
+buildRadioRow('#q_1_3 .opts', 'q1_3', FREQ5);
+buildCheckboxes('#opts_1_3_1', 'q1_3_1', ERR_STEPS);
+buildRadioRow('#q_2_1 .opts', 'q2_1', SCALE5);
+buildRadioRow('#q_2_2 .opts', 'q2_2', SCALE5);
+buildRadioRow('#q_2_3 .opts', 'q2_3', SCALE5);
+buildRadioRow('#q_2_4 .opts', 'q2_4', FREQ3);
+buildRadioRow('#q_3_1 .opts', 'q3_1', SCALE5);
+buildRadioRow('#q_3_2 .opts', 'q3_2', SCALE5_MATCH);
+buildRadioRow('#q_3_3 .opts', 'q3_3', USE_3_3);
+buildRadioRow('#q_3_3_1 .opts', 'q3_3_1', SCALE5);
+buildRadioRow('#q_3_4 .opts', 'q3_4', MEMBERS_3_4);
+buildRadioRow('#q_3_4_1 .opts', 'q3_4_1', SCALE5);
+buildRadioRow('#q_3_4_2 .opts', 'q3_4_2', ACT_3_4_2);
+buildRadioRow('#q_4_1 .opts', 'q4_1', SCALE5_SAT);
+
+document.addEventListener('change', (e)=>{
+  if(e.target.name==='q1_3'){
+    document.getElementById('q_1_3_1').classList.toggle('hidden', !(e.target.value===FREQ5[3]||e.target.value===FREQ5[4]));
+  }
+  if(e.target.name==='q3_3'){
+    document.getElementById('q_3_3_1').classList.toggle('hidden', e.target.value!==USE_3_3[0]);
+  }
+  if(e.target.name==='q3_4'){
+    const show = e.target.value===MEMBERS_3_4[0];
+    document.getElementById('q_3_4_1').classList.toggle('hidden', !show);
+    document.getElementById('q_3_4_2').classList.toggle('hidden', !show);
+  }
+});
+
+const ROUND = new URLSearchParams(location.search).get('round') === '1month' ? '1month' : (new URLSearchParams(location.search).get('round') === '1week' ? '1week' : null);
+document.getElementById('headerSub').textContent += ROUND === '1month' ? ' (1개월 사용 만족도 조사)' : ROUND === '1week' ? ' (1주일 사용 만족도 조사)' : '';
+
+let matchedTarget = null;
+function normPhone(p){ return (p||'').replace(/[^0-9]/g,''); }
+function waitFb(){ return new Promise(res=>{ if(window._fbReady) return res(); document.addEventListener('fb-ready', ()=>res(), {once:true}); }); }
+
+async function findTargetByPhone(phone){
+  const fb = window._fb;
+  const norm = normPhone(phone);
+  const snap = await fb.getDocs(fb.query(fb.collection(fb.db,'dcr34wf_targets')));
+  const all = snap.docs.map(d=>({id:d.id, ...d.data()}));
+  return all.find(t => normPhone(t.customerPhone)===norm || normPhone(t.phone)===norm) || null;
+}
+async function findExistingResponse(targetId, round){
+  const fb = window._fb;
+  const snap = await fb.getDocs(fb.query(fb.collection(fb.db,'dcr34wf_satisfaction')));
+  return snap.docs.map(d=>({id:d.id, ...d.data()})).find(s=>s.targetId===targetId && s.round===round) || null;
+}
+
+window.checkGate = async function(){
+  const phone = document.getElementById('gatePhone').value.trim();
+  const msgEl = document.getElementById('gateMsg');
+  msgEl.innerHTML = '';
+  if(!ROUND){ msgEl.innerHTML = '<div class="msg-err">설문 링크에 조사 차수(1주차/1달차) 정보가 없습니다. 관리자에게 받은 링크로 다시 접속해주세요.</div>'; return; }
+  if(!phone){ msgEl.innerHTML = '<div class="msg-err">연락처를 입력해주세요.</div>'; return; }
+  await waitFb();
+  try{
+    const t = await findTargetByPhone(phone);
+    if(!t){ msgEl.innerHTML = '<div class="msg-err">등록된 설치대상을 찾을 수 없습니다. 담당자에게 문의해주세요.</div>'; return; }
+    if(t.replace !== 'OK'){ msgEl.innerHTML = `<div class="msg-err">이 설치대상은 교체여부가 "${t.replace||'미확인'}"입니다. 교체여부 OK로 확인된 대상만 설문에 참여할 수 있습니다.</div>`; return; }
+    const existing = await findExistingResponse(t.id, ROUND);
+    if(existing){
+      if(!confirm('이미 해당 차수의 설문에 응답하셨습니다. 다시 작성하시겠습니까? (기존 응답은 유지되고 새 응답이 추가됩니다)')) return;
+    }
+    matchedTarget = t;
+    document.getElementById('gateCard').classList.add('hidden');
+    document.getElementById('formArea').classList.remove('hidden');
+    document.getElementById('f_customerPhone').value = t.customerPhone || t.phone || phone;
+  }catch(e){
+    console.error(e);
+    msgEl.innerHTML = '<div class="msg-err">조회 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.</div>';
+  }
+};
+
+function radioVal(name){ const el=document.querySelector(`input[name="${name}"]:checked`); return el?el.value:''; }
+function checkedVals(name){ return Array.from(document.querySelectorAll(`input[name="${name}"]:checked`)).map(e=>e.value); }
+
+window.submitForm = async function(){
+  if(!matchedTarget){ alert('고객 확인이 필요합니다.'); return; }
+  const customerName = document.getElementById('f_customerName').value.trim();
+  const customerPhone = document.getElementById('f_customerPhone').value.trim();
+  if(!customerName){ alert('고객 성명을 입력해주세요.'); return; }
+  const required = ['q1_1','q1_2','q1_3','q2_1','q2_2','q2_3','q2_4','q3_1','q3_2','q3_3','q3_4','q4_1'];
+  for(const r of required){ if(!radioVal(r)){ alert('모든 필수 문항에 답변해주세요.'); return; } }
+
+  let q1_3_1 = checkedVals('q1_3_1');
+  const etc = document.getElementById('f_1_3_1_etc').value.trim();
+  if(etc) q1_3_1.push('기타: '+etc);
+
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true; btn.textContent = '제출 중...';
+  await waitFb();
+  const fb = window._fb;
+  try{
+    await fb.addDoc(fb.collection(fb.db,'dcr34wf_satisfaction'), {
+      targetId: matchedTarget.id,
+      round: ROUND,
+      customerName, customerPhone,
+      answers: {
+        customerName, customerPhone,
+        q1_1: radioVal('q1_1'), q1_2: radioVal('q1_2'), q1_3: radioVal('q1_3'), q1_3_1,
+        q2_1: radioVal('q2_1'), q2_2: radioVal('q2_2'), q2_3: radioVal('q2_3'), q2_4: radioVal('q2_4'),
+        q3_1: radioVal('q3_1'), q3_2: radioVal('q3_2'), q3_3: radioVal('q3_3'), q3_3_1: radioVal('q3_3_1'),
+        q3_4: radioVal('q3_4'), q3_4_1: radioVal('q3_4_1'), q3_4_2: radioVal('q3_4_2'),
+        q4_1: radioVal('q4_1'), q4_2: document.getElementById('f_4_2').value
+      },
+      submittedAt: fb.serverTimestamp()
+    });
+    document.getElementById('formArea').classList.add('hidden');
+    document.getElementById('successArea').classList.remove('hidden');
+  }catch(e){
+    console.error(e);
+    alert('제출 중 오류가 발생했습니다: '+e.message);
+    btn.disabled=false; btn.textContent='설문 제출하기';
+  }
+};
+
+(function(){
+  const p = new URLSearchParams(location.search).get('phone');
+  if(p) document.addEventListener('DOMContentLoaded', ()=>{ document.getElementById('gatePhone').value = decodeURIComponent(p); });
+  document.getElementById('gateDesc').textContent = ROUND === '1month' ? '1개월 사용 만족도 조사입니다. 연락처를 입력해주세요.' : ROUND === '1week' ? '1주일 사용 만족도 조사입니다. 연락처를 입력해주세요.' : '설문 링크가 올바르지 않습니다.';
+})();
+</script>
+</body>
+</html>
