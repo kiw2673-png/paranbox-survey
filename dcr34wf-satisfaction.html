@@ -40,6 +40,11 @@ header .sub{font-size:.78rem;opacity:.85;margin-top:4px;line-height:1.5;}
 .msg-err{background:var(--red-bg);color:var(--red-text);padding:12px;border-radius:var(--radius-sm);font-size:.88rem;margin-top:10px;}
 .success-box{text-align:center;padding:40px 20px;}
 .success-box h2{color:var(--green);}
+.round-banner{text-align:center;padding:12px 16px;font-size:1.05rem;font-weight:800;letter-spacing:.3px;position:sticky;top:0;z-index:10;}
+.round-banner .tag{display:inline-block;background:rgba(255,255,255,.28);padding:2px 12px;border-radius:999px;margin-right:8px;font-size:1.2rem;vertical-align:middle;}
+.round-banner.week{background:#1a56b0;color:#fff;}
+.round-banner.month{background:#3B6D11;color:#fff;}
+.round-banner.none{background:#A32D2D;color:#fff;}
 </style>
 </head>
 <body>
@@ -48,10 +53,11 @@ header .sub{font-size:.78rem;opacity:.85;margin-top:4px;line-height:1.5;}
   <h1>IoT 각방 온도조절기 고객 만족도 설문서</h1>
   <div class="sub" id="headerSub">본 설문은 IoT 각방 온도조절기 필드 테스트 제품의 사용 편의성과 안정성을 검증하기 위한 설문입니다. 고객님의 소중한 의견은 정식 출시 제품의 품질 향상에 적극 반영됩니다.</div>
 </header>
+<div id="roundBanner" class="round-banner"></div>
 
 <div class="wrap">
   <div id="gateCard" class="card gate-box">
-    <h2>고객 확인</h2>
+    <h2 id="gateTitle">고객 확인</h2>
     <p style="font-size:.85rem;color:var(--text-muted);" id="gateDesc">연락처를 입력해주세요.</p>
     <div class="field"><label>연락처</label><input type="text" id="gatePhone" placeholder="010-0000-0000"></div>
     <button class="btn btn-blue" onclick="checkGate()">확인</button>
@@ -237,6 +243,24 @@ document.addEventListener('change', (e)=>{
 
 const ROUND = new URLSearchParams(location.search).get('round') === '1month' ? '1month' : (new URLSearchParams(location.search).get('round') === '1week' ? '1week' : null);
 document.getElementById('headerSub').textContent += ROUND === '1month' ? ' (1개월 사용 만족도 조사)' : ROUND === '1week' ? ' (1주일 사용 만족도 조사)' : '';
+
+(function(){
+  const banner = document.getElementById('roundBanner');
+  if(ROUND === '1month'){
+    banner.className = 'round-banner month';
+    banner.innerHTML = '<span class="tag">📅 1개월</span>1개월 사용 고객만족도 조사';
+    document.title = '[1개월차] ' + document.title;
+    document.getElementById('gateTitle').textContent = '고객 확인 (1개월차 설문)';
+  } else if(ROUND === '1week'){
+    banner.className = 'round-banner week';
+    banner.innerHTML = '<span class="tag">📅 1주일</span>1주일 사용 고객만족도 조사';
+    document.title = '[1주일차] ' + document.title;
+    document.getElementById('gateTitle').textContent = '고객 확인 (1주일차 설문)';
+  } else {
+    banner.className = 'round-banner none';
+    banner.innerHTML = '⚠️ 조사 차수 정보가 없는 링크입니다';
+  }
+})();
 
 let matchedTarget = null;
 function normPhone(p){ return (p||'').replace(/[^0-9]/g,''); }
