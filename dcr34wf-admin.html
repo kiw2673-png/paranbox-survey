@@ -57,6 +57,7 @@ th{background:#f8f9fb;color:var(--text-muted);font-weight:600;position:sticky;to
 .field input,.field select,.field textarea{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:.88rem;font-family:inherit;}
 .field textarea{resize:vertical;min-height:60px;}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 12px;}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0 12px;}
 .modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;}
 .hidden{display:none !important;}
 .copy-link{color:var(--blue);cursor:pointer;text-decoration:underline;font-size:.78rem;}
@@ -133,7 +134,7 @@ th{background:#f8f9fb;color:var(--text-muted);font-weight:600;position:sticky;to
     </div>
     <div class="tbl-wrap">
       <table>
-        <thead><tr><th>제출일시</th><th>고객명</th><th>연락처</th><th>주소</th><th>조절기모델명</th><th>이상여부</th><th>교육실시</th><th>상세</th></tr></thead>
+        <thead><tr><th>제출일시</th><th>고객명</th><th>연락처</th><th>주소</th><th>조절기모델명</th><th>이상여부</th><th>교육실시</th><th>관리</th></tr></thead>
         <tbody id="checkTbody"></tbody>
       </table>
     </div>
@@ -234,6 +235,87 @@ th{background:#f8f9fb;color:var(--text-muted);font-weight:600;position:sticky;to
     <h3 id="detailTitle"></h3>
     <div id="detailBody"></div>
     <div class="modal-actions"><button class="btn" onclick="closeDetailModal()">닫기</button></div>
+  </div>
+</div>
+
+<!-- check edit modal -->
+<div class="modal-bg hidden" id="checkEditModalBg">
+  <div class="modal lg">
+    <h3>컨설턴트 체크리스트 수정</h3>
+    <input type="hidden" id="ce_id">
+    <div class="section-title">사용자</div>
+    <div class="grid2">
+      <div class="field"><label>고객 성명</label><input type="text" id="ce_customerName"></div>
+      <div class="field"><label>전화번호</label><input type="text" id="ce_customerPhone"></div>
+    </div>
+    <div class="field"><label>주소</label><input type="text" id="ce_address"></div>
+    <div class="grid2">
+      <div class="field"><label>분류</label>
+        <select id="ce_buildingType">
+          <option value="단독주택">단독주택</option>
+          <option value="아파트">공동주택 - 아파트</option>
+          <option value="연립">공동주택 - 연립</option>
+          <option value="다세대">공동주택 - 다세대</option>
+          <option value="기타">기타</option>
+        </select>
+      </div>
+      <div class="field"><label>분류 기타(직접입력)</label><input type="text" id="ce_buildingTypeEtc"></div>
+    </div>
+    <div class="section-title">규모</div>
+    <div class="grid2">
+      <div class="field"><label>건축면적(㎡)</label><input type="text" id="ce_area_construction"></div>
+      <div class="field"><label>난방면적(㎡)</label><input type="text" id="ce_area_heating"></div>
+    </div>
+    <div class="grid3">
+      <div class="field"><label>평형</label><input type="text" id="ce_area_pyeong"></div>
+      <div class="field"><label>세대수</label><input type="text" id="ce_area_households"></div>
+      <div class="field"><label>층수</label><input type="text" id="ce_area_floors"></div>
+    </div>
+    <div class="section-title">각방 설치내역</div>
+    <div class="grid2">
+      <div class="field"><label>온도조절기 모델명</label><input type="text" id="ce_thermoModel"></div>
+      <div class="field"><label>제조번호(S/N)</label><input type="text" id="ce_serialNo"></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label>밸브제어기 모델명</label><input type="text" id="ce_valveCtrlModel"></div>
+      <div class="field"><label>방 Zone 개수</label><input type="number" id="ce_zoneCount"></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label>연동 보일러 모델명</label><input type="text" id="ce_boilerModel"></div>
+      <div class="field"><label>밸브 구동기 개수</label><input type="number" id="ce_actuatorCount"></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label>보일러 연동 타입</label>
+        <select id="ce_boilerLinkType"><option value="">선택안함</option><option value="통신">통신</option><option value="접점">접점</option></select>
+      </div>
+      <div class="field"><label>거실 R/C 설치장소</label><input type="text" id="ce_rcLocation"></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label>공유기 설치장소</label><input type="text" id="ce_sharedDeviceLocation"></div>
+      <div class="field"><label>IoT온도조절기로부터 거리(M)</label><input type="number" id="ce_distanceFromThermo"></div>
+    </div>
+    <div class="field"><label>설치일자</label><input type="date" id="ce_installDate"></div>
+    <div class="section-title">확인사항</div>
+    <div class="grid2">
+      <div class="field"><label>15) R/C 및 보일러 간 통신연동</label>
+        <select id="ce_c15"><option value="">-</option><option value="정상">정상</option><option value="이상">이상</option></select></div>
+      <div class="field"><label>16) 온도조절기 간 통신연동</label>
+        <select id="ce_c16"><option value="">-</option><option value="정상">정상</option><option value="이상">이상</option></select></div>
+      <div class="field"><label>17) 온도조절기 기능 정상확인</label>
+        <select id="ce_c17"><option value="">-</option><option value="정상">정상</option><option value="이상">이상</option></select></div>
+      <div class="field"><label>18) 각방시스템 및 보일러 간 동작</label>
+        <select id="ce_c18"><option value="">-</option><option value="정상">정상</option><option value="이상">이상</option></select></div>
+      <div class="field"><label>19) IoT 등록 및 App 연동확인</label>
+        <select id="ce_c19"><option value="">-</option><option value="정상">정상</option><option value="이상">이상</option></select></div>
+      <div class="field"><label>20) 사용 교육 실시여부</label>
+        <select id="ce_c20"><option value="">-</option><option value="실시">실시</option><option value="미실시">미실시</option></select></div>
+    </div>
+    <div class="field"><label>기타 특기사항</label><textarea id="ce_etc"></textarea></div>
+    <div class="field"><label>작성자(컨설턴트명)</label><input type="text" id="ce_consultantName"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeCheckEdit()">취소</button>
+      <button class="btn btn-blue" onclick="saveCheckEdit()">저장</button>
+    </div>
   </div>
 </div>
 
@@ -421,8 +503,8 @@ window.saveTarget = async function(){
   }catch(e){ console.error(e); alert('저장 실패: '+e.message); }
 };
 
-window.openDeleteModal = function(id){
-  deleteCtx = {type:'target', id};
+window.openDeleteModal = function(id, type){
+  deleteCtx = {type: type||'target', id};
   document.getElementById('deletePw').value = '';
   document.getElementById('deletePwErr').textContent = '';
   document.getElementById('deleteModalBg').classList.remove('hidden');
@@ -436,6 +518,8 @@ window.confirmDelete = async function(){
   try{
     if(deleteCtx.type==='target'){
       await fb.deleteDoc(fb.doc(fb.db,'dcr34wf_targets',deleteCtx.id));
+    }else if(deleteCtx.type==='check'){
+      await fb.deleteDoc(fb.doc(fb.db,'dcr34wf_checks',deleteCtx.id));
     }
     closeDeleteModal();
     await loadAll();
@@ -510,7 +594,11 @@ function renderChecks(){
       <td>${esc(c.thermoModel)}</td>
       <td>${abnormal?'<span class="badge badge-absent">이상있음</span>':'<span class="badge badge-ok">정상</span>'}</td>
       <td>${esc(c.checks?.c20||'-')}</td>
-      <td><button class="btn btn-sm" onclick="openCheckDetail('${c.id}')">보기</button></td>
+      <td>
+        <button class="btn btn-sm" onclick="openCheckDetail('${c.id}')">보기</button>
+        <button class="btn btn-sm" onclick="openCheckEdit('${c.id}')">수정</button>
+        <button class="btn btn-sm btn-danger" onclick="openDeleteModal('${c.id}','check')">삭제</button>
+      </td>
     </tr>`;
   }).join('');
 }
@@ -542,6 +630,49 @@ window.openCheckDetail = function(id){
   html += `<div class="section-title">기타 특기사항</div><div style="white-space:pre-wrap;font-size:.85rem;">${esc(c.etc||'-')}</div>`;
   document.getElementById('detailBody').innerHTML = html;
   document.getElementById('detailModalBg').classList.remove('hidden');
+};
+
+window.openCheckEdit = function(id){
+  const c = checks.find(x=>x.id===id); if(!c) return;
+  const a = c.area||{}; const ch = c.checks||{};
+  const set=(k,v)=>{ const el=document.getElementById(k); if(el) el.value = v==null?'':v; };
+  set('ce_id', c.id);
+  set('ce_customerName', c.customerName); set('ce_customerPhone', c.customerPhone); set('ce_address', c.address);
+  set('ce_buildingType', c.buildingType||'단독주택'); set('ce_buildingTypeEtc', c.buildingTypeEtc);
+  set('ce_area_construction', a.construction); set('ce_area_heating', a.heating);
+  set('ce_area_pyeong', a.pyeong); set('ce_area_households', a.households); set('ce_area_floors', a.floors);
+  set('ce_thermoModel', c.thermoModel); set('ce_serialNo', c.serialNo);
+  set('ce_valveCtrlModel', c.valveCtrlModel); set('ce_zoneCount', c.zoneCount);
+  set('ce_boilerModel', c.boilerModel); set('ce_actuatorCount', c.actuatorCount);
+  set('ce_boilerLinkType', c.boilerLinkType); set('ce_rcLocation', c.rcLocation);
+  set('ce_sharedDeviceLocation', c.sharedDeviceLocation); set('ce_distanceFromThermo', c.distanceFromThermo);
+  set('ce_installDate', c.installDate);
+  ['c15','c16','c17','c18','c19','c20'].forEach(k=> set('ce_'+k, ch[k]));
+  set('ce_etc', c.etc); set('ce_consultantName', c.consultantName);
+  document.getElementById('checkEditModalBg').classList.remove('hidden');
+};
+window.closeCheckEdit = function(){ document.getElementById('checkEditModalBg').classList.add('hidden'); };
+window.saveCheckEdit = async function(){
+  const fb = window._fb;
+  const id = document.getElementById('ce_id').value;
+  const g=(k)=>{ const el=document.getElementById(k); return el ? el.value.trim() : ''; };
+  const payload = {
+    customerName: g('ce_customerName'), customerPhone: g('ce_customerPhone'), address: g('ce_address'),
+    buildingType: g('ce_buildingType'), buildingTypeEtc: g('ce_buildingTypeEtc'),
+    area: { construction:g('ce_area_construction'), heating:g('ce_area_heating'), pyeong:g('ce_area_pyeong'), households:g('ce_area_households'), floors:g('ce_area_floors') },
+    thermoModel: g('ce_thermoModel'), serialNo: g('ce_serialNo'), valveCtrlModel: g('ce_valveCtrlModel'), zoneCount: g('ce_zoneCount'),
+    boilerModel: g('ce_boilerModel'), actuatorCount: g('ce_actuatorCount'), boilerLinkType: g('ce_boilerLinkType'),
+    rcLocation: g('ce_rcLocation'), sharedDeviceLocation: g('ce_sharedDeviceLocation'), distanceFromThermo: g('ce_distanceFromThermo'),
+    installDate: g('ce_installDate'),
+    checks: { c15:g('ce_c15'), c16:g('ce_c16'), c17:g('ce_c17'), c18:g('ce_c18'), c19:g('ce_c19'), c20:g('ce_c20') },
+    etc: g('ce_etc'), consultantName: g('ce_consultantName'),
+    updatedAt: fb.serverTimestamp()
+  };
+  try{
+    await fb.updateDoc(fb.doc(fb.db,'dcr34wf_checks',id), payload);
+    closeCheckEdit();
+    await loadAll();
+  }catch(e){ console.error(e); alert('저장 실패: '+e.message); }
 };
 
 // ---- satisfaction tab ----
