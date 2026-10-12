@@ -873,31 +873,14 @@ window.saveSatEdit = async function(){
 window.closeDetailModal = function(){ document.getElementById('detailModalBg').classList.add('hidden'); };
 
 // ---- WORD download (설치명단 기준: 컨설턴트 체크리스트 / 고객만족도 1주 / 1달) ----
-const SAT_QUESTIONS_FULL = [
-  ['q1_1','1-1. 온도조절기와 앱의 기기 연결 및 Wi-Fi 등록 과정은 편리하고 이해하기 쉬웠습니까?'],
-  ['q1_2','1-2. 제공된 앱 등록 매뉴얼(가이드)의 설명이 직관적이고 따라 하기 쉽게 작성되었습니까?'],
-  ['q1_3','1-3. 기기 연결 및 Wi-Fi 앱 등록 과정에서 연결 실패나 오류가 발생한 적이 있습니까?'],
-  ['q1_3_1','1-3-1. 어느 단계에서 오류가 발생했습니까? (해당 항목 모두 선택)'],
-  ['q2_1','2-1. 거실 조절기의 화면이 선명하고, 현재 상태를 확인하기 편리합니까?'],
-  ['q2_2','2-2. 앱에서의 화면 구성이 각 방의 현재 상태를 한눈에 확인하기에 편리합니까?'],
-  ['q2_3','2-3. 앱에서 각 방의 명칭을 설정·변경하고, 앱에 표시되는 각 방과 실제 방을 대응시켜 확인하기에 편리합니까?'],
-  ['q2_4','2-4. 앱 사용 중 기기 연결 실패(오프라인)나 에러 알림이 발생한 적이 있습니까?'],
-  ['q3_1','3-1. 앱에서 각 방의 원격 제어가 원활합니까? (온도 조절, 모드 변경, 전원 On/Off 등)'],
-  ['q3_2','3-2. 조절기 본체 또는 앱에서 온도, 모드를 변경했을 때, 변경된 온도·모드가 조절기 본체와 앱 화면에 동일하게 표시됩니까?'],
-  ['q3_3','3-3. 전체 자동화(외출/귀가) 모드를 사용해 본 적이 있습니까?'],
-  ['q3_3_1','3-3-1. 외출/귀가 모드 기능에 얼마나 만족하십니까?'],
-  ['q3_4','3-4. 앱에 함께 등록하여 조절기를 제어하는 가족(세대원)은 본인 포함 몇 명입니까?'],
-  ['q3_4_1','3-4-1. 가족 구성원 초대(세대원 추가) 및 기기공유 등록 과정은 편리했습니까?'],
-  ['q3_4_2','3-4-2. 기기에 등록된 그룹 세대원이 같이 앱을 사용해도 정상 작동했습니까?'],
-  ['q4_1','4-1. 본 IoT 각방 온도조절기 제품에 대한 전반적인 만족도를 체크해주시기 바랍니다.']
-];
+// 실제 설문지(dcr34wf-check.html / dcr34wf-satisfaction.html) 화면 구성을 그대로 재현한다.
 
 function sanitizeFileName(s){ return String(s||'').replace(/[\\/:*?"<>|]/g,'_').trim() || '고객'; }
 
 function wordDownload(filename, bodyHtml){
   if(!window.htmlDocx){ alert('html-docx-js 라이브러리가 로드되지 않았습니다.'); return; }
   const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
-    body{font-family:'맑은 고딕','Malgun Gothic',sans-serif;font-size:10pt;line-height:1.4;margin:0;color:#1a1a1a;}
+    body{font-family:'맑은 고딕','Malgun Gothic',sans-serif;font-size:10pt;line-height:1.5;margin:0;color:#1a1a1a;}
     table{border-collapse:collapse;width:100%;margin-bottom:10pt;}
     th{text-align:left;}
     td,th{border:0.5pt solid #C8D4E8;padding:5pt 7pt;vertical-align:top;font-size:9.5pt;}
@@ -911,68 +894,146 @@ function wordDownload(filename, bodyHtml){
 }
 
 function hdrBlock(title){
-  return `<div style="background:#1F3864;color:#fff;padding:8pt 10pt;font-size:13pt;font-weight:bold;margin-bottom:10pt">${esc(title)}</div>`;
+  return `<div style="background:#1F3864;color:#fff;padding:8pt 10pt;font-size:13pt;font-weight:bold;margin-bottom:8pt">${esc(title)}</div>`;
 }
 function secBlock(title){
-  return `<p style="color:#1F3864;font-weight:bold;font-size:11pt;margin:10pt 0 3pt;border-bottom:1pt solid #1F3864;padding-bottom:2pt">${esc(title)}</p>`;
+  return `<p style="color:#1F3864;font-weight:bold;font-size:11pt;margin:12pt 0 5pt;border-bottom:1pt solid #1F3864;padding-bottom:2pt">${esc(title)}</p>`;
 }
-const tdLbl = 'background:#DCE6F1;color:#1F3864;font-weight:bold;white-space:nowrap;width:32%';
+function fieldLine(label, value){
+  const v = (value===undefined||value===null||value==='') ? '-' : value;
+  return `<p style="margin:4pt 0;font-size:9.5pt;"><b>${esc(label)}</b> : ${esc(v)}</p>`;
+}
+function optsLine(options, selected){
+  return (options||[]).map(o => (o===selected?'☑':'☐')+' '+esc(o)).join('&nbsp;&nbsp;&nbsp;&nbsp;');
+}
+
+const BUILDING_TYPE_LABELS = {단독주택:'단독주택', 아파트:'공동주택 - 아파트', 연립:'공동주택 - 연립', 다세대:'공동주택 - 다세대', 기타:'기타'};
+
+const CHECK_FORM_ITEMS = [
+  {k:'c15', title:'15) R/C 및 보일러 간 통신연동여부', subs:['1) 밸브제어기 전면에 R/C 파란색 LED 점등 확인','2) 밸브제어기 전면에 보일러 파란색 LED 점등 확인'], opts:['정상','이상']},
+  {k:'c16', title:'16) 온도조절기 간 통신연동여부', subs:['1) 각 방별 설정된 방 번호 확인','2) 거실에서 각실 방 번호 확인'], opts:['정상','이상']},
+  {k:'c17', title:'17) 온도조절기 기능 정상확인여부', subs:['1) 온도조절기 LCD 화면 표시 상태 확인','2) 온도조절기 버튼 입력 및 조작 상태 확인','3) 온도조절기 현재/설정 온도 및 운전 모드 변경 동작 확인'], opts:['정상','이상']},
+  {k:'c18', title:'18) 각방시스템 및 보일러 간 동작여부', subs:['1) 각 방별 난방 가동 유/무에 따른 구동기 동작 확인','2) 난방 가동 유/무에 따른 보일러 동작 확인','3) 거실 온도조절기에서 각실 제어 및 확인'], opts:['정상','이상']},
+  {k:'c19', title:'19) IoT 등록 및 App 연동확인', subs:['1) 거실 온도조절기에서 Wi-Fi 등록 여부 확인','2) App에서 각 방별 등록 및 기기 연결 상태 확인','3) APP에서 각 방별 제어 및 동작 확인'], opts:['정상','이상']},
+  {k:'c20', title:'20) 사용 교육의 실시 여부', subs:[], opts:['실시','미실시']}
+];
+function checkItemBlock(it, val){
+  let h = `<div style="border:0.5pt solid #d8d8d8;padding:6pt 8pt;margin-bottom:6pt;">
+    <div style="font-weight:bold;font-size:9.5pt;">${esc(it.title)}</div>`;
+  it.subs.forEach(s=> h += `<div style="font-size:8pt;color:#777;margin:1pt 0;">${esc(s)}</div>`);
+  h += `<div style="margin-top:4pt;">${optsLine(it.opts, val)}</div></div>`;
+  return h;
+}
 
 window.downloadCheckWord = function(targetId){
   const c = checks.find(x=>x.targetId===targetId);
   if(!c){ alert('아직 제출된 컨설턴트 체크리스트가 없습니다.'); return; }
   const t = targets.find(x=>x.id===targetId);
   const a = c.area||{};
-  const rows = [
-    ['고객 성명', c.customerName], ['전화번호', c.customerPhone], ['주소', c.address],
-    ['분류', (c.buildingType||'-') + (c.buildingTypeEtc? ' ('+c.buildingTypeEtc+')':'')],
-    ['건축면적(㎡)', a.construction], ['난방면적(㎡)', a.heating],
-    ['평형', a.pyeong], ['세대수', a.households], ['층수', a.floors],
-    ['온도조절기 모델명', c.thermoModel], ['제조번호(S/N)', c.serialNo],
-    ['밸브제어기 모델명', c.valveCtrlModel], ['방 Zone 개수', c.zoneCount],
-    ['연동 보일러 모델명', c.boilerModel], ['밸브 구동기 개수', c.actuatorCount],
-    ['보일러 연동 타입', c.boilerLinkType], ['거실 R/C 설치장소', c.rcLocation],
-    ['공유기 설치장소', c.sharedDeviceLocation], ['IoT온도조절기로부터 거리(M)', c.distanceFromThermo],
-    ['설치일자', c.installDate]
-  ];
-  let body = hdrBlock('IoT 각방 온도조절기(DCR-34/WF) 설치 현황표 - 컨설턴트 체크리스트');
-  body += secBlock('기본 정보');
-  body += '<table>'+rows.map(r=>`<tr><td style="${tdLbl}">${esc(r[0])}</td><td>${esc(r[1]??'-')}</td></tr>`).join('')+'</table>';
+
+  let body = hdrBlock('IoT 각방 온도조절기(DCR-34/WF) 설치 현황표');
+  body += `<p style="text-align:center;color:#555;font-size:9.5pt;margin:0 0 10pt;">컨설턴트(설치자) 필드테스트 체크리스트</p>`;
+
+  body += secBlock('사용자');
+  body += fieldLine('1) 성명', c.customerName);
+  body += fieldLine('2) 전화번호', c.customerPhone);
+  body += fieldLine('3) 주소', c.address);
+
+  body += secBlock('건축물');
+  body += `<p style="margin:4pt 0;font-size:9.5pt;"><b>4) 분류</b> : ${optsLine(Object.keys(BUILDING_TYPE_LABELS).map(k=>BUILDING_TYPE_LABELS[k]), BUILDING_TYPE_LABELS[c.buildingType]||'')}${(c.buildingType==='기타'&&c.buildingTypeEtc)?' ('+esc(c.buildingTypeEtc)+')':''}</p>`;
+  body += `<p style="margin:4pt 0 0;font-size:9.5pt;"><b>5) 규모</b></p>`;
+  body += fieldLine('건축면적(㎡) / 난방면적(㎡)', `${a.construction||'-'} / ${a.heating||'-'}`);
+  body += fieldLine('평형 / 세대수 / 층수', `${a.pyeong||'-'}평형 / ${a.households||'-'}세대 / ${a.floors||'-'}층`);
+
+  body += secBlock('각방 설치내역');
+  body += fieldLine('6) 온도조절기 모델명', c.thermoModel);
+  body += fieldLine('7) 제조번호(S/N)', c.serialNo);
+  body += fieldLine('8) 밸브제어기 모델명', c.valveCtrlModel);
+  body += fieldLine('9) 방 Zone 개수 (온도조절기 기준, 대)', c.zoneCount);
+  body += fieldLine('10) 연동 보일러 모델명 / 밸브 구동기 개수', `${c.boilerModel||'-'} / ${c.actuatorCount||'-'}`);
+  body += `<p style="margin:4pt 0;font-size:9.5pt;"><b>11) 보일러 연동 타입</b> : ${optsLine(['통신','접점'], c.boilerLinkType)}</p>`;
+  body += fieldLine('12) 거실 R/C 설치장소', c.rcLocation);
+  body += fieldLine('13) 공유기 설치장소', c.sharedDeviceLocation);
+  body += fieldLine('IoT온도조절기로부터 거리(M)', c.distanceFromThermo);
+  body += fieldLine('14) 설치일자', c.installDate);
+
   body += secBlock('확인사항');
-  body += '<table><tr><th style="background:#1F3864;color:#fff">항목</th><th style="background:#1F3864;color:#fff;width:18%">결과</th></tr>';
-  CHECK_ITEMS.forEach(it=>{
-    const v = c.checks?.[it.k];
-    const style = v==='이상' ? 'background:#FCEBEB;color:#C00000;font-weight:bold' : v==='정상' ? 'background:#EAF3DE;color:#3B6D11;font-weight:bold' : '';
-    body += `<tr><td>${esc(it.label)}</td><td style="${style}">${esc(v||'-')}</td></tr>`;
-  });
-  body += `<tr><td>20) 사용교육 실시여부</td><td>${esc(c.checks?.c20||'-')}</td></tr></table>`;
-  body += secBlock('기타 특기사항');
-  body += `<p>${esc(c.etc||'-').replace(/\n/g,'<br>')}</p>`;
-  body += `<p style="text-align:right;color:#555">작성자(컨설턴트명): ${esc(c.consultantName||'-')}</p>`;
+  CHECK_FORM_ITEMS.forEach(it=>{ body += checkItemBlock(it, c.checks?.[it.k]); });
+
+  body += secBlock('21) 기타 특기사항');
+  body += `<p style="font-size:9.5pt;">${esc(c.etc||'-').replace(/\n/g,'<br>')}</p>`;
+  body += fieldLine('작성자(컨설턴트명)', c.consultantName);
+
   const fname = `컨설턴트체크리스트_${sanitizeFileName(c.customerName||t?.agency)}.docx`;
   wordDownload(fname, body);
 };
+
+const SAT_FORM = [
+  {sec:'1. Wi-Fi 및 APP 등록', qs:[
+    {k:'q1_1', text:'1-1. 온도조절기와 앱의 기기 연결 및 Wi-Fi 등록 과정은 편리하고 이해하기 쉬웠습니까?', opts:'SCALE5'},
+    {k:'q1_2', text:'1-2. 제공된 앱 등록 매뉴얼(가이드)의 설명이 직관적이고 따라 하기 쉽게 작성되었습니까?', opts:'SCALE5'},
+    {k:'q1_3', text:'1-3. 기기 연결 및 Wi-Fi 앱 등록 과정에서 연결 실패나 오류가 발생한 적이 있습니까?', opts:'FREQ5'},
+    {k:'q1_3_1', text:'1-3-1. 어느 단계에서 오류가 발생했습니까? (해당 항목 모두 선택)', opts:'ERR_STEPS', multi:true, conditional:true}
+  ]},
+  {sec:'2. 각방 상태 확인', qs:[
+    {k:'q2_1', text:'2-1. 거실 조절기의 화면이 선명하고, 현재 상태를 확인하기 편리합니까?', hint:'(실내/설정 온도, 난방/외출/예약 모드, 연결 상태 등)', opts:'SCALE5'},
+    {k:'q2_2', text:'2-2. 앱에서의 화면 구성이 각 방의 현재 상태를 한눈에 확인하기에 편리합니까?', opts:'SCALE5'},
+    {k:'q2_3', text:'2-3. 앱에서 각 방의 명칭을 설정·변경하고, 앱에 표시되는 각 방과 실제 방을 대응시켜 확인하기에 편리합니까?', opts:'SCALE5'},
+    {k:'q2_4', text:'2-4. 앱 사용 중 기기 연결 실패(오프라인)나 에러 알림이 발생한 적이 있습니까?', opts:'FREQ3'}
+  ]},
+  {sec:'3. IoT 기능 및 제어', qs:[
+    {k:'q3_1', text:'3-1. 앱에서 각 방의 원격 제어가 원활합니까? (온도 조절, 모드 변경, 전원 On/Off 등)', opts:'SCALE5'},
+    {k:'q3_2', text:'3-2. 조절기 본체 또는 앱에서 온도, 모드를 변경했을 때, 변경된 온도·모드가 조절기 본체와 앱 화면에 동일하게 표시됩니까?', opts:'SCALE5_MATCH'},
+    {k:'q3_3', text:'3-3. 전체 자동화(외출/귀가) 모드를 사용해 본 적이 있습니까?', opts:'USE_3_3'},
+    {k:'q3_3_1', text:'3-3-1. 외출/귀가 모드 기능에 얼마나 만족하십니까?', opts:'SCALE5', conditional:true},
+    {k:'q3_4', text:'3-4. 앱에 함께 등록하여 조절기를 제어하는 가족(세대원)은 본인 포함 몇 명입니까?', opts:'MEMBERS_3_4'},
+    {k:'q3_4_1', text:'3-4-1. 가족 구성원 초대(세대원 추가) 및 기기공유 등록 과정은 편리했습니까?', opts:'SCALE5', conditional:true},
+    {k:'q3_4_2', text:'3-4-2. 기기에 등록된 그룹 세대원이 같이 앱을 사용해도 정상 작동했습니까?', opts:'ACT_3_4_2', conditional:true}
+  ]},
+  {sec:'4. 종합 만족도 및 건의사항', qs:[
+    {k:'q4_1', text:'4-1. 본 IoT 각방 온도조절기 제품에 대한 전반적인 만족도를 체크해주시기 바랍니다.', hint:'(체험 기간 동안의 품질, 디자인, 기능, 모바일 앱 사용 편의성에 대한 종합 만족도)', opts:'SCALE5_SAT'}
+  ]}
+];
+function renderSatQuestion(q, val){
+  const empty = val==null || val==='' || (Array.isArray(val)&&val.length===0);
+  if(q.conditional && empty) return '';
+  const opts = SAT_OPTS[q.opts]||[];
+  let h = `<div style="margin:0 0 10pt;">`;
+  h += `<div style="font-weight:bold;font-size:9.5pt;">${esc(q.text)}</div>`;
+  if(q.hint) h += `<div style="font-size:8pt;color:#777;margin:1pt 0 3pt;">${esc(q.hint)}</div>`;
+  if(q.multi){
+    const vals = Array.isArray(val) ? val : [];
+    const etc = vals.find(v=>String(v).startsWith('기타:'));
+    const lines = opts.map(o=> (vals.includes(o)?'☑':'☐')+' '+esc(o));
+    lines.push((etc?'☑':'☐')+' '+(etc?esc(etc):'기타'));
+    h += `<div style="margin-top:3pt;">${lines.join('&nbsp;&nbsp;&nbsp;&nbsp;')}</div>`;
+  }else{
+    h += `<div style="margin-top:3pt;">${optsLine(opts, val)}</div>`;
+  }
+  h += '</div>';
+  return h;
+}
 
 window.downloadSatWord = function(targetId, round){
   const s = sats.find(x=>x.targetId===targetId && x.round===round);
   if(!s){ alert('아직 제출된 고객만족도 설문이 없습니다.'); return; }
   const a = s.answers||{};
   const roundLabel = round==='1month' ? '1개월' : '1주일';
-  let body = hdrBlock(`IoT 각방 온도조절기 고객 만족도 설문서 (${roundLabel} 사용)`);
-  body += secBlock('고객 정보');
-  body += `<table><tr><td style="${tdLbl}">고객 성명</td><td>${esc(a.customerName||s.customerName||'-')}</td></tr>`;
-  body += `<tr><td style="${tdLbl}">전화번호</td><td>${esc(a.customerPhone||s.customerPhone||'-')}</td></tr></table>`;
-  body += secBlock('설문 응답');
-  body += '<table><tr><th style="background:#1F3864;color:#fff;width:55%">문항</th><th style="background:#1F3864;color:#fff">응답</th></tr>';
-  SAT_QUESTIONS_FULL.forEach(([k,label])=>{
-    let v = a[k];
-    if(Array.isArray(v)) v = v.join(', ');
-    if(v==null || v==='') return;
-    body += `<tr><td style="${tdLbl}">${esc(label)}</td><td>${esc(v)}</td></tr>`;
+  const roundColor = round==='1month' ? '#3B6D11' : '#1a56b0';
+
+  let body = hdrBlock('IoT 각방 온도조절기 고객 만족도 설문서');
+  body += `<p style="background:${roundColor};color:#fff;text-align:center;padding:6pt;font-weight:bold;font-size:11pt;margin:0 0 10pt;">${esc(roundLabel)} 사용 고객만족도 조사</p>`;
+  body += fieldLine('고객 성명', a.customerName||s.customerName);
+  body += fieldLine('전화번호', a.customerPhone||s.customerPhone);
+
+  SAT_FORM.forEach(section=>{
+    body += secBlock(section.sec);
+    section.qs.forEach(q=>{ body += renderSatQuestion(q, a[q.k]); });
   });
-  body += '</table>';
+
   body += secBlock('4-2. 건의사항');
-  body += `<p>${esc(a.q4_2||'-').replace(/\n/g,'<br>')}</p>`;
+  body += `<p style="font-size:9.5pt;">${esc(a.q4_2||'-').replace(/\n/g,'<br>')}</p>`;
+
   const fname = `고객만족도_${roundLabel}_${sanitizeFileName(a.customerName||s.customerName)}.docx`;
   wordDownload(fname, body);
 };
