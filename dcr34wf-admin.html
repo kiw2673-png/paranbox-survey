@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>DCR-34WF 필드테스트 관리자</title>
+<script src="https://cdn.jsdelivr.net/npm/html-docx-js@0.3.1/dist/html-docx.js"></script>
 <style>
 :root{
   --blue:#1a56b0; --blue-dark:#154698; --blue-light:#e6f1fb;
@@ -124,7 +125,7 @@ th{background:#f8f9fb;color:var(--text-muted);font-weight:600;position:sticky;to
         <thead><tr>
           <th>순번</th><th>대리점명</th><th>주소</th><th>연락처</th><th>교체여부</th>
           <th>고객연락처</th><th>희망일자</th><th>담당자</th><th>설치일</th>
-          <th>체크리스트</th><th>1주만족</th><th>1달만족</th><th>링크</th><th>관리</th>
+          <th>체크리스트</th><th>1주만족</th><th>1달만족</th><th>링크</th><th>WORD 다운로드</th><th>관리</th>
         </tr></thead>
         <tbody id="listTbody"></tbody>
       </table>
@@ -436,12 +437,15 @@ function renderTargets(){
   list.sort((a,b)=> (Number(a.no)||0) - (Number(b.no)||0));
   document.getElementById('listSummary').textContent = `전체 ${targets.length}건 중 ${list.length}건 표시 / 교체여부 OK: ${targets.filter(t=>t.replace==='OK').length}건`;
   const tb = document.getElementById('listTbody');
-  if(!list.length){ tb.innerHTML = '<tr><td colspan="13" class="empty">데이터가 없습니다.</td></tr>'; return; }
+  if(!list.length){ tb.innerHTML = '<tr><td colspan="15" class="empty">데이터가 없습니다.</td></tr>'; return; }
   tb.innerHTML = list.map(t=>{
     const hasCheck = checks.some(c=>c.targetId===t.id);
     const has1w = sats.some(s=>s.targetId===t.id && s.round==='1week');
     const has1m = sats.some(s=>s.targetId===t.id && s.round==='1month');
     const phoneForLink = encodeURIComponent(t.customerPhone||t.phone||'');
+    const dlLink = (enabled, onclick, label) => enabled
+      ? `<span class="copy-link" onclick="${onclick}">${label}</span>`
+      : `<span style="color:#bbb;font-size:.78rem;">${label}</span>`;
     return `<tr>
       <td>${esc(t.no)}</td><td>${esc(t.agency)}</td><td style="white-space:normal;min-width:400px;max-width:660px;">${esc(t.address)}</td>
       <td>${esc(t.phone)}</td><td>${replaceBadge(t.replace)}</td><td>${esc(t.customerPhone)}</td>
@@ -453,6 +457,11 @@ function renderTargets(){
         <span class="copy-link" onclick="copyLink('check','${phoneForLink}')">체크리스트</span><br>
         <span class="copy-link" onclick="copyLink('1week','${phoneForLink}')">1주만족도</span><br>
         <span class="copy-link" onclick="copyLink('1month','${phoneForLink}')">1달만족도</span>
+      </td>
+      <td>
+        ${dlLink(hasCheck, `downloadCheckWord('${t.id}')`, '체크리스트')}<br>
+        ${dlLink(has1w, `downloadSatWord('${t.id}','1week')`, '1주만족도')}<br>
+        ${dlLink(has1m, `downloadSatWord('${t.id}','1month')`, '1달만족도')}
       </td>
       <td>
         <button class="btn btn-sm" onclick="openTargetModal('${t.id}')">수정</button>
@@ -862,6 +871,111 @@ window.saveSatEdit = async function(){
 };
 
 window.closeDetailModal = function(){ document.getElementById('detailModalBg').classList.add('hidden'); };
+
+// ---- WORD download (설치명단 기준: 컨설턴트 체크리스트 / 고객만족도 1주 / 1달) ----
+const SAT_QUESTIONS_FULL = [
+  ['q1_1','1-1. 온도조절기와 앱의 기기 연결 및 Wi-Fi 등록 과정은 편리하고 이해하기 쉬웠습니까?'],
+  ['q1_2','1-2. 제공된 앱 등록 매뉴얼(가이드)의 설명이 직관적이고 따라 하기 쉽게 작성되었습니까?'],
+  ['q1_3','1-3. 기기 연결 및 Wi-Fi 앱 등록 과정에서 연결 실패나 오류가 발생한 적이 있습니까?'],
+  ['q1_3_1','1-3-1. 어느 단계에서 오류가 발생했습니까? (해당 항목 모두 선택)'],
+  ['q2_1','2-1. 거실 조절기의 화면이 선명하고, 현재 상태를 확인하기 편리합니까?'],
+  ['q2_2','2-2. 앱에서의 화면 구성이 각 방의 현재 상태를 한눈에 확인하기에 편리합니까?'],
+  ['q2_3','2-3. 앱에서 각 방의 명칭을 설정·변경하고, 앱에 표시되는 각 방과 실제 방을 대응시켜 확인하기에 편리합니까?'],
+  ['q2_4','2-4. 앱 사용 중 기기 연결 실패(오프라인)나 에러 알림이 발생한 적이 있습니까?'],
+  ['q3_1','3-1. 앱에서 각 방의 원격 제어가 원활합니까? (온도 조절, 모드 변경, 전원 On/Off 등)'],
+  ['q3_2','3-2. 조절기 본체 또는 앱에서 온도, 모드를 변경했을 때, 변경된 온도·모드가 조절기 본체와 앱 화면에 동일하게 표시됩니까?'],
+  ['q3_3','3-3. 전체 자동화(외출/귀가) 모드를 사용해 본 적이 있습니까?'],
+  ['q3_3_1','3-3-1. 외출/귀가 모드 기능에 얼마나 만족하십니까?'],
+  ['q3_4','3-4. 앱에 함께 등록하여 조절기를 제어하는 가족(세대원)은 본인 포함 몇 명입니까?'],
+  ['q3_4_1','3-4-1. 가족 구성원 초대(세대원 추가) 및 기기공유 등록 과정은 편리했습니까?'],
+  ['q3_4_2','3-4-2. 기기에 등록된 그룹 세대원이 같이 앱을 사용해도 정상 작동했습니까?'],
+  ['q4_1','4-1. 본 IoT 각방 온도조절기 제품에 대한 전반적인 만족도를 체크해주시기 바랍니다.']
+];
+
+function sanitizeFileName(s){ return String(s||'').replace(/[\\/:*?"<>|]/g,'_').trim() || '고객'; }
+
+function wordDownload(filename, bodyHtml){
+  if(!window.htmlDocx){ alert('html-docx-js 라이브러리가 로드되지 않았습니다.'); return; }
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
+    body{font-family:'맑은 고딕','Malgun Gothic',sans-serif;font-size:10pt;line-height:1.4;margin:0;color:#1a1a1a;}
+    table{border-collapse:collapse;width:100%;margin-bottom:10pt;}
+    th{text-align:left;}
+    td,th{border:0.5pt solid #C8D4E8;padding:5pt 7pt;vertical-align:top;font-size:9.5pt;}
+  </style></head><body>${bodyHtml}</body></html>`;
+  const blob = window.htmlDocx.asBlob(html, {orientation:'portrait', margins:{top:720,right:720,bottom:720,left:720}});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(a.href);
+}
+
+function hdrBlock(title){
+  return `<div style="background:#1F3864;color:#fff;padding:8pt 10pt;font-size:13pt;font-weight:bold;margin-bottom:10pt">${esc(title)}</div>`;
+}
+function secBlock(title){
+  return `<p style="color:#1F3864;font-weight:bold;font-size:11pt;margin:10pt 0 3pt;border-bottom:1pt solid #1F3864;padding-bottom:2pt">${esc(title)}</p>`;
+}
+const tdLbl = 'background:#DCE6F1;color:#1F3864;font-weight:bold;white-space:nowrap;width:32%';
+
+window.downloadCheckWord = function(targetId){
+  const c = checks.find(x=>x.targetId===targetId);
+  if(!c){ alert('아직 제출된 컨설턴트 체크리스트가 없습니다.'); return; }
+  const t = targets.find(x=>x.id===targetId);
+  const a = c.area||{};
+  const rows = [
+    ['고객 성명', c.customerName], ['전화번호', c.customerPhone], ['주소', c.address],
+    ['분류', (c.buildingType||'-') + (c.buildingTypeEtc? ' ('+c.buildingTypeEtc+')':'')],
+    ['건축면적(㎡)', a.construction], ['난방면적(㎡)', a.heating],
+    ['평형', a.pyeong], ['세대수', a.households], ['층수', a.floors],
+    ['온도조절기 모델명', c.thermoModel], ['제조번호(S/N)', c.serialNo],
+    ['밸브제어기 모델명', c.valveCtrlModel], ['방 Zone 개수', c.zoneCount],
+    ['연동 보일러 모델명', c.boilerModel], ['밸브 구동기 개수', c.actuatorCount],
+    ['보일러 연동 타입', c.boilerLinkType], ['거실 R/C 설치장소', c.rcLocation],
+    ['공유기 설치장소', c.sharedDeviceLocation], ['IoT온도조절기로부터 거리(M)', c.distanceFromThermo],
+    ['설치일자', c.installDate]
+  ];
+  let body = hdrBlock('IoT 각방 온도조절기(DCR-34/WF) 설치 현황표 - 컨설턴트 체크리스트');
+  body += secBlock('기본 정보');
+  body += '<table>'+rows.map(r=>`<tr><td style="${tdLbl}">${esc(r[0])}</td><td>${esc(r[1]??'-')}</td></tr>`).join('')+'</table>';
+  body += secBlock('확인사항');
+  body += '<table><tr><th style="background:#1F3864;color:#fff">항목</th><th style="background:#1F3864;color:#fff;width:18%">결과</th></tr>';
+  CHECK_ITEMS.forEach(it=>{
+    const v = c.checks?.[it.k];
+    const style = v==='이상' ? 'background:#FCEBEB;color:#C00000;font-weight:bold' : v==='정상' ? 'background:#EAF3DE;color:#3B6D11;font-weight:bold' : '';
+    body += `<tr><td>${esc(it.label)}</td><td style="${style}">${esc(v||'-')}</td></tr>`;
+  });
+  body += `<tr><td>20) 사용교육 실시여부</td><td>${esc(c.checks?.c20||'-')}</td></tr></table>`;
+  body += secBlock('기타 특기사항');
+  body += `<p>${esc(c.etc||'-').replace(/\n/g,'<br>')}</p>`;
+  body += `<p style="text-align:right;color:#555">작성자(컨설턴트명): ${esc(c.consultantName||'-')}</p>`;
+  const fname = `컨설턴트체크리스트_${sanitizeFileName(c.customerName||t?.agency)}.docx`;
+  wordDownload(fname, body);
+};
+
+window.downloadSatWord = function(targetId, round){
+  const s = sats.find(x=>x.targetId===targetId && x.round===round);
+  if(!s){ alert('아직 제출된 고객만족도 설문이 없습니다.'); return; }
+  const a = s.answers||{};
+  const roundLabel = round==='1month' ? '1개월' : '1주일';
+  let body = hdrBlock(`IoT 각방 온도조절기 고객 만족도 설문서 (${roundLabel} 사용)`);
+  body += secBlock('고객 정보');
+  body += `<table><tr><td style="${tdLbl}">고객 성명</td><td>${esc(a.customerName||s.customerName||'-')}</td></tr>`;
+  body += `<tr><td style="${tdLbl}">전화번호</td><td>${esc(a.customerPhone||s.customerPhone||'-')}</td></tr></table>`;
+  body += secBlock('설문 응답');
+  body += '<table><tr><th style="background:#1F3864;color:#fff;width:55%">문항</th><th style="background:#1F3864;color:#fff">응답</th></tr>';
+  SAT_QUESTIONS_FULL.forEach(([k,label])=>{
+    let v = a[k];
+    if(Array.isArray(v)) v = v.join(', ');
+    if(v==null || v==='') return;
+    body += `<tr><td style="${tdLbl}">${esc(label)}</td><td>${esc(v)}</td></tr>`;
+  });
+  body += '</table>';
+  body += secBlock('4-2. 건의사항');
+  body += `<p>${esc(a.q4_2||'-').replace(/\n/g,'<br>')}</p>`;
+  const fname = `고객만족도_${roundLabel}_${sanitizeFileName(a.customerName||s.customerName)}.docx`;
+  wordDownload(fname, body);
+};
 </script>
 </body>
 </html>
