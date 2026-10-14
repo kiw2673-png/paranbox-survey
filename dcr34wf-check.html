@@ -64,6 +64,7 @@ header .sub{font-size:.78rem;opacity:.85;margin-top:2px;}
 
   <div id="formArea" class="hidden">
     <div class="save-indicator" id="saveIndicator"></div>
+    <p style="font-size:.78rem;color:var(--red-text);margin:0 0 10px;"><span style="color:var(--red-text)">*</span> 표시는 필수 입력 항목입니다. (건축물 정보는 선택 입력)</p>
 
     <div class="card">
       <h2>사용자</h2>
@@ -72,10 +73,10 @@ header .sub{font-size:.78rem;opacity:.85;margin-top:2px;}
       <div class="field"><label>3) 주소</label><input type="text" id="f_address"></div>
     </div>
 
-    <div class="card">
+    <div class="card" id="buildingCard">
       <h2>건축물</h2>
       <div class="field"><label>4) 분류</label>
-        <select id="f_buildingType" onchange="document.getElementById('f_buildingTypeEtcWrap').classList.toggle('hidden', this.value!=='기타'); document.getElementById('f_buildingTypeEtc').required = (this.value==='기타');">
+        <select id="f_buildingType" onchange="document.getElementById('f_buildingTypeEtcWrap').classList.toggle('hidden', this.value!=='기타');">
           <option value="단독주택">단독주택</option>
           <option value="아파트">공동주택 - 아파트</option>
           <option value="연립">공동주택 - 연립</option>
@@ -203,9 +204,24 @@ document.dispatchEvent(new Event('fb-ready'));
 const DRAFT_KEY = 'dcr34wf_check_draft';
 let matchedTarget = null;
 
-// make every field required (조건부 입력인 '분류 기타'는 선택 시에만 필수)
+// make every field required except 건축물 섹션(선택 입력), 라벨에 필수 표시(*) 추가
+function markRequiredLabel(el){
+  const field = el.closest('.field');
+  if(field){
+    const label = field.querySelector('label');
+    if(label && !label.dataset.reqMarked){ label.insertAdjacentHTML('beforeend', ' <span style="color:var(--red-text)">*</span>'); label.dataset.reqMarked = '1'; }
+    return;
+  }
+  const item = el.closest('.check-item');
+  if(item){
+    const num = item.querySelector('.num');
+    if(num && !num.dataset.reqMarked){ num.insertAdjacentHTML('beforeend', ' <span style="color:var(--red-text)">*</span>'); num.dataset.reqMarked = '1'; }
+  }
+}
 document.querySelectorAll('#formArea input, #formArea select, #formArea textarea').forEach(el=>{
-  if(el.id!=='f_buildingTypeEtc') el.required = true;
+  if(el.closest('#buildingCard')) return;
+  el.required = true;
+  markRequiredLabel(el);
 });
 // validate all visible required controls; show native message on first invalid one
 function validateRequired(scope){
@@ -364,3 +380,4 @@ window.submitForm = async function(){
 </script>
 </body>
 </html>
+
