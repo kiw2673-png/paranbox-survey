@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>DCR-34WF 필드테스트 관리자</title>
-<script src="https://cdn.jsdelivr.net/npm/html-docx-js@0.3.1/dist/html-docx.js"></script>
 <style>
 :root{
   --blue:#1a56b0; --blue-dark:#154698; --blue-light:#e6f1fb;
@@ -24,7 +23,7 @@ header .sub{font-size:.78rem;opacity:.85;margin-top:2px;}
 .header-links{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
 .header-links a{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.4);color:#fff;padding:6px 14px;border-radius:var(--radius-sm);font-size:.85rem;text-decoration:none;white-space:nowrap;}
 .header-links a:hover{background:rgba(255,255,255,.28);}
-.wrap{max-width:none;margin:0 auto;padding:16px 20px;}
+.wrap{max-width:1280px;margin:0 auto;padding:16px;}
 .tab-bar{display:flex;border-bottom:2px solid var(--border);background:var(--card);border-radius:var(--radius) var(--radius) 0 0;overflow:hidden;}
 .tab-btn{flex:none;padding:12px 20px;border:none;background:none;cursor:pointer;font-size:.92rem;color:var(--text-muted);border-bottom:3px solid transparent;}
 .tab-btn.active{color:var(--blue);border-bottom-color:var(--blue);font-weight:600;}
@@ -58,7 +57,6 @@ th{background:#f8f9fb;color:var(--text-muted);font-weight:600;position:sticky;to
 .field input,.field select,.field textarea{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:.88rem;font-family:inherit;}
 .field textarea{resize:vertical;min-height:60px;}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 12px;}
-.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0 12px;}
 .modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;}
 .hidden{display:none !important;}
 .copy-link{color:var(--blue);cursor:pointer;text-decoration:underline;font-size:.78rem;}
@@ -85,12 +83,9 @@ th{background:#f8f9fb;color:var(--text-muted);font-weight:600;position:sticky;to
 
 <div id="app" class="hidden">
 <header>
-  <div style="display:flex;align-items:center;gap:14px;">
-    <img src="logo_preview_on_blue.png" alt="대성쎌틱에너시스" style="width:200px;height:auto;object-fit:contain;display:block;">
-    <div>
-      <h1>각방IoT 온도조절기(DCR-34WF) 필드테스트 관리자</h1>
-      <div class="sub" id="loginWho"></div>
-    </div>
+  <div>
+    <h1>각방IoT 온도조절기(DCR-34WF) 필드테스트 관리자</h1>
+    <div class="sub" id="loginWho"></div>
   </div>
   <div class="header-links">
     <a href="dcr34wf-check.html" target="_blank" rel="noopener">체크리스트 열기</a>
@@ -125,7 +120,7 @@ th{background:#f8f9fb;color:var(--text-muted);font-weight:600;position:sticky;to
         <thead><tr>
           <th>순번</th><th>대리점명</th><th>주소</th><th>연락처</th><th>교체여부</th>
           <th>고객연락처</th><th>희망일자</th><th>담당자</th><th>설치일</th>
-          <th>체크리스트</th><th>1주만족</th><th>1달만족</th><th>링크</th><th>WORD 다운로드</th><th>관리</th>
+          <th>체크리스트</th><th>1주만족</th><th>1달만족</th><th>링크</th><th>관리</th>
         </tr></thead>
         <tbody id="listTbody"></tbody>
       </table>
@@ -138,7 +133,7 @@ th{background:#f8f9fb;color:var(--text-muted);font-weight:600;position:sticky;to
     </div>
     <div class="tbl-wrap">
       <table>
-        <thead><tr><th>제출일시</th><th>고객명</th><th>연락처</th><th>주소</th><th>조절기모델명</th><th>이상여부</th><th>교육실시</th><th>관리</th></tr></thead>
+        <thead><tr><th>제출일시</th><th>고객명</th><th>연락처</th><th>주소</th><th>조절기모델명</th><th>이상여부</th><th>교육실시</th><th>상세</th></tr></thead>
         <tbody id="checkTbody"></tbody>
       </table>
     </div>
@@ -156,7 +151,7 @@ th{background:#f8f9fb;color:var(--text-muted);font-weight:600;position:sticky;to
     <div class="section-title">응답 목록</div>
     <div class="tbl-wrap">
       <table>
-        <thead><tr><th>제출일시</th><th>차수</th><th>고객명</th><th>연락처</th><th>종합만족도(4-1)</th><th>관리</th></tr></thead>
+        <thead><tr><th>제출일시</th><th>차수</th><th>고객명</th><th>연락처</th><th>종합만족도(4-1)</th><th>상세</th></tr></thead>
         <tbody id="satTbody"></tbody>
       </table>
     </div>
@@ -239,100 +234,6 @@ th{background:#f8f9fb;color:var(--text-muted);font-weight:600;position:sticky;to
     <h3 id="detailTitle"></h3>
     <div id="detailBody"></div>
     <div class="modal-actions"><button class="btn" onclick="closeDetailModal()">닫기</button></div>
-  </div>
-</div>
-
-<!-- check edit modal -->
-<div class="modal-bg hidden" id="checkEditModalBg">
-  <div class="modal lg">
-    <h3>컨설턴트 체크리스트 수정</h3>
-    <input type="hidden" id="ce_id">
-    <div class="section-title">사용자</div>
-    <div class="grid2">
-      <div class="field"><label>고객 성명</label><input type="text" id="ce_customerName"></div>
-      <div class="field"><label>전화번호</label><input type="text" id="ce_customerPhone"></div>
-    </div>
-    <div class="field"><label>주소</label><input type="text" id="ce_address"></div>
-    <div class="grid2">
-      <div class="field"><label>분류</label>
-        <select id="ce_buildingType">
-          <option value="단독주택">단독주택</option>
-          <option value="아파트">공동주택 - 아파트</option>
-          <option value="연립">공동주택 - 연립</option>
-          <option value="다세대">공동주택 - 다세대</option>
-          <option value="기타">기타</option>
-        </select>
-      </div>
-      <div class="field"><label>분류 기타(직접입력)</label><input type="text" id="ce_buildingTypeEtc"></div>
-    </div>
-    <div class="section-title">규모</div>
-    <div class="grid2">
-      <div class="field"><label>건축면적(㎡)</label><input type="text" id="ce_area_construction"></div>
-      <div class="field"><label>난방면적(㎡)</label><input type="text" id="ce_area_heating"></div>
-    </div>
-    <div class="grid3">
-      <div class="field"><label>평형</label><input type="text" id="ce_area_pyeong"></div>
-      <div class="field"><label>세대수</label><input type="text" id="ce_area_households"></div>
-      <div class="field"><label>층수</label><input type="text" id="ce_area_floors"></div>
-    </div>
-    <div class="section-title">각방 설치내역</div>
-    <div class="grid2">
-      <div class="field"><label>온도조절기 모델명</label><input type="text" id="ce_thermoModel"></div>
-      <div class="field"><label>제조번호(S/N)</label><input type="text" id="ce_serialNo"></div>
-    </div>
-    <div class="grid2">
-      <div class="field"><label>밸브제어기 모델명</label><input type="text" id="ce_valveCtrlModel"></div>
-      <div class="field"><label>방 Zone 개수</label><input type="number" id="ce_zoneCount"></div>
-    </div>
-    <div class="grid2">
-      <div class="field"><label>연동 보일러 모델명</label><input type="text" id="ce_boilerModel"></div>
-      <div class="field"><label>밸브 구동기 개수</label><input type="number" id="ce_actuatorCount"></div>
-    </div>
-    <div class="grid2">
-      <div class="field"><label>보일러 연동 타입</label>
-        <select id="ce_boilerLinkType"><option value="">선택안함</option><option value="통신">통신</option><option value="접점">접점</option></select>
-      </div>
-      <div class="field"><label>거실 R/C 설치장소</label><input type="text" id="ce_rcLocation"></div>
-    </div>
-    <div class="grid2">
-      <div class="field"><label>공유기 설치장소</label><input type="text" id="ce_sharedDeviceLocation"></div>
-      <div class="field"><label>IoT온도조절기로부터 거리(M)</label><input type="number" id="ce_distanceFromThermo"></div>
-    </div>
-    <div class="field"><label>설치일자</label><input type="date" id="ce_installDate"></div>
-    <div class="section-title">확인사항</div>
-    <div class="grid2">
-      <div class="field"><label>15) R/C 및 보일러 간 통신연동</label>
-        <select id="ce_c15"><option value="">-</option><option value="정상">정상</option><option value="이상">이상</option></select></div>
-      <div class="field"><label>16) 온도조절기 간 통신연동</label>
-        <select id="ce_c16"><option value="">-</option><option value="정상">정상</option><option value="이상">이상</option></select></div>
-      <div class="field"><label>17) 온도조절기 기능 정상확인</label>
-        <select id="ce_c17"><option value="">-</option><option value="정상">정상</option><option value="이상">이상</option></select></div>
-      <div class="field"><label>18) 각방시스템 및 보일러 간 동작</label>
-        <select id="ce_c18"><option value="">-</option><option value="정상">정상</option><option value="이상">이상</option></select></div>
-      <div class="field"><label>19) IoT 등록 및 App 연동확인</label>
-        <select id="ce_c19"><option value="">-</option><option value="정상">정상</option><option value="이상">이상</option></select></div>
-      <div class="field"><label>20) 사용 교육 실시여부</label>
-        <select id="ce_c20"><option value="">-</option><option value="실시">실시</option><option value="미실시">미실시</option></select></div>
-    </div>
-    <div class="field"><label>기타 특기사항</label><textarea id="ce_etc"></textarea></div>
-    <div class="field"><label>작성자(컨설턴트명)</label><input type="text" id="ce_consultantName"></div>
-    <div class="modal-actions">
-      <button class="btn" onclick="closeCheckEdit()">취소</button>
-      <button class="btn btn-blue" onclick="saveCheckEdit()">저장</button>
-    </div>
-  </div>
-</div>
-
-<!-- satisfaction edit modal -->
-<div class="modal-bg hidden" id="satEditModalBg">
-  <div class="modal lg">
-    <h3>고객만족도 수정</h3>
-    <input type="hidden" id="se_id">
-    <div id="se_body"></div>
-    <div class="modal-actions">
-      <button class="btn" onclick="closeSatEdit()">취소</button>
-      <button class="btn btn-blue" onclick="saveSatEdit()">저장</button>
-    </div>
   </div>
 </div>
 
@@ -437,31 +338,23 @@ function renderTargets(){
   list.sort((a,b)=> (Number(a.no)||0) - (Number(b.no)||0));
   document.getElementById('listSummary').textContent = `전체 ${targets.length}건 중 ${list.length}건 표시 / 교체여부 OK: ${targets.filter(t=>t.replace==='OK').length}건`;
   const tb = document.getElementById('listTbody');
-  if(!list.length){ tb.innerHTML = '<tr><td colspan="15" class="empty">데이터가 없습니다.</td></tr>'; return; }
+  if(!list.length){ tb.innerHTML = '<tr><td colspan="13" class="empty">데이터가 없습니다.</td></tr>'; return; }
   tb.innerHTML = list.map(t=>{
-    const hasCheck = checks.some(c=>c.targetId===t.id);
-    const has1w = sats.some(s=>s.targetId===t.id && s.round==='1week');
-    const has1m = sats.some(s=>s.targetId===t.id && s.round==='1month');
+    const checkRec = checks.find(c=>c.targetId===t.id);
+    const satW = sats.find(s=>s.targetId===t.id && s.round==='1week');
+    const satM = sats.find(s=>s.targetId===t.id && s.round==='1month');
     const phoneForLink = encodeURIComponent(t.customerPhone||t.phone||'');
-    const dlLink = (enabled, onclick, label) => enabled
-      ? `<span class="copy-link" onclick="${onclick}">${label}</span>`
-      : `<span style="color:#bbb;font-size:.78rem;">${label}</span>`;
     return `<tr>
-      <td>${esc(t.no)}</td><td>${esc(t.agency)}</td><td style="white-space:normal;min-width:400px;max-width:660px;">${esc(t.address)}</td>
+      <td>${esc(t.no)}</td><td>${esc(t.agency)}</td><td style="white-space:normal;max-width:220px;">${esc(t.address)}</td>
       <td>${esc(t.phone)}</td><td>${replaceBadge(t.replace)}</td><td>${esc(t.customerPhone)}</td>
       <td>${esc(t.preferDate)}</td><td>${esc(t.manager)}</td><td>${esc(t.installDate)}</td>
-      <td>${hasCheck?'<span class="badge badge-blue">완료</span>':'<span class="badge badge-none">미작성</span>'}</td>
-      <td>${has1w?'<span class="badge badge-ok">완료</span>':'<span class="badge badge-none">미작성</span>'}</td>
-      <td>${has1m?'<span class="badge badge-ok">완료</span>':'<span class="badge badge-none">미작성</span>'}</td>
+      <td>${checkRec?`<span class="badge badge-blue" style="cursor:pointer" onclick="viewCheckFromList('${checkRec.id}')">완료</span>`:'<span class="badge badge-none">미작성</span>'}</td>
+      <td>${satW?`<span class="badge badge-ok" style="cursor:pointer" onclick="viewSatFromList('${satW.id}')">완료</span>`:'<span class="badge badge-none">미작성</span>'}</td>
+      <td>${satM?`<span class="badge badge-ok" style="cursor:pointer" onclick="viewSatFromList('${satM.id}')">완료</span>`:'<span class="badge badge-none">미작성</span>'}</td>
       <td>
         <span class="copy-link" onclick="copyLink('check','${phoneForLink}')">체크리스트</span><br>
         <span class="copy-link" onclick="copyLink('1week','${phoneForLink}')">1주만족도</span><br>
         <span class="copy-link" onclick="copyLink('1month','${phoneForLink}')">1달만족도</span>
-      </td>
-      <td>
-        ${dlLink(hasCheck, `downloadCheckWord('${t.id}')`, '체크리스트')}<br>
-        ${dlLink(has1w, `downloadSatWord('${t.id}','1week')`, '1주만족도')}<br>
-        ${dlLink(has1m, `downloadSatWord('${t.id}','1month')`, '1달만족도')}
       </td>
       <td>
         <button class="btn btn-sm" onclick="openTargetModal('${t.id}')">수정</button>
@@ -471,6 +364,15 @@ function renderTargets(){
   }).join('');
 }
 window.renderTargets = renderTargets;
+
+window.viewCheckFromList = function(checkId){
+  switchTab('check');
+  openCheckDetail(checkId);
+};
+window.viewSatFromList = function(satId){
+  switchTab('sat');
+  openSatDetail(satId);
+};
 
 window.copyLink = function(kind, phone){
   const base = location.href.replace(/dcr34wf-admin\.html.*$/,'');
@@ -528,8 +430,8 @@ window.saveTarget = async function(){
   }catch(e){ console.error(e); alert('저장 실패: '+e.message); }
 };
 
-window.openDeleteModal = function(id, type){
-  deleteCtx = {type: type||'target', id};
+window.openDeleteModal = function(id){
+  deleteCtx = {type:'target', id};
   document.getElementById('deletePw').value = '';
   document.getElementById('deletePwErr').textContent = '';
   document.getElementById('deleteModalBg').classList.remove('hidden');
@@ -543,10 +445,6 @@ window.confirmDelete = async function(){
   try{
     if(deleteCtx.type==='target'){
       await fb.deleteDoc(fb.doc(fb.db,'dcr34wf_targets',deleteCtx.id));
-    }else if(deleteCtx.type==='check'){
-      await fb.deleteDoc(fb.doc(fb.db,'dcr34wf_checks',deleteCtx.id));
-    }else if(deleteCtx.type==='sat'){
-      await fb.deleteDoc(fb.doc(fb.db,'dcr34wf_satisfaction',deleteCtx.id));
     }
     closeDeleteModal();
     await loadAll();
@@ -621,11 +519,7 @@ function renderChecks(){
       <td>${esc(c.thermoModel)}</td>
       <td>${abnormal?'<span class="badge badge-absent">이상있음</span>':'<span class="badge badge-ok">정상</span>'}</td>
       <td>${esc(c.checks?.c20||'-')}</td>
-      <td>
-        <button class="btn btn-sm" onclick="openCheckDetail('${c.id}')">보기</button>
-        <button class="btn btn-sm" onclick="openCheckEdit('${c.id}')">수정</button>
-        <button class="btn btn-sm btn-danger" onclick="openDeleteModal('${c.id}','check')">삭제</button>
-      </td>
+      <td><button class="btn btn-sm" onclick="openCheckDetail('${c.id}')">보기</button></td>
     </tr>`;
   }).join('');
 }
@@ -659,49 +553,6 @@ window.openCheckDetail = function(id){
   document.getElementById('detailModalBg').classList.remove('hidden');
 };
 
-window.openCheckEdit = function(id){
-  const c = checks.find(x=>x.id===id); if(!c) return;
-  const a = c.area||{}; const ch = c.checks||{};
-  const set=(k,v)=>{ const el=document.getElementById(k); if(el) el.value = v==null?'':v; };
-  set('ce_id', c.id);
-  set('ce_customerName', c.customerName); set('ce_customerPhone', c.customerPhone); set('ce_address', c.address);
-  set('ce_buildingType', c.buildingType||'단독주택'); set('ce_buildingTypeEtc', c.buildingTypeEtc);
-  set('ce_area_construction', a.construction); set('ce_area_heating', a.heating);
-  set('ce_area_pyeong', a.pyeong); set('ce_area_households', a.households); set('ce_area_floors', a.floors);
-  set('ce_thermoModel', c.thermoModel); set('ce_serialNo', c.serialNo);
-  set('ce_valveCtrlModel', c.valveCtrlModel); set('ce_zoneCount', c.zoneCount);
-  set('ce_boilerModel', c.boilerModel); set('ce_actuatorCount', c.actuatorCount);
-  set('ce_boilerLinkType', c.boilerLinkType); set('ce_rcLocation', c.rcLocation);
-  set('ce_sharedDeviceLocation', c.sharedDeviceLocation); set('ce_distanceFromThermo', c.distanceFromThermo);
-  set('ce_installDate', c.installDate);
-  ['c15','c16','c17','c18','c19','c20'].forEach(k=> set('ce_'+k, ch[k]));
-  set('ce_etc', c.etc); set('ce_consultantName', c.consultantName);
-  document.getElementById('checkEditModalBg').classList.remove('hidden');
-};
-window.closeCheckEdit = function(){ document.getElementById('checkEditModalBg').classList.add('hidden'); };
-window.saveCheckEdit = async function(){
-  const fb = window._fb;
-  const id = document.getElementById('ce_id').value;
-  const g=(k)=>{ const el=document.getElementById(k); return el ? el.value.trim() : ''; };
-  const payload = {
-    customerName: g('ce_customerName'), customerPhone: g('ce_customerPhone'), address: g('ce_address'),
-    buildingType: g('ce_buildingType'), buildingTypeEtc: g('ce_buildingTypeEtc'),
-    area: { construction:g('ce_area_construction'), heating:g('ce_area_heating'), pyeong:g('ce_area_pyeong'), households:g('ce_area_households'), floors:g('ce_area_floors') },
-    thermoModel: g('ce_thermoModel'), serialNo: g('ce_serialNo'), valveCtrlModel: g('ce_valveCtrlModel'), zoneCount: g('ce_zoneCount'),
-    boilerModel: g('ce_boilerModel'), actuatorCount: g('ce_actuatorCount'), boilerLinkType: g('ce_boilerLinkType'),
-    rcLocation: g('ce_rcLocation'), sharedDeviceLocation: g('ce_sharedDeviceLocation'), distanceFromThermo: g('ce_distanceFromThermo'),
-    installDate: g('ce_installDate'),
-    checks: { c15:g('ce_c15'), c16:g('ce_c16'), c17:g('ce_c17'), c18:g('ce_c18'), c19:g('ce_c19'), c20:g('ce_c20') },
-    etc: g('ce_etc'), consultantName: g('ce_consultantName'),
-    updatedAt: fb.serverTimestamp()
-  };
-  try{
-    await fb.updateDoc(fb.doc(fb.db,'dcr34wf_checks',id), payload);
-    closeCheckEdit();
-    await loadAll();
-  }catch(e){ console.error(e); alert('저장 실패: '+e.message); }
-};
-
 // ---- satisfaction tab ----
 const SCALE5_POS = {'매우 그렇다':5,'대체로 그렇다':4,'보통':3,'그렇지 않다':2,'전혀 그렇지 않다':1,
   '매우 만족':5,'대체로 만족':4,'다소 불편':2,'매우 불편':1,
@@ -711,41 +562,6 @@ const SAT_SCALE_QUESTIONS = [
   ['q2_1','2-1 거실 조절기 화면 편의성'], ['q2_2','2-2 앱 화면구성 편의성'], ['q2_3','2-3 방 명칭 설정 편의성'],
   ['q3_1','3-1 원격제어 원활함'], ['q3_2','3-2 본체/앱 표시 일치도'],
   ['q4_1','4-1 종합 만족도']
-];
-// option sets (mirror of dcr34wf-satisfaction.html) for editing responses
-const SAT_OPTS = {
-  SCALE5: ['매우 그렇다','대체로 그렇다','보통','그렇지 않다','전혀 그렇지 않다'],
-  SCALE5_SAT: ['매우 만족','대체로 만족','보통','다소 불편','매우 불편'],
-  SCALE5_MATCH: ['항상 일치','대체로 일치','보통','가끔 불일치','자주 불일치'],
-  FREQ5: ['① 전혀 없음','② 간혹 있었음','③ 보통','④ 자주 있었음','⑤ 항상 있음'],
-  FREQ3: ['전혀 없음','간혹 발생 (월 1~2회)','자주 발생 (주 1회 이상)'],
-  ERR_STEPS: [
-    '앱에서 거실 온도조절기 기기 연결 실패(Bluetooth 연결).',
-    '앱에서 무선공유기(Wi-Fi) 선택 창에 연결할 공유기가 표시되지 않음.',
-    '공유기 비밀번호 입력 후 공유기와 조절기 간 무선 연결 실패.',
-    '등록 완료 직후 앱 메인화면에서 기기가 오프라인(연결 끊김)으로 전환됨.'
-  ],
-  USE_3_3: ['① 사용해 본 적 있다.','② 사용해 본 적 없다.'],
-  MEMBERS_3_4: ['① 2명 이상','② 1명 (본인 단독 사용)'],
-  ACT_3_4_2: ['항상 정상 작동','일부 지연 발생','작동 안됨']
-};
-const SAT_EDIT_FIELDS = [
-  {k:'q1_1', label:'1-1 기기연결/Wi-Fi등록 편의성', opts:'SCALE5'},
-  {k:'q1_2', label:'1-2 매뉴얼 이해도', opts:'SCALE5'},
-  {k:'q1_3', label:'1-3 연결 실패/오류 발생 빈도', opts:'FREQ5'},
-  {k:'q1_3_1', label:'1-3-1 오류 발생 단계 (복수선택)', opts:'ERR_STEPS', multi:true},
-  {k:'q2_1', label:'2-1 거실 조절기 화면 편의성', opts:'SCALE5'},
-  {k:'q2_2', label:'2-2 앱 화면구성 편의성', opts:'SCALE5'},
-  {k:'q2_3', label:'2-3 방 명칭 설정 편의성', opts:'SCALE5'},
-  {k:'q2_4', label:'2-4 연결 실패/에러 발생 빈도', opts:'FREQ3'},
-  {k:'q3_1', label:'3-1 원격제어 원활함', opts:'SCALE5'},
-  {k:'q3_2', label:'3-2 본체/앱 표시 일치도', opts:'SCALE5_MATCH'},
-  {k:'q3_3', label:'3-3 외출/귀가 모드 사용 경험', opts:'USE_3_3'},
-  {k:'q3_3_1', label:'3-3-1 외출/귀가 모드 만족도', opts:'SCALE5'},
-  {k:'q3_4', label:'3-4 함께 사용하는 세대원 수', opts:'MEMBERS_3_4'},
-  {k:'q3_4_1', label:'3-4-1 세대원 초대/기기공유 편의성', opts:'SCALE5'},
-  {k:'q3_4_2', label:'3-4-2 세대원 동시 사용 작동여부', opts:'ACT_3_4_2'},
-  {k:'q4_1', label:'4-1 종합 만족도', opts:'SCALE5_SAT'}
 ];
 function renderSat(){
   const q=(document.getElementById('satSearch').value||'').toLowerCase();
@@ -765,11 +581,7 @@ function renderSat(){
         <td>${dt}</td><td>${s.round==='1week'?'1주차':s.round==='1month'?'1달차':'-'}</td>
         <td>${esc(s.customerName)}</td><td>${esc(s.customerPhone)}</td>
         <td>${esc(s.answers?.q4_1||'-')}</td>
-        <td>
-          <button class="btn btn-sm" onclick="openSatDetail('${s.id}')">보기</button>
-          <button class="btn btn-sm" onclick="openSatEdit('${s.id}')">수정</button>
-          <button class="btn btn-sm btn-danger" onclick="openDeleteModal('${s.id}','sat')">삭제</button>
-        </td>
+        <td><button class="btn btn-sm" onclick="openSatDetail('${s.id}')">보기</button></td>
       </tr>`;
     }).join('');
   }
@@ -809,234 +621,7 @@ window.openSatDetail = function(id){
   document.getElementById('detailModalBg').classList.remove('hidden');
 };
 
-window.openSatEdit = function(id){
-  const s = sats.find(x=>x.id===id); if(!s) return;
-  const a = s.answers||{};
-  document.getElementById('se_id').value = s.id;
-  let html = `<div class="grid2">
-    <div class="field"><label>차수</label><select id="se_round">
-      <option value="1week"${s.round==='1week'?' selected':''}>1주차</option>
-      <option value="1month"${s.round==='1month'?' selected':''}>1달차</option>
-    </select></div>
-    <div class="field"><label>고객 성명</label><input type="text" id="se_customerName" value="${esc(a.customerName||s.customerName||'')}"></div>
-  </div>
-  <div class="field"><label>전화번호</label><input type="text" id="se_customerPhone" value="${esc(a.customerPhone||s.customerPhone||'')}"></div>`;
-  SAT_EDIT_FIELDS.forEach(f=>{
-    const opts = SAT_OPTS[f.opts]||[];
-    if(f.multi){
-      const vals = Array.isArray(a[f.k])?a[f.k]:[];
-      const etcVal = (vals.find(v=>String(v).startsWith('기타:'))||'').replace(/^기타:\s*/,'');
-      html += `<div class="field"><label>${esc(f.label)}</label><div>`+
-        opts.map(o=>`<label style="display:block;font-size:.85rem;font-weight:normal;color:var(--text);margin:2px 0;"><input type="checkbox" class="se_${f.k}" value="${esc(o)}"${vals.includes(o)?' checked':''}> ${esc(o)}</label>`).join('')+
-        `</div><input type="text" id="se_${f.k}_etc" placeholder="기타 원인 (직접 작성)" value="${esc(etcVal)}" style="margin-top:4px;"></div>`;
-    }else{
-      html += `<div class="field"><label>${esc(f.label)}</label><select id="se_${f.k}"><option value="">-</option>`+
-        opts.map(o=>`<option value="${esc(o)}"${o===a[f.k]?' selected':''}>${esc(o)}</option>`).join('')+`</select></div>`;
-    }
-  });
-  html += `<div class="field"><label>4-2 건의사항</label><textarea id="se_q4_2">${esc(a.q4_2||'')}</textarea></div>`;
-  document.getElementById('se_body').innerHTML = html;
-  document.getElementById('satEditModalBg').classList.remove('hidden');
-};
-window.closeSatEdit = function(){ document.getElementById('satEditModalBg').classList.add('hidden'); };
-window.saveSatEdit = async function(){
-  const fb = window._fb;
-  const id = document.getElementById('se_id').value;
-  const g=(k)=>{ const el=document.getElementById(k); return el ? el.value.trim() : ''; };
-  const customerName = g('se_customerName'), customerPhone = g('se_customerPhone');
-  const answers = { customerName, customerPhone };
-  SAT_EDIT_FIELDS.forEach(f=>{
-    if(f.multi){
-      const vals = Array.from(document.querySelectorAll('.se_'+f.k)).filter(e=>e.checked).map(e=>e.value);
-      const etc = g('se_'+f.k+'_etc');
-      if(etc) vals.push('기타: '+etc);
-      answers[f.k] = vals;
-    }else{
-      answers[f.k] = g('se_'+f.k);
-    }
-  });
-  const q4_2El = document.getElementById('se_q4_2');
-  answers.q4_2 = q4_2El ? q4_2El.value : '';
-  const payload = {
-    round: document.getElementById('se_round').value,
-    customerName, customerPhone,
-    answers,
-    updatedAt: fb.serverTimestamp()
-  };
-  try{
-    await fb.updateDoc(fb.doc(fb.db,'dcr34wf_satisfaction',id), payload);
-    closeSatEdit();
-    await loadAll();
-  }catch(e){ console.error(e); alert('저장 실패: '+e.message); }
-};
-
 window.closeDetailModal = function(){ document.getElementById('detailModalBg').classList.add('hidden'); };
-
-// ---- WORD download (설치명단 기준: 컨설턴트 체크리스트 / 고객만족도 1주 / 1달) ----
-// 실제 설문지(dcr34wf-check.html / dcr34wf-satisfaction.html) 화면 구성을 그대로 재현한다.
-
-function sanitizeFileName(s){ return String(s||'').replace(/[\\/:*?"<>|]/g,'_').trim() || '고객'; }
-
-function wordDownload(filename, bodyHtml){
-  if(!window.htmlDocx){ alert('html-docx-js 라이브러리가 로드되지 않았습니다.'); return; }
-  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
-    body{font-family:'맑은 고딕','Malgun Gothic',sans-serif;font-size:10pt;line-height:1.5;margin:0;color:#1a1a1a;}
-    table{border-collapse:collapse;width:100%;margin-bottom:10pt;}
-    th{text-align:left;}
-    td,th{border:0.5pt solid #C8D4E8;padding:5pt 7pt;vertical-align:top;font-size:9.5pt;}
-  </style></head><body>${bodyHtml}</body></html>`;
-  const blob = window.htmlDocx.asBlob(html, {orientation:'portrait', margins:{top:720,right:720,bottom:720,left:720}});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = filename;
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  URL.revokeObjectURL(a.href);
-}
-
-function hdrBlock(title){
-  return `<div style="background:#1F3864;color:#fff;padding:8pt 10pt;font-size:13pt;font-weight:bold;margin-bottom:8pt">${esc(title)}</div>`;
-}
-function secBlock(title){
-  return `<p style="color:#1F3864;font-weight:bold;font-size:11pt;margin:12pt 0 5pt;border-bottom:1pt solid #1F3864;padding-bottom:2pt">${esc(title)}</p>`;
-}
-function fieldLine(label, value){
-  const v = (value===undefined||value===null||value==='') ? '-' : value;
-  return `<p style="margin:4pt 0;font-size:9.5pt;"><b>${esc(label)}</b> : ${esc(v)}</p>`;
-}
-function optsLine(options, selected){
-  return (options||[]).map(o => (o===selected?'☑':'☐')+' '+esc(o)).join('&nbsp;&nbsp;&nbsp;&nbsp;');
-}
-
-const BUILDING_TYPE_LABELS = {단독주택:'단독주택', 아파트:'공동주택 - 아파트', 연립:'공동주택 - 연립', 다세대:'공동주택 - 다세대', 기타:'기타'};
-
-const CHECK_FORM_ITEMS = [
-  {k:'c15', title:'15) R/C 및 보일러 간 통신연동여부', subs:['1) 밸브제어기 전면에 R/C 파란색 LED 점등 확인','2) 밸브제어기 전면에 보일러 파란색 LED 점등 확인'], opts:['정상','이상']},
-  {k:'c16', title:'16) 온도조절기 간 통신연동여부', subs:['1) 각 방별 설정된 방 번호 확인','2) 거실에서 각실 방 번호 확인'], opts:['정상','이상']},
-  {k:'c17', title:'17) 온도조절기 기능 정상확인여부', subs:['1) 온도조절기 LCD 화면 표시 상태 확인','2) 온도조절기 버튼 입력 및 조작 상태 확인','3) 온도조절기 현재/설정 온도 및 운전 모드 변경 동작 확인'], opts:['정상','이상']},
-  {k:'c18', title:'18) 각방시스템 및 보일러 간 동작여부', subs:['1) 각 방별 난방 가동 유/무에 따른 구동기 동작 확인','2) 난방 가동 유/무에 따른 보일러 동작 확인','3) 거실 온도조절기에서 각실 제어 및 확인'], opts:['정상','이상']},
-  {k:'c19', title:'19) IoT 등록 및 App 연동확인', subs:['1) 거실 온도조절기에서 Wi-Fi 등록 여부 확인','2) App에서 각 방별 등록 및 기기 연결 상태 확인','3) APP에서 각 방별 제어 및 동작 확인'], opts:['정상','이상']},
-  {k:'c20', title:'20) 사용 교육의 실시 여부', subs:[], opts:['실시','미실시']}
-];
-function checkItemBlock(it, val){
-  let h = `<div style="border:0.5pt solid #d8d8d8;padding:6pt 8pt;margin-bottom:6pt;">
-    <div style="font-weight:bold;font-size:9.5pt;">${esc(it.title)}</div>`;
-  it.subs.forEach(s=> h += `<div style="font-size:8pt;color:#777;margin:1pt 0;">${esc(s)}</div>`);
-  h += `<div style="margin-top:4pt;">${optsLine(it.opts, val)}</div></div>`;
-  return h;
-}
-
-window.downloadCheckWord = function(targetId){
-  const c = checks.find(x=>x.targetId===targetId);
-  if(!c){ alert('아직 제출된 컨설턴트 체크리스트가 없습니다.'); return; }
-  const t = targets.find(x=>x.id===targetId);
-  const a = c.area||{};
-
-  let body = hdrBlock('IoT 각방 온도조절기(DCR-34/WF) 설치 현황표');
-  body += `<p style="text-align:center;color:#555;font-size:9.5pt;margin:0 0 10pt;">컨설턴트(설치자) 필드테스트 체크리스트</p>`;
-
-  body += secBlock('사용자');
-  body += fieldLine('1) 성명', c.customerName);
-  body += fieldLine('2) 전화번호', c.customerPhone);
-  body += fieldLine('3) 주소', c.address);
-
-  body += secBlock('건축물');
-  body += `<p style="margin:4pt 0;font-size:9.5pt;"><b>4) 분류</b> : ${optsLine(Object.keys(BUILDING_TYPE_LABELS).map(k=>BUILDING_TYPE_LABELS[k]), BUILDING_TYPE_LABELS[c.buildingType]||'')}${(c.buildingType==='기타'&&c.buildingTypeEtc)?' ('+esc(c.buildingTypeEtc)+')':''}</p>`;
-  body += `<p style="margin:4pt 0 0;font-size:9.5pt;"><b>5) 규모</b></p>`;
-  body += fieldLine('건축면적(㎡) / 난방면적(㎡)', `${a.construction||'-'} / ${a.heating||'-'}`);
-  body += fieldLine('평형 / 세대수 / 층수', `${a.pyeong||'-'}평형 / ${a.households||'-'}세대 / ${a.floors||'-'}층`);
-
-  body += secBlock('각방 설치내역');
-  body += fieldLine('6) 온도조절기 모델명', c.thermoModel);
-  body += fieldLine('7) 제조번호(S/N)', c.serialNo);
-  body += fieldLine('8) 밸브제어기 모델명', c.valveCtrlModel);
-  body += fieldLine('9) 방 Zone 개수 (온도조절기 기준, 대)', c.zoneCount);
-  body += fieldLine('10) 연동 보일러 모델명 / 밸브 구동기 개수', `${c.boilerModel||'-'} / ${c.actuatorCount||'-'}`);
-  body += `<p style="margin:4pt 0;font-size:9.5pt;"><b>11) 보일러 연동 타입</b> : ${optsLine(['통신','접점'], c.boilerLinkType)}</p>`;
-  body += fieldLine('12) 거실 R/C 설치장소', c.rcLocation);
-  body += fieldLine('13) 공유기 설치장소', c.sharedDeviceLocation);
-  body += fieldLine('IoT온도조절기로부터 거리(M)', c.distanceFromThermo);
-  body += fieldLine('14) 설치일자', c.installDate);
-
-  body += secBlock('확인사항');
-  CHECK_FORM_ITEMS.forEach(it=>{ body += checkItemBlock(it, c.checks?.[it.k]); });
-
-  body += secBlock('21) 기타 특기사항');
-  body += `<p style="font-size:9.5pt;">${esc(c.etc||'-').replace(/\n/g,'<br>')}</p>`;
-  body += fieldLine('작성자(컨설턴트명)', c.consultantName);
-
-  const fname = `컨설턴트체크리스트_${sanitizeFileName(c.customerName||t?.agency)}.docx`;
-  wordDownload(fname, body);
-};
-
-const SAT_FORM = [
-  {sec:'1. Wi-Fi 및 APP 등록', qs:[
-    {k:'q1_1', text:'1-1. 온도조절기와 앱의 기기 연결 및 Wi-Fi 등록 과정은 편리하고 이해하기 쉬웠습니까?', opts:'SCALE5'},
-    {k:'q1_2', text:'1-2. 제공된 앱 등록 매뉴얼(가이드)의 설명이 직관적이고 따라 하기 쉽게 작성되었습니까?', opts:'SCALE5'},
-    {k:'q1_3', text:'1-3. 기기 연결 및 Wi-Fi 앱 등록 과정에서 연결 실패나 오류가 발생한 적이 있습니까?', opts:'FREQ5'},
-    {k:'q1_3_1', text:'1-3-1. 어느 단계에서 오류가 발생했습니까? (해당 항목 모두 선택)', opts:'ERR_STEPS', multi:true, conditional:true}
-  ]},
-  {sec:'2. 각방 상태 확인', qs:[
-    {k:'q2_1', text:'2-1. 거실 조절기의 화면이 선명하고, 현재 상태를 확인하기 편리합니까?', hint:'(실내/설정 온도, 난방/외출/예약 모드, 연결 상태 등)', opts:'SCALE5'},
-    {k:'q2_2', text:'2-2. 앱에서의 화면 구성이 각 방의 현재 상태를 한눈에 확인하기에 편리합니까?', opts:'SCALE5'},
-    {k:'q2_3', text:'2-3. 앱에서 각 방의 명칭을 설정·변경하고, 앱에 표시되는 각 방과 실제 방을 대응시켜 확인하기에 편리합니까?', opts:'SCALE5'},
-    {k:'q2_4', text:'2-4. 앱 사용 중 기기 연결 실패(오프라인)나 에러 알림이 발생한 적이 있습니까?', opts:'FREQ3'}
-  ]},
-  {sec:'3. IoT 기능 및 제어', qs:[
-    {k:'q3_1', text:'3-1. 앱에서 각 방의 원격 제어가 원활합니까? (온도 조절, 모드 변경, 전원 On/Off 등)', opts:'SCALE5'},
-    {k:'q3_2', text:'3-2. 조절기 본체 또는 앱에서 온도, 모드를 변경했을 때, 변경된 온도·모드가 조절기 본체와 앱 화면에 동일하게 표시됩니까?', opts:'SCALE5_MATCH'},
-    {k:'q3_3', text:'3-3. 전체 자동화(외출/귀가) 모드를 사용해 본 적이 있습니까?', opts:'USE_3_3'},
-    {k:'q3_3_1', text:'3-3-1. 외출/귀가 모드 기능에 얼마나 만족하십니까?', opts:'SCALE5', conditional:true},
-    {k:'q3_4', text:'3-4. 앱에 함께 등록하여 조절기를 제어하는 가족(세대원)은 본인 포함 몇 명입니까?', opts:'MEMBERS_3_4'},
-    {k:'q3_4_1', text:'3-4-1. 가족 구성원 초대(세대원 추가) 및 기기공유 등록 과정은 편리했습니까?', opts:'SCALE5', conditional:true},
-    {k:'q3_4_2', text:'3-4-2. 기기에 등록된 그룹 세대원이 같이 앱을 사용해도 정상 작동했습니까?', opts:'ACT_3_4_2', conditional:true}
-  ]},
-  {sec:'4. 종합 만족도 및 건의사항', qs:[
-    {k:'q4_1', text:'4-1. 본 IoT 각방 온도조절기 제품에 대한 전반적인 만족도를 체크해주시기 바랍니다.', hint:'(체험 기간 동안의 품질, 디자인, 기능, 모바일 앱 사용 편의성에 대한 종합 만족도)', opts:'SCALE5_SAT'}
-  ]}
-];
-function renderSatQuestion(q, val){
-  const empty = val==null || val==='' || (Array.isArray(val)&&val.length===0);
-  if(q.conditional && empty) return '';
-  const opts = SAT_OPTS[q.opts]||[];
-  let h = `<div style="margin:0 0 10pt;">`;
-  h += `<div style="font-weight:bold;font-size:9.5pt;">${esc(q.text)}</div>`;
-  if(q.hint) h += `<div style="font-size:8pt;color:#777;margin:1pt 0 3pt;">${esc(q.hint)}</div>`;
-  if(q.multi){
-    const vals = Array.isArray(val) ? val : [];
-    const etc = vals.find(v=>String(v).startsWith('기타:'));
-    const lines = opts.map(o=> (vals.includes(o)?'☑':'☐')+' '+esc(o));
-    lines.push((etc?'☑':'☐')+' '+(etc?esc(etc):'기타'));
-    h += `<div style="margin-top:3pt;">${lines.join('&nbsp;&nbsp;&nbsp;&nbsp;')}</div>`;
-  }else{
-    h += `<div style="margin-top:3pt;">${optsLine(opts, val)}</div>`;
-  }
-  h += '</div>';
-  return h;
-}
-
-window.downloadSatWord = function(targetId, round){
-  const s = sats.find(x=>x.targetId===targetId && x.round===round);
-  if(!s){ alert('아직 제출된 고객만족도 설문이 없습니다.'); return; }
-  const a = s.answers||{};
-  const roundLabel = round==='1month' ? '1개월' : '1주일';
-  const roundColor = round==='1month' ? '#3B6D11' : '#1a56b0';
-
-  let body = hdrBlock('IoT 각방 온도조절기 고객 만족도 설문서');
-  body += `<p style="background:${roundColor};color:#fff;text-align:center;padding:6pt;font-weight:bold;font-size:11pt;margin:0 0 10pt;">${esc(roundLabel)} 사용 고객만족도 조사</p>`;
-  body += fieldLine('고객 성명', a.customerName||s.customerName);
-  body += fieldLine('전화번호', a.customerPhone||s.customerPhone);
-
-  SAT_FORM.forEach(section=>{
-    body += secBlock(section.sec);
-    section.qs.forEach(q=>{ body += renderSatQuestion(q, a[q.k]); });
-  });
-
-  body += secBlock('4-2. 건의사항');
-  body += `<p style="font-size:9.5pt;">${esc(a.q4_2||'-').replace(/\n/g,'<br>')}</p>`;
-
-  const fname = `고객만족도_${roundLabel}_${sanitizeFileName(a.customerName||s.customerName)}.docx`;
-  wordDownload(fname, body);
-};
 </script>
 </body>
 </html>
