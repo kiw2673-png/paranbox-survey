@@ -176,6 +176,16 @@
 
   @keyframes spin { to { transform: rotate(360deg); } }
   .spinning { animation: spin 1s linear infinite; display: inline-block; }
+
+  /* 파란박스 사양 */
+  .spec-slot { background: var(--card); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 16px; }
+  .spec-slot img { width: 100%; display: block; border-radius: 8px; cursor: zoom-in; }
+  .spec-slot-empty { border: 2px dashed var(--border); border-radius: var(--radius); min-height: 180px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; color: var(--text-muted); font-size: 13px; cursor: pointer; background: #fafafa; }
+  .spec-slot-empty:hover { border-color: var(--blue); color: var(--blue); background: var(--blue-light); }
+  .spec-slot-empty i { font-size: 30px; }
+  .spec-slot-readonly { min-height: 160px; display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 13px; background: #fafafa; border-radius: var(--radius); }
+  .spec-slot-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .spec-slot-head .name { font-size: 12px; color: var(--text-muted); }
 </style>
 </head>
 <body>
@@ -249,6 +259,9 @@
       </button>
       <button class="tab-btn" id="tab-install" onclick="switchTab('install')">
         <i class="ti ti-building-store"></i> 설치 현황
+      </button>
+      <button class="tab-btn" id="tab-spec" onclick="switchTab('spec')">
+        <i class="ti ti-replace"></i> 변경사양
       </button>
     </div>
 
@@ -325,6 +338,12 @@
         </table>
       </div>
     </div>
+
+    <!-- ===== 파란박스 사양 탭 ===== -->
+    <div id="sectionSpec" style="display:none">
+      <div class="install-section-title"><i class="ti ti-replace"></i> 파란박스 사양 <span style="font-size:11px;font-weight:400;color:var(--text-muted)">(이미지 최대 3장)</span></div>
+      <div id="specList" style="display:flex;flex-direction:column;gap:20px"></div>
+    </div>
   </div>
 </div>
 
@@ -381,7 +400,7 @@
 
 <script type="module">
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-  import { getFirestore, collection, getDocs, doc, updateDoc, deleteDoc, orderBy, query, addDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+  import { getFirestore, collection, getDocs, doc, updateDoc, deleteDoc, orderBy, query, addDoc, serverTimestamp, getDoc, setDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
   import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
   import { getStorage, ref as sRef, uploadBytesResumable, getDownloadURL, deleteObject } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js';
 
@@ -399,7 +418,7 @@
   const auth    = getAuth(app);
   const storage = getStorage(app);
 
-  window._fb = { db, auth, storage, sRef, uploadBytesResumable, getDownloadURL, deleteObject, collection, getDocs, doc, updateDoc, deleteDoc, orderBy, query, addDoc, serverTimestamp, signInWithEmailAndPassword, signOut, onAuthStateChanged };
+  window._fb = { db, auth, storage, sRef, uploadBytesResumable, getDownloadURL, deleteObject, collection, getDocs, doc, updateDoc, deleteDoc, orderBy, query, addDoc, serverTimestamp, getDoc, setDoc, signInWithEmailAndPassword, signOut, onAuthStateChanged };
 
   let _dataLoaded = false;
   onAuthStateChanged(auth, user => {
@@ -414,6 +433,7 @@
       document.getElementById('loggedArea').style.display = 'none';
     }
     if (!_dataLoaded) { _dataLoaded = true; loadData(); }
+    if (window.renderSpecList && window._specLoaded) window.renderSpecList();
   });
 </script>
 
@@ -447,16 +467,139 @@
   let editNewMedia = [];    // 이번 세션에서 새로 추가했지만 아직 업로드되지 않은 파일 { file, kind, name, previewUrl }
   let editRemovedUrls = []; // 이번 세션에서 삭제 표시된 기존 미디어의 URL (저장 시 Storage에서 삭제 시도)
 
+  // 파란박스 사양 탭 상태
+  const SPEC_SLOT_COUNT = 3;
+  let specImages = Array(SPEC_SLOT_COUNT).fill(null); // [{url,name}|null, ...]
+  window._specLoaded = false;
+
   // ─── 탭 전환 ───────────────────────────────────────────────────
   function switchTab(tab) {
     currentTab = tab;
     document.getElementById('sectionResponses').style.display = tab === 'responses' ? '' : 'none';
     document.getElementById('sectionInstall').style.display   = tab === 'install'   ? '' : 'none';
+    document.getElementById('sectionSpec').style.display      = tab === 'spec'      ? '' : 'none';
     document.getElementById('tab-responses').classList.toggle('active', tab === 'responses');
     document.getElementById('tab-install').classList.toggle('active',   tab === 'install');
+    document.getElementById('tab-spec').classList.toggle('active',      tab === 'spec');
     if (tab === 'install') renderInstall();
+    if (tab === 'spec') loadSpecData();
   }
   window.switchTab = switchTab;
+
+  // ─── 파란박스 사양 탭 ───────────────────────────────────────
+  async function loadSpecData() {
+    const list = document.getElementById('specList');
+    list.innerHTML = '<div style="padding:2rem;color:var(--text-muted);font-size:13px;text-align:center">불러오는 중...</div>';
+    const { db, doc, getDoc } = window._fb;
+    try {
+      const snap = await getDoc(doc(db, 'changeSpec', 'main'));
+      const saved = (snap.exists() && Array.isArray(snap.data().images)) ? snap.data().images : [];
+      specImages = Array(SPEC_SLOT_COUNT).fill(null).map((_, i) => saved[i] || null);
+    } catch (e) {
+      specImages = Array(SPEC_SLOT_COUNT).fill(null);
+      console.error('파란박스 사양 불러오기 실패:', e);
+    }
+    window._specLoaded = true;
+    renderSpecList();
+  }
+  window.loadSpecData = loadSpecData;
+
+  function renderSpecList() {
+    const list = document.getElementById('specList');
+    if (!list) return;
+    const loggedIn = document.body.classList.contains('logged-in');
+    list.innerHTML = specImages.map((img, i) => {
+      if (img && img.url) {
+        const controls = loggedIn ? `
+          <div style="display:flex;gap:6px">
+            <label class="icon-btn" style="padding:5px 10px;font-size:12px;cursor:pointer">
+              <i class="ti ti-replace"></i> 교체
+              <input type="file" accept="image/*" style="display:none" onchange="handleSpecFileChange(${i}, this.files[0]);this.value=''">
+            </label>
+            <button type="button" class="icon-btn" style="padding:5px 10px;font-size:12px" onclick="removeSpecImage(${i})"><i class="ti ti-trash"></i> 삭제</button>
+          </div>` : '';
+        return `<div class="spec-slot">
+          <div class="spec-slot-head">
+            <span class="name">${(img.name||'').replace(/</g,'&lt;')}</span>
+            ${controls}
+          </div>
+          <img src="${img.url}" alt="파란박스 사양 ${i+1}" onclick="openSpecViewer(${i})">
+        </div>`;
+      }
+      if (loggedIn) {
+        return `<label class="spec-slot-empty" title="이미지 업로드">
+          <i class="ti ti-plus"></i>
+          <span>클릭해서 이미지 업로드</span>
+          <input type="file" accept="image/*" style="display:none" onchange="handleSpecFileChange(${i}, this.files[0]);this.value=''">
+        </label>`;
+      }
+      return `<div class="spec-slot-readonly">등록된 이미지가 없습니다.</div>`;
+    }).join('');
+  }
+  window.renderSpecList = renderSpecList;
+
+  function openSpecViewer(i) {
+    const img = specImages[i];
+    if (!img) return;
+    showMediaInViewer({ kind: 'photo', name: img.name, url: img.url });
+  }
+  window.openSpecViewer = openSpecViewer;
+
+  async function handleSpecFileChange(i, file) {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { alert('이미지 파일만 업로드할 수 있습니다.'); return; }
+    if (file.size > 20 * 1024 * 1024) { alert('이미지는 20MB 이하만 업로드할 수 있습니다.'); return; }
+    const list = document.getElementById('specList');
+    list.innerHTML = '<div style="padding:2rem;color:var(--text-muted);font-size:13px;text-align:center">업로드 중...</div>';
+    const { db, doc, setDoc, storage, sRef, uploadBytesResumable, getDownloadURL, deleteObject } = window._fb;
+    const old = specImages[i];
+    try {
+      const ext = file.name.includes('.') ? file.name.split('.').pop() : 'jpg';
+      const path = `changeSpec/slot${i + 1}_${Date.now()}.${ext}`;
+      const storageRef = sRef(storage, path);
+      const url = await new Promise((resolve, reject) => {
+        const task = uploadBytesResumable(storageRef, file);
+        task.on('state_changed', () => {}, reject, async () => {
+          try { resolve(await getDownloadURL(task.snapshot.ref)); } catch (err) { reject(err); }
+        });
+      });
+      specImages[i] = { url, name: file.name };
+      await setDoc(doc(db, 'changeSpec', 'main'), { images: specImages }, { merge: true });
+      if (old && old.url) {
+        try {
+          const match = old.url.match(/\/o\/([^?#]+)/);
+          if (match) await deleteObject(sRef(storage, decodeURIComponent(match[1])));
+        } catch (e) { /* 이미 삭제됐거나 권한 문제는 무시 */ }
+      }
+    } catch (e) {
+      console.error('사양 이미지 업로드 오류:', e.code, e.message);
+      if (e.code === 'permission-denied' || (e.message && e.message.includes('permission'))) {
+        alert('업로드 실패: Firestore 보안 규칙에서 changeSpec 컬렉션 쓰기 권한이 없습니다.\n\nFirebase 콘솔 > Firestore Database > 규칙 탭에서 changeSpec 컬렉션에 대한 allow write 권한을 추가해 주세요.');
+      } else {
+        alert('업로드 실패: ' + e.message);
+      }
+    }
+    renderSpecList();
+  }
+  window.handleSpecFileChange = handleSpecFileChange;
+
+  async function removeSpecImage(i) {
+    if (!confirm('이 이미지를 삭제하시겠습니까?')) return;
+    const old = specImages[i];
+    specImages[i] = null;
+    const { db, doc, setDoc, storage, sRef, deleteObject } = window._fb;
+    try {
+      await setDoc(doc(db, 'changeSpec', 'main'), { images: specImages }, { merge: true });
+      if (old && old.url) {
+        const match = old.url.match(/\/o\/([^?#]+)/);
+        if (match) await deleteObject(sRef(storage, decodeURIComponent(match[1])));
+      }
+    } catch (e) {
+      alert('삭제 실패: ' + e.message);
+    }
+    renderSpecList();
+  }
+  window.removeSpecImage = removeSpecImage;
 
   // ─── 설치 현황 렌더링 ────────────────────────────────────────
   function renderInstall() {
